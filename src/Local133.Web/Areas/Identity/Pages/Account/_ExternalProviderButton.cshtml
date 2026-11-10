@@ -1,0 +1,14 @@
+@model ExternalProviderButton
+@* Botón de envío para un proveedor externo; va dentro de un form cuyo campo "provider" elige el esquema. *@
+@{
+    var icon = Model.Scheme.Name switch
+    {
+        "Google" => "bi-google",
+        "Facebook" => "bi-facebook",
+        _ => "bi-box-arrow-in-right",
+    };
+}
+<button id="@Model.Id" type="submit" class="btn btn-outline-secondary" name="provider" value="@Model.Scheme.Name"
+        title="@Model.Verb con tu cuenta de @Model.Scheme.DisplayName">
+    <i class="bi @icon me-1" aria-hidden="true"></i>@Model.Verb con @Model.Scheme.DisplayName
+</button>

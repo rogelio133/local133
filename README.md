@@ -45,6 +45,17 @@ dotnet run --project src/Local133.Web --launch-profile http
 
 **Correos en desarrollo**: no se envían; `FileEmailSender` guarda cada uno como `.html` en `src/Local133.Web/App_Data/emails` (ignorada en git) y escribe la liga en el log. Ábrelo para confirmar la cuenta o restablecer la contraseña. Carpeta configurable con `EmailPickup:Directory`.
 
+**Login con Google / Facebook (opcional)**: los botones solo aparecen si hay credenciales en user-secrets (sin ellas el sitio funciona igual).
+
+```powershell
+dotnet user-secrets set "Authentication:Google:ClientId" "<client-id>" --project src/Local133.Web
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<client-secret>" --project src/Local133.Web
+dotnet user-secrets set "Authentication:Facebook:AppId" "<app-id>" --project src/Local133.Web
+dotnet user-secrets set "Authentication:Facebook:AppSecret" "<app-secret>" --project src/Local133.Web
+```
+
+Registra las URI de redirección en Google Cloud Console (cliente OAuth "Aplicación web") y en Meta for Developers (Inicio de sesión con Facebook): `https://localhost:7180/signin-google` y `https://localhost:7180/signin-facebook`. Arranca con el perfil `https` (`--launch-profile https`); Facebook exige HTTPS. Reglas: si conservas el correo del proveedor, la cuenta queda confirmada y entras de inmediato; si escribes otro, se confirma por correo; si el correo ya tiene cuenta, no se liga solo: entra con contraseña y liga desde `/Identity/Account/Manage/ExternalLogins`.
+
 ## Comandos
 
 | Tarea | Comando |
