@@ -156,7 +156,14 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
    - *`tests/Local133.IntegrationTests` con 26 pruebas (`Category=SqlServer`, base `Local133_Tests`, Respawn), todas verdes en local. CI las excluye con `--filter "Category!=SqlServer"`.*
    - *Prueba de arranque del sitio real: redirección a login, registro y `.html` del correo generado, Swagger solo con `/api/health`.*
    - *Pendiente: el admin sembrado (1.5); mientras tanto el rol `Admin` se asigna a mano.)*
-3. Login externo Google y Facebook.
+3. Login externo Google y Facebook. ✅ *(hecho 2026-11-10:*
+   - *Las páginas `ExternalLogin` y `Manage/ExternalLogins` ya venían del scaffold de 1.2. Se agregaron los paquetes `Microsoft.AspNetCore.Authentication.Google`/`.Facebook` 9.0.22.*
+   - *Los proveedores se registran solo si hay credenciales (`Authentication:Google:ClientId/ClientSecret`, `Authentication:Facebook:AppId/AppSecret` en user-secrets). Sin ellas no hay botones y CI/pruebas no dependen de ellos.*
+   - *Reglas: si se conserva el correo del proveedor ⇒ cuenta confirmada y entra directo como `Merchant`. Si se escribe otro ⇒ correo de confirmación. Si el correo ya tiene cuenta ⇒ no se liga solo: mensaje para entrar con contraseña y ligar desde Mi cuenta → Cuentas externas.*
+   - *Google se pide con `prompt=select_account`: después de cerrar sesión muestra "Elige una cuenta" en lugar de volver a entrar solo con la misma cuenta (teléfonos compartidos). No pide la contraseña.*
+   - *Cancelar o fallar en el proveedor regresa a Login (o a Cuentas externas) con mensaje en español. Botones con icono (parcial `_ExternalProviderButton`).*
+   - *12 pruebas nuevas: 9 de flujo con un proveedor falso (`FakeExternalAuthHandler`, `Category=SqlServer`) y 3 de registro condicional que corren en CI. 38/38 verdes en local.*
+   - *Pendiente: prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar `https://localhost:7180/signin-google` y `/signin-facebook`).)*
 4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada.
 5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.
 

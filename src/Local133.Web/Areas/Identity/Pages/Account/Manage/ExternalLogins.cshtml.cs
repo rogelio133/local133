@@ -3,6 +3,7 @@
 #nullable disable
 
 using Local133.Infrastructure.Identity;
+using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -76,8 +77,14 @@ public class ExternalLoginsModel(UserManager<ApplicationUser> userManager, SignI
         return new ChallengeResult(provider, properties);
     }
 
-    public async Task<IActionResult> OnGetLinkLoginCallbackAsync()
+    public async Task<IActionResult> OnGetLinkLoginCallbackAsync(string remoteError = null)
     {
+        if (remoteError != null)
+        {
+            StatusMessage = "Error: " + ExternalLoginErrors.Message(remoteError);
+            return RedirectToPage();
+        }
+
         var user = await userManager.GetUserAsync(User);
         if (user == null)
         {

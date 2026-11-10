@@ -32,7 +32,7 @@
     <form id="link-login-form" asp-page-handler="LinkLogin" method="post" class="d-grid gap-2">
         @foreach (var provider in Model.OtherLogins)
         {
-            <button id="@($"link-login-button-{provider.Name}")" type="submit" class="btn btn-outline-secondary" name="provider" value="@provider.Name" title="Ligar tu cuenta de @provider.DisplayName">@provider.DisplayName</button>
+            <partial name="_ExternalProviderButton" model='new ExternalProviderButton(provider, "Ligar", $"link-login-button-{provider.Name}")' />
         }
     </form>
 }

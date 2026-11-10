@@ -36,7 +36,7 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
-    builder.Services.AddAppIdentity(builder.Environment);
+    builder.Services.AddAppIdentity(builder.Configuration, builder.Environment);
 
     var app = builder.Build();
 

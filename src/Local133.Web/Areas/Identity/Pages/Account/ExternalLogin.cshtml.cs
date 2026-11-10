@@ -8,6 +8,7 @@ using System.Text;
 using Local133.Application.Auth;
 using Local133.Infrastructure.Identity;
 using Local133.Web.Identity;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -17,7 +18,11 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace Local133.Web.Areas.Identity.Pages.Account;
 
-/// <summary>Login con proveedores externos (Google y Facebook se configuran en el paso 1.3).</summary>
+/// <summary>
+/// Login y alta con Google/Facebook. Reglas: si se conserva el correo que manda el proveedor, se da por
+/// confirmado; si ya existe una cuenta con ese correo no se liga sola (se entra con contraseña y se liga
+/// desde Manage/ExternalLogins).
+/// </summary>
 [AllowAnonymous]
 public class ExternalLoginModel(
     SignInManager<ApplicationUser> signInManager,
@@ -25,6 +30,9 @@ public class ExternalLoginModel(
     ILogger<ExternalLoginModel> logger,
     IEmailSender emailSender) : PageModel
 {
+    public const string ExistingAccountMessage =
+        "Ya tienes una cuenta con ese correo. Entra con tu contraseña y liga {0} desde Mi cuenta → Cuentas externas.";
+
     [BindProperty]
     public InputModel Input { get; set; }
 
@@ -57,7 +65,7 @@ public class ExternalLoginModel(
     {
         if (remoteError != null)
         {
-            ErrorMessage = $"El proveedor externo respondió con un error: {remoteError}";
+            ErrorMessage = ExternalLoginErrors.Message(remoteError);
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
@@ -85,13 +93,18 @@ public class ExternalLoginModel(
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
+        // No está ligada. Si el correo ya es de otra cuenta, no se liga sola.
+        var providerEmail = ProviderEmail(info);
+        if (providerEmail != null && await userManager.FindByEmailAsync(providerEmail) != null)
+        {
+            ErrorMessage = string.Format(ExistingAccountMessage, info.ProviderDisplayName);
+            return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
+        }
+
         // No tiene cuenta: se le pide confirmar el correo para crearla.
         ReturnUrl = returnUrl;
         ProviderDisplayName = info.ProviderDisplayName;
-        if (info.Principal.HasClaim(c => c.Type == ClaimTypes.Email))
-        {
-            Input = new InputModel { Email = info.Principal.FindFirstValue(ClaimTypes.Email) };
-        }
+        Input = new InputModel { Email = providerEmail };
         return Page();
     }
 
@@ -104,12 +117,20 @@ public class ExternalLoginModel(
             return RedirectToPage("./Login", new { ReturnUrl = returnUrl });
         }
 
+        if (ModelState.IsValid && await userManager.FindByEmailAsync(Input.Email) != null)
+        {
+            ModelState.AddModelError(string.Empty, string.Format(ExistingAccountMessage, info.ProviderDisplayName));
+        }
+
         if (ModelState.IsValid)
         {
-            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email };
+            // El correo que manda el proveedor ya lo verificó él; si el usuario lo cambia, se confirma por correo.
+            var emailConfirmed = string.Equals(Input.Email, ProviderEmail(info), StringComparison.OrdinalIgnoreCase);
+            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = emailConfirmed };
             var result = await userManager.CreateAsync(user);
             if (result.Succeeded)
             {
+                // 1.4: aquí también se creará el Merchant en PendingBankAccount (igual que en Register).
                 result = await userManager.AddToRoleAsync(user, Roles.Merchant);
             }
             if (result.Succeeded)
@@ -119,6 +140,12 @@ public class ExternalLoginModel(
             if (result.Succeeded)
             {
                 logger.LogInformation("Usuario {UserId} creado con {LoginProvider}.", user.Id, info.LoginProvider);
+
+                if (emailConfirmed)
+                {
+                    await signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
+                    return await RedirectAfterLoginAsync(returnUrl, user);
+                }
 
                 var userId = await userManager.GetUserIdAsync(user);
                 var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -130,13 +157,8 @@ public class ExternalLoginModel(
                     protocol: Request.Scheme);
                 await emailSender.SendEmailAsync(Input.Email, AccountEmails.ConfirmSubject, AccountEmails.ConfirmBody(callbackUrl));
 
-                if (userManager.Options.SignIn.RequireConfirmedAccount)
-                {
-                    return RedirectToPage("./RegisterConfirmation", new { Input.Email, returnUrl });
-                }
-
-                await signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
-                return await RedirectAfterLoginAsync(returnUrl, user);
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+                return RedirectToPage("./RegisterConfirmation", new { Input.Email, returnUrl });
             }
 
             foreach (var error in result.Errors)
@@ -150,8 +172,13 @@ public class ExternalLoginModel(
         return Page();
     }
 
+    private static string ProviderEmail(ExternalLoginInfo info) =>
+        info.Principal.FindFirstValue(ClaimTypes.Email) is { Length: > 0 } email ? email : null;
+
     private async Task<IActionResult> RedirectAfterLoginAsync(string returnUrl, ApplicationUser user)
     {
+        // Ya no se necesita la cookie del proveedor.
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
             return LocalRedirect(returnUrl);

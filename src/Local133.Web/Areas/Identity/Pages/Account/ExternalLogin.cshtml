@@ -7,7 +7,10 @@
     <div class="col-sm-10 col-md-7 col-lg-5">
         <h1 class="h3">@ViewData["Title"]</h1>
         <p class="text-secondary">
-            Entraste con <strong>@Model.ProviderDisplayName</strong>. Confirma tu correo para terminar de crear tu cuenta.
+            Entraste con <strong>@Model.ProviderDisplayName</strong>. Revisa tu correo para terminar de crear tu cuenta.
+        </p>
+        <p class="small text-secondary">
+            Si conservas el correo de @Model.ProviderDisplayName, entras de inmediato. Si escribes otro, te mandaremos un correo para confirmarlo.
         </p>
         <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>

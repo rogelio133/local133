@@ -35,6 +35,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public InMemoryEmailSender Emails { get; } = new();
 
+    /// <summary>Lo que devuelve el proveedor externo falso; cada prueba lo ajusta (se restablece en <see cref="ResetAsync"/>).</summary>
+    public FakeExternalUser ExternalUser { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -51,6 +54,11 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddSingleton<IEmailSender>(Emails);
 
             services.AddTransient<IStartupFilter, ChallengeEndpointsStartupFilter>();
+
+            // Proveedor externo falso: las pruebas no dependen de Google/Facebook ni de sus secretos.
+            services.AddSingleton(ExternalUser);
+            services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, FakeExternalAuthHandler>(FakeExternalAuthHandler.SchemeName, "Proveedor", _ => { });
         });
     }
 
@@ -73,6 +81,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task ResetAsync()
     {
         Emails.Clear();
+        var defaults = new FakeExternalUser();
+        ExternalUser.ProviderKey = defaults.ProviderKey;
+        ExternalUser.Email = defaults.Email;
         if (_respawner is not null)
         {
             await _respawner.ResetAsync(ConnectionString);
