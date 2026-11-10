@@ -4,7 +4,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using Local133.Application.Auth;
 using Local133.Infrastructure.Identity;
 using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -21,6 +20,8 @@ namespace Local133.Web.Areas.Identity.Pages.Account;
 public class RegisterModel(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
+    AccountRegistration registration,
+    TimeProvider clock,
     ILogger<RegisterModel> logger,
     IEmailSender emailSender) : PageModel
 {
@@ -31,7 +32,7 @@ public class RegisterModel(
 
     public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-    public class InputModel
+    public class InputModel : LegalAcceptanceInput
     {
         [Required(ErrorMessage = "Escribe tu correo.")]
         [EmailAddress(ErrorMessage = "El correo no es válido.")]
@@ -65,14 +66,9 @@ public class RegisterModel(
             return Page();
         }
 
-        var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email };
-        var result = await userManager.CreateAsync(user, Input.Password);
-        if (result.Succeeded)
-        {
-            // La entidad Merchant (estatus PendingBankAccount) se crea en el paso 1.4.
-            result = await userManager.AddToRoleAsync(user, Roles.Merchant);
-        }
-
+        var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email }
+            .AcceptLegalDocuments(clock.GetUtcNow());
+        var result = await registration.CreateMerchantAsync(user, Input.Password);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)

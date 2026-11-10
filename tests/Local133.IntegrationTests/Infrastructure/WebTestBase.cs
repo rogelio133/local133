@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Local133.Application.Auth;
 using Local133.Infrastructure.Identity;
+using Local133.Web.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,20 +51,32 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
             ["Input.Password"] = password,
         });
 
-    protected static Task<HttpResponseMessage> RegisterAsync(HttpClient client, string email, string password = Password) =>
+    protected static Task<HttpResponseMessage> RegisterAsync(
+        HttpClient client, string email, string password = Password, bool acceptLegal = true) =>
         PostFormAsync(client, "/Identity/Account/Register", new Dictionary<string, string>
         {
             ["Input.Email"] = email,
             ["Input.Password"] = password,
             ["Input.ConfirmPassword"] = password,
+            ["Input.AcceptLegal"] = acceptLegal ? "true" : "false",
         });
 
-    /// <summary>Crea un usuario con correo ya confirmado y el rol indicado, directo con UserManager.</summary>
+    /// <summary>
+    /// Crea un usuario con correo ya confirmado y el rol indicado. Los vendedores se crean con
+    /// <see cref="AccountRegistration"/> (igual que el registro real: con su Merchant y términos aceptados).
+    /// </summary>
     protected async Task CreateConfirmedUserAsync(string email, string role)
     {
         using var scope = Factory.Services.CreateScope();
-        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+        if (role == Roles.Merchant)
+        {
+            user.AcceptLegalDocuments(DateTimeOffset.UtcNow);
+            AssertSucceeded(await scope.ServiceProvider.GetRequiredService<AccountRegistration>().CreateMerchantAsync(user, Password));
+            return;
+        }
+
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         AssertSucceeded(await users.CreateAsync(user, Password));
         AssertSucceeded(await users.AddToRoleAsync(user, role));
     }

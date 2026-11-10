@@ -1,0 +1,45 @@
+@using Local133.Domain.Legal
+@{
+    ViewData["Title"] = "Aviso de privacidad";
+}
+<article class="mx-auto" style="max-width: 46rem;">
+    <h1 class="h3">@ViewData["Title"]</h1>
+    <p class="text-secondary small">Versión @LegalDocuments.CurrentPrivacyNoticeVersion</p>
+
+    <div class="alert alert-warning" role="alert">
+        <strong>Borrador pendiente de revisión legal.</strong> Este texto es provisional y puede cambiar antes del lanzamiento.
+    </div>
+
+    <h2 class="h5 mt-4">Responsable</h2>
+    <p>Local133 es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos
+        Personales en Posesión de los Particulares.</p>
+
+    <h2 class="h5 mt-4">Datos que recabamos</h2>
+    <ul>
+        <li>Identificación y contacto: nombre, correo electrónico, teléfono y dirección del negocio.</li>
+        <li>Datos financieros: nombre del titular y CLABE de la cuenta bancaria donde recibes tus cobros.</li>
+        <li>Datos de operación: ventas, pagos recibidos, comisiones y estados de cuenta.</li>
+        <li>Si entras con Google o Facebook: el correo y el identificador que nos comparte ese proveedor.</li>
+    </ul>
+
+    <h2 class="h5 mt-4">Finalidades</h2>
+    <ul>
+        <li>Crear y administrar tu cuenta.</li>
+        <li>Registrar tu cuenta bancaria ante el proveedor de pagos y el sistema CoDi para que recibas tus cobros.</li>
+        <li>Generar cobros, recibos, estados de cuenta y la cobranza de la comisión.</li>
+        <li>Enviarte avisos sobre tu cuenta (activación, estados de cuenta, suspensión).</li>
+    </ul>
+
+    <h2 class="h5 mt-4">Transferencias</h2>
+    <p>Compartimos tu nombre, CLABE y los datos de cada cobro con el proveedor de pagos y, a través de él, con Banxico y las
+        instituciones bancarias que participan en CoDi, únicamente para procesar tus cobros.</p>
+
+    <h2 class="h5 mt-4">Derechos ARCO</h2>
+    <p>Puedes solicitar el acceso, rectificación, cancelación u oposición al tratamiento de tus datos, así como revocar tu
+        consentimiento, escribiendo al correo de contacto que publicaremos en esta página.</p>
+
+    <h2 class="h5 mt-4">Cambios</h2>
+    <p>Cualquier cambio a este aviso se publicará en esta página con una nueva versión.</p>
+
+    <p class="mt-4">Consulta también nuestros <a href="~/terminos">Términos y condiciones</a>.</p>
+</article>

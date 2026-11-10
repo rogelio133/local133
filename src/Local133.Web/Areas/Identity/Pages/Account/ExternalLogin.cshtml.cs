@@ -5,7 +5,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
-using Local133.Application.Auth;
 using Local133.Infrastructure.Identity;
 using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -27,6 +26,8 @@ namespace Local133.Web.Areas.Identity.Pages.Account;
 public class ExternalLoginModel(
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,
+    AccountRegistration registration,
+    TimeProvider clock,
     ILogger<ExternalLoginModel> logger,
     IEmailSender emailSender) : PageModel
 {
@@ -43,7 +44,7 @@ public class ExternalLoginModel(
     [TempData]
     public string ErrorMessage { get; set; }
 
-    public class InputModel
+    public class InputModel : LegalAcceptanceInput
     {
         [Required(ErrorMessage = "Escribe tu correo.")]
         [EmailAddress(ErrorMessage = "El correo no es válido.")]
@@ -126,17 +127,9 @@ public class ExternalLoginModel(
         {
             // El correo que manda el proveedor ya lo verificó él; si el usuario lo cambia, se confirma por correo.
             var emailConfirmed = string.Equals(Input.Email, ProviderEmail(info), StringComparison.OrdinalIgnoreCase);
-            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = emailConfirmed };
-            var result = await userManager.CreateAsync(user);
-            if (result.Succeeded)
-            {
-                // 1.4: aquí también se creará el Merchant en PendingBankAccount (igual que en Register).
-                result = await userManager.AddToRoleAsync(user, Roles.Merchant);
-            }
-            if (result.Succeeded)
-            {
-                result = await userManager.AddLoginAsync(user, info);
-            }
+            var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = emailConfirmed }
+                .AcceptLegalDocuments(clock.GetUtcNow());
+            var result = await registration.CreateMerchantAsync(user, password: null, info);
             if (result.Succeeded)
             {
                 logger.LogInformation("Usuario {UserId} creado con {LoginProvider}.", user.Id, info.LoginProvider);

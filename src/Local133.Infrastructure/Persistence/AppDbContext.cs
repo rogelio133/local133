@@ -1,3 +1,4 @@
+using Local133.Domain.Merchants;
 using Local133.Domain.Settings;
 using Local133.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -8,6 +9,8 @@ namespace Local133.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
+
+    public DbSet<Merchant> Merchants => Set<Merchant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

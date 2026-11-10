@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Local133.Web.Identity;
 
@@ -58,6 +59,9 @@ public static class IdentitySetup
         });
 
         services.AddExternalLogins(configuration);
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<AccountRegistration>();
 
         return services;
     }
