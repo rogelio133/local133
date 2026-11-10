@@ -7,7 +7,7 @@ Proyecto desde cero. La fuente de verdad es [PLAN_DESARROLLO.md](PLAN_DESARROLLO
 
 ## Stack
 - Backend: ASP.NET Core 9 Web API, EF Core 9 sobre **SQL Server local** (sin Docker), ASP.NET Core Identity (cookie, roles `Merchant`/`Admin`, Google y Facebook), FluentValidation, Serilog, ProblemDetails, Swagger, SignalR, Hangfire (storage SQL Server), Polly, ImageSharp.
-- Frontend: **una sola SPA** (portal cliente + admin) en `src/web`: React + Vite + TypeScript + React-Bootstrap + React Router + TanStack Query; `qrcode.react` para renderizar `qrString`. Móvil primero. La API sirve la SPA (mismo host ⇒ cookie).
+- Frontend: **una sola SPA** (portal cliente + admin) en `src/Local133.CustomerPortal`: React + Vite + TypeScript + React-Bootstrap + React Router + TanStack Query; `qrcode.react` para renderizar `qrString`. Móvil primero. La API sirve la SPA (mismo host ⇒ cookie).
 - Pruebas: xUnit, WebApplicationFactory, Respawn, WireMock.
 
 ## Estructura
@@ -18,7 +18,7 @@ src/
   Local133.Application     casos de uso, DTOs, validadores, interfaces (IPaymentGateway, IFileStorage…)
   Local133.Infrastructure  EF Core, PeyClient, procesamiento de webhooks, storage, email, jobs Hangfire
   Local133.Api             endpoints REST, hub SignalR, POST /api/webhooks/pey, sirve la SPA
-  web/                     SPA React
+  Local133.CustomerPortal  SPA React (Local133.CustomerPortal.esproj, visible en Visual Studio)
 tests/
   Local133.UnitTests
   Local133.IntegrationTests  (base `Local133_Tests` en SQL Server local, recreada con migraciones, limpiada con Respawn)
@@ -29,7 +29,8 @@ Dependencias: Domain ← Application ← Infrastructure/Api. Pey solo se usa des
 - Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Api` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings).
 - Migraciones: `dotnet ef migrations add <Nombre> --project src/Local133.Infrastructure --startup-project src/Local133.Api` · `dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Api`
 - Build / pruebas: `dotnet build` · `dotnet test` · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"`
-- SPA: `cd src/web && npm install && npm run dev` (proxy a la API en dev)
+- SPA: `cd src/Local133.CustomerPortal && npm install && npm run dev` → `http://localhost:5173`; proxy de `/api` y `/hubs` a la API en `http://localhost:5231` (perfil `http`; otro destino con la variable `API_URL`). Arrancar la API antes.
+- SPA build / lint: `npm run build` (`tsc -b` + Vite; publica en `src/Local133.Api/wwwroot`, ignorado en git, y la API lo sirve con fallback a `index.html`) · `npm run lint` (oxlint). Alias de imports `@/` → `src/Local133.CustomerPortal/src`. El portal admin se carga con `lazy` (cada página admin exporta `Component`).
 - Webhook en local: túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en portal.mipey.mx.
 
 ## Smart App Control (este equipo)
