@@ -5,15 +5,13 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local133.Api", "src\Local133.Api\Local133.Api.csproj", "{B105CDA4-0D98-4AAB-8439-0D096E4A168F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local133.Web", "src\Local133.Web\Local133.Web.csproj", "{B105CDA4-0D98-4AAB-8439-0D096E4A168F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local133.Application", "src\Local133.Application\Local133.Application.csproj", "{2FC27108-7A9A-4E1C-9C24-5E87A087814A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local133.Domain", "src\Local133.Domain\Local133.Domain.csproj", "{B48B717F-CA76-4257-A8A8-F6E00085C904}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Local133.Infrastructure", "src\Local133.Infrastructure\Local133.Infrastructure.csproj", "{C8586414-0207-4A54-A76F-8A5671DD1CAD}"
-EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "Local133.CustomerPortal", "src\Local133.CustomerPortal\Local133.CustomerPortal.esproj", "{8C03AF03-7249-4CC3-89B7-A0A4E787723E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,12 +71,6 @@ Global
 		{C8586414-0207-4A54-A76F-8A5671DD1CAD}.Release|x64.Build.0 = Release|Any CPU
 		{C8586414-0207-4A54-A76F-8A5671DD1CAD}.Release|x86.ActiveCfg = Release|Any CPU
 		{C8586414-0207-4A54-A76F-8A5671DD1CAD}.Release|x86.Build.0 = Release|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Release|x64.ActiveCfg = Release|Any CPU
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,6 +80,5 @@ Global
 		{2FC27108-7A9A-4E1C-9C24-5E87A087814A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{B48B717F-CA76-4257-A8A8-F6E00085C904} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{C8586414-0207-4A54-A76F-8A5671DD1CAD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{8C03AF03-7249-4CC3-89B7-A0A4E787723E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

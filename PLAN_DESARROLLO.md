@@ -7,7 +7,7 @@ Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos)
 Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 
 **Decisiones confirmadas**
-- Backend ASP.NET Core 9 Web API + **una SPA React** (Vite + TypeScript + React-Bootstrap) para portal cliente y admin.
+- **ASP.NET Core 9 MVC** (vistas Razor + Bootstrap 5, móvil primero) en un solo proyecto web que también expone la API REST interna, el webhook y el hub SignalR; portal cliente y admin como áreas MVC. *(Cambio 2026-11-09: reemplaza la SPA React original.)*
 - **SQL Server** con EF Core 9.
 - Estado de cuenta semanal se paga con **QR CoDi hacia la cuenta de la plataforma**, conciliado por webhook; falta de pago ⇒ suspensión.
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
@@ -70,7 +70,7 @@ enum SuspensionReason{ UnpaidStatement, Admin, BankAccountError }
 | Vendedor guarda cuenta bancaria | `POST /bank-account` → guardar `id` + `codiStatus` ⇒ `BankAccountInReview` |
 | Activación | Webhook `bank.account.updated` ⇒ `Active` + email al vendedor |
 | Detectar rechazo / respaldo | Job cada 30 min: `GET /bank-account/{id}` para cuentas `PENDING/PROCESSING` |
-| Cobrar venta (carrito o monto) | `POST /codi/qr` `{amount, concept, expiration:600, numRef, bankAccountId, metadata}` → render `qrString` en cliente |
+| Cobrar venta (carrito o monto) | `POST /codi/qr` `{amount, concept, expiration:600, numRef, bankAccountId, metadata}` → render de `qrString` como SVG en servidor (QRCoder) dentro de la vista Razor |
 | QR fijo del puesto | `POST /codi/qr` `{amount:0, expiration:0, bankAccountId, metadata:{kind:"static"}}` (una vez por vendedor) |
 | Cobro por celular | `POST /codi/pn` `{amount, phoneNumber(10), concept, expiration≥360, bankAccountId, metadata}` → `transactionId` |
 | Confirmar pago | Webhooks `codi.qr.payment_received` (match por `codiQrId`) y `codi.pn.payment_received` (match por `transactionId`) |
@@ -111,17 +111,18 @@ src/
   Local133.Domain          entidades, enums (propios y Pey), reglas (comisión, CLABE)
   Local133.Application     casos de uso, DTOs, validadores (FluentValidation), interfaces
   Local133.Infrastructure  EF Core (SQL Server), PeyClient, webhooks, storage, email, jobs
-  Local133.Api             endpoints REST, SignalR hub, endpoint webhook, sirve la SPA
-  Local133.CustomerPortal  React + Vite + TS + React-Bootstrap + React Router + TanStack Query
+  Local133.Web             MVC: áreas Merchant/Admin (vistas Razor + Bootstrap), Identity scaffoldeado
+                           (Areas/Identity), endpoints /api (webhook, consulta de venta), hub SignalR
 tests/
-  Local133.UnitTests · Local133.IntegrationTests (WebApplicationFactory + base de pruebas `Local133_Tests` en el SQL Server local, recreada con migraciones y limpiada entre pruebas con Respawn)
+  Local133.UnitTests · Local133.IntegrationTests (WebApplicationFactory<Program> sobre Local133.Web + base de pruebas `Local133_Tests` en el SQL Server local, recreada con migraciones y limpiada entre pruebas con Respawn)
 ```
 
-- **Auth**: ASP.NET Core Identity, cookie segura (SPA servida por el mismo host), roles `Merchant` / `Admin`, login externo Google y Facebook.
+- **Auth**: ASP.NET Core Identity con la **UI scaffoldeada** (Razor Pages en `Areas/Identity`, personalizada en español y adaptada al layout), cookie segura, roles `Merchant` / `Admin`, login externo Google y Facebook.
+- **Frontend**: MVC con vistas Razor; `_Layout` Bootstrap 5 móvil primero (barra inferior en el área del vendedor, sidebar/Offcanvas en admin). Bootstrap, cliente JS de SignalR y demás librerías cliente vía **LibMan** en `wwwroot/lib` (sin npm ni build de JS). Validación con jQuery Validation Unobtrusive en cliente + FluentValidation en servidor; antiforgery en todos los formularios. JS ligero solo donde hace falta (teclado numérico, carrito, cuenta regresiva del QR).
 - **Multi-tenant**: toda entidad de negocio lleva `MerchantId`; filtro global de EF Core + política de autorización.
 - **PeyClient**: `HttpClient` tipado + Polly (reintentos en 503/5xx, timeout), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → responder 200 → procesar. Procesamiento idempotente por `transactionId`.
-- **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived`. Respaldo: polling del front a `GET /api/sales/{id}` cada 3 s.
+- **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
 - **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · corte semanal (lunes 00:05 `America/Mexico_City`) · vencimiento y suspensión.
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con ImageSharp.
 - **Secretos**: API key y secreto de webhook de Pey en user-secrets / variables de entorno. CLABE enmascarada en UI.
@@ -138,20 +139,22 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 
 ### Fase 0 — Cimientos (≈3 días)
 1. ✅ Solución .NET 9 con los 4 proyectos, EF Core + migración inicial, Serilog, ProblemDetails, Swagger. *(hecho 2026-11-09: migración `Initial` = `SystemSettings` + semilla; API con controladores; build sin advertencias. Prueba de arranque verificada el mismo día: Swagger, `/api/health` y 404 ProblemDetails.)*
-2. ✅ SPA con Vite + TS + React-Bootstrap, layout móvil primero, proxy a la API en dev, ruteo cliente/admin. *(hecho 2026-11-09: `src/Local133.CustomerPortal` (Vite 8, React 19, React Router 7, TanStack Query 5, oxlint); `/app` vendedor con pestañas inferiores, `/admin` con Offcanvas/sidebar cargado bajo demanda, `/login`, `/registro`, 404; `apiFetch` con ProblemDetails; proxy `/api` y `/hubs` a :5231; `npm run build` publica en `src/Local133.Api/wwwroot` (ignorado en git) y la API lo sirve con fallback a `index.html` (rutas `/api/*` desconocidas ⇒ 404 ProblemDetails). Sin guards por rol hasta Fase 1. El build de npm no está enganchado a `dotnet build`; se decide en 0.3 (CI).)*
-3. ✅ Base de datos en el **SQL Server local del equipo** (sin Docker): crear la base `Local133`, cadena de conexión en user-secrets (`ConnectionStrings:Default`, p. ej. `Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True`) y aplicar migraciones con `dotnet ef database update`; `README` con arranque local y requisitos (instancia de SQL Server instalada); CI (build + tests). *(hecho 2026-11-09: base `Local133` en `localhost\SQLEXPRESS` con `Initial` y semilla; `README.md`; GitHub Actions `.github/workflows/ci.yml` con job .NET (build Release, `dotnet ef migrations has-pending-model-changes`, `dotnet test`) y job SPA (`npm ci`, lint, build). Decisiones: los proyectos de prueba se crean en Fase 1 (CI no usa SQL Server todavía); `npm run build` sigue fuera de `dotnet build` y solo `dotnet publish` de la API compila la SPA (`-p:SkipSpaBuild=true` para omitirla).)*
+2. ✅ Base de datos en el **SQL Server local del equipo** (sin Docker): crear la base `Local133`, cadena de conexión en user-secrets (`ConnectionStrings:Default`, p. ej. `Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True`) y aplicar migraciones con `dotnet ef database update`; `README` con arranque local y requisitos (instancia de SQL Server instalada); CI (build + tests). *(hecho 2026-11-09: base `Local133` en `localhost\SQLEXPRESS` con `Initial` y semilla; `README.md`; GitHub Actions `.github/workflows/ci.yml` con job .NET (build Release, `dotnet ef migrations has-pending-model-changes`, `dotnet test`). Los proyectos de prueba se crean en Fase 1 (CI no usa SQL Server todavía).)*
+
+> Nota (2026-11-09): el antiguo punto 0.2 (SPA React en `src/Local133.CustomerPortal`) se construyó y quedó **descartado** al cambiar el frontend a MVC Razor. Su código, el target `BuildSpaForPublish` y el job `spa` de CI se eliminaron en el paso 1.1.
 
 ### Fase 1 — Registro y autenticación (≈1 semana)
-1. Identity + roles; registro con correo/contraseña, verificación de correo, login, logout, recuperación.
-2. Login externo Google y Facebook.
-3. Al registrarse se crea `Merchant` en `PendingBankAccount`; aceptación de términos y aviso de privacidad.
-4. Shell del portal cliente con checklist de onboarding; seed del usuario admin.
+1. **Limpieza y paso a MVC**: eliminar `src/Local133.CustomerPortal` (y su `.esproj` de la solución), el target `BuildSpaForPublish` / `SkipSpaBuild` del `.csproj`, el job `spa` de `.github/workflows/ci.yml` y el `MapFallbackToFile("index.html")`. Renombrar `Local133.Api` → `Local133.Web` (carpeta, `.csproj`, namespaces, `.sln`, CI, README). `AddControllersWithViews` + `MapRazorPages`; `_Layout` Bootstrap 5 (LibMan) móvil primero; áreas `Merchant` y `Admin`; rutas `/api/*` desconocidas siguen respondiendo 404 ProblemDetails. ✅ *(hecho 2026-11-09: rutas por atributo en español — `/`, `/app` (+`cobrar`, `ventas`, `mas`) y `/admin` (+`clientes`, `transacciones`, `parametros`) con las mismas pantallas placeholder de la SPA (parcial `_ComingSoon`); errores separados: `/api/*` ⇒ ProblemDetails, resto ⇒ vistas `/error` y `/error/{code}`; LibMan como herramienta local con Bootstrap 5.3.8, Bootstrap Icons, jQuery y jQuery Validation Unobtrusive, `wwwroot/lib` versionado; `MapStaticAssets` con fingerprint. Verificado arrancando el sitio: todas las rutas 200, `/api/nada` 404 problem+json, `/nada` 404 HTML, Swagger solo con `/api/health`. Sin guards por rol hasta 1.2.)*
+2. **Scaffold de Identity** (`dotnet aspnet-codegenerator identity`) sobre `AppDbContext` + roles, solo con las páginas necesarias (Register, Login, Logout, ConfirmEmail, ForgotPassword, ResetPassword, ExternalLogin, Manage); traducir al español y adaptarlas al layout. Registro con correo/contraseña, verificación de correo, login, logout, recuperación.
+3. Login externo Google y Facebook.
+4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada.
+5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.
 
 ### Fase 2 — Ventas (núcleo) (≈2.5 semanas)
 1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores.
 2. **Cuenta bancaria mínima**: formulario (titular, CLABE con validación, alias, tipo de titular) → `POST /bank-account`; pantalla de estatus.
 3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus.
-4. **Venta por monto directo**: teclado numérico → crea `Sale` → `POST /codi/qr` → mostrar QR (`qrcode.react` a partir de `qrString`) con cuenta regresiva.
+4. **Venta por monto directo**: teclado numérico → crea `Sale` → `POST /codi/qr` → vista con el QR (SVG generado en servidor con QRCoder a partir de `qrString`) y cuenta regresiva en JS.
 5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta.
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`.
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
@@ -200,7 +203,7 @@ Rate limiting en generación de cobros · pruebas de carga del webhook · respal
 ## 7. Verificación
 
 - **Unitarias**: cálculo y redondeo de comisión, jerarquía de tasas, dígito verificador de CLABE, corte semanal (zona horaria, bordes de semana), transiciones de estatus.
-- **Integración**: webhook con firma válida/ inválida/duplicada; `PeyClient` contra servidor simulado (WireMock) con cada `error.type`; aislamiento entre vendedores.
+- **Integración**: webhook con firma válida/ inválida/duplicada; `PeyClient` contra servidor simulado (WireMock) con cada `error.type`; aislamiento entre vendedores; páginas de Identity y áreas `Merchant`/`Admin` accesibles solo con el rol correcto (redirección a login / 403).
 - **Extremo a extremo (producción Pey, $0.01)**:
   1. Registrarse → capturar CLABE de prueba `012180015826225713` → recibir `bank.account.updated` → estatus `Active`.
   2. Venta por monto directo → escanear QR con app bancaria → pantalla cambia a "Pago recibido" sin recargar → aparece en historial con comisión.

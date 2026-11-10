@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <partial name="_Head" />
+</head>
+<body>
+    <nav class="navbar navbar-expand bg-primary sticky-top" data-bs-theme="dark">
+        <div class="container">
+            <a class="navbar-brand" href="~/">Local133</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="~/app">Vendedor</a>
+                <a class="nav-link" href="~/admin">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        @RenderBody()
+    </main>
+
+    <partial name="_Scripts" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
