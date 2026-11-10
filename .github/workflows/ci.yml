@@ -35,27 +35,8 @@ jobs:
         run: |
           dotnet tool restore
           dotnet ef migrations has-pending-model-changes --configuration Release --no-build \
-            --project src/Local133.Infrastructure --startup-project src/Local133.Api
+            --project src/Local133.Infrastructure --startup-project src/Local133.Web
 
       # Aún no hay proyectos de prueba (se crean en Fase 1); el paso queda listo.
       - name: Tests
         run: dotnet test -c Release --no-build
-
-  spa:
-    name: SPA lint + build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/Local133.CustomerPortal
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: src/Local133.CustomerPortal/package-lock.json
-
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build

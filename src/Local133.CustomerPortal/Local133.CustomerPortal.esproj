@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2752196">
-  <PropertyGroup>
-    <!-- F5 en Visual Studio levanta Vite en :5173 (arrancar la API antes). -->
-    <StartupCommand>npm run dev</StartupCommand>
-    <!-- `dotnet build` de la solución no ejecuta `npm run build`; la SPA se compila con npm. -->
-    <ShouldRunBuildScript>false</ShouldRunBuildScript>
-    <BuildOutputFolder>$(MSBuildProjectDirectory)\..\Local133.Api\wwwroot</BuildOutputFolder>
-  </PropertyGroup>
-</Project>

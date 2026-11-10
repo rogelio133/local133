@@ -1,0 +1,54 @@
+@{
+    // Portal administrador: menú en Offcanvas en móvil; en ≥lg el mismo Offcanvas se muestra como sidebar fijo.
+    var current = ViewContext.RouteData.Values["action"] as string;
+    var links = new (string Action, string Href, string Label, string Icon)[]
+    {
+        ("Index", "~/admin", "Tablero", "bi-speedometer2"),
+        ("Customers", "~/admin/clientes", "Clientes", "bi-people"),
+        ("Transactions", "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
+        ("Settings", "~/admin/parametros", "Parámetros", "bi-sliders"),
+    };
+}
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <partial name="_Head" />
+</head>
+<body>
+    <nav class="navbar bg-dark sticky-top" data-bs-theme="dark">
+        <div class="container-fluid justify-content-start">
+            <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#admin-menu" aria-controls="admin-menu" aria-label="Abrir menú">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="~/admin">Local133 · Admin</a>
+        </div>
+    </nav>
+
+    <div class="d-lg-flex">
+        <div class="offcanvas-lg offcanvas-start admin-sidebar bg-body border-end" tabindex="-1" id="admin-menu" aria-labelledby="admin-menu-title">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="admin-menu-title">Menú</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#admin-menu" aria-label="Cerrar"></button>
+            </div>
+            <div class="offcanvas-body p-2">
+                <nav class="nav nav-pills flex-column w-100">
+                    @foreach (var link in links)
+                    {
+                        var active = link.Action == current;
+                        <a class="nav-link @(active ? "active" : null)" href="@Url.Content(link.Href)" aria-current="@(active ? "page" : null)">
+                            <i class="bi @link.Icon me-2" aria-hidden="true"></i>@link.Label
+                        </a>
+                    }
+                </nav>
+            </div>
+        </div>
+
+        <main class="flex-grow-1 p-3 p-lg-4">
+            @RenderBody()
+        </main>
+    </div>
+
+    <partial name="_Scripts" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

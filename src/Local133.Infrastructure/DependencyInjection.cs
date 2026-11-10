@@ -16,7 +16,7 @@ public static class DependencyInjection
         {
             throw new InvalidOperationException(
                 $"Falta la cadena de conexión 'ConnectionStrings:{ConnectionStringName}'. Configúrala con " +
-                $"dotnet user-secrets set \"ConnectionStrings:{ConnectionStringName}\" \"<cadena>\" --project src/Local133.Api");
+                $"dotnet user-secrets set \"ConnectionStrings:{ConnectionStringName}\" \"<cadena>\" --project src/Local133.Web");
         }
 
         services.AddDbContext<AppDbContext>(options =>
