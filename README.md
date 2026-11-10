@@ -56,6 +56,14 @@ dotnet user-secrets set "Authentication:Facebook:AppSecret" "<app-secret>" --pro
 
 Registra las URI de redirección en Google Cloud Console (cliente OAuth "Aplicación web") y en Meta for Developers (Inicio de sesión con Facebook): `https://localhost:7180/signin-google` y `https://localhost:7180/signin-facebook`. Arranca con el perfil `https` (`--launch-profile https`); Facebook exige HTTPS. Reglas: si conservas el correo del proveedor, la cuenta queda confirmada y entras de inmediato; si escribes otro, se confirma por correo; si el correo ya tiene cuenta, no se liga solo: entra con contraseña y liga desde `/Identity/Account/Manage/ExternalLogins`.
 
+**Pey (CoDi)**: el cliente (`IPaymentGateway`, en `src/Local133.Infrastructure/Pey`) usa una sola API key de la plataforma. Sin ella el sitio arranca igual, pero cualquier llamada a Pey falla con un mensaje que indica cómo configurarla. Pey **no tiene sandbox**: las pruebas reales son en producción con $0.01 y la CLABE de prueba `012180015826225713`.
+
+```powershell
+dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web
+```
+
+Opcional en la sección `Pey`: `BaseUrl` (por defecto `https://api.pey.mx`), `AttemptTimeout` (30 s), `TotalTimeout` (90 s), `MaxRetryAttempts` (3) y `RetryDelay` (1 s). Las pruebas de `PeyClient` usan un Pey simulado con WireMock y corren en CI.
+
 ## Comandos
 
 | Tarea | Comando |
@@ -75,4 +83,4 @@ En equipos con Smart App Control activo, Windows puede bloquear DLL recién comp
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) corre en cada PR y en push a `main`: restore, build Release, verificación de que las migraciones están al día con el modelo (`dotnet ef migrations has-pending-model-changes`) y `dotnet test --filter "Category!=SqlServer"` (las pruebas de integración marcadas `Category=SqlServer` necesitan SQL Server y solo corren en local).
 
-CI no usa SQL Server ni llama a Pey.
+CI no usa SQL Server ni llama a Pey (las pruebas de `PeyClient` van contra WireMock).

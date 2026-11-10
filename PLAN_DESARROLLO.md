@@ -46,7 +46,7 @@ enum PeyOwnerType         { API_KEY }
 "codi.qr.payment_received" | "codi.pn.payment_received" | "bank.account.updated" | "payment_link.status_updated"
 // error.type  → { "error": { "message", "type", "requestId" } }
 INVALID_REQUEST, INVALID_AMOUNT, INVALID_PARAMETER, INCOMPLETE_PARAMETERS, INVALID_CLABE, INVALID_STATE,
-BANK_ACCOUNT_NOT_FOUND, NOT_FOUND, FORBIDDEN, AUTH_ERROR, BAD_REQUEST, REQUEST_PARSING_ERROR,
+INVALID_PARAMETERS (plural, en listados), BANK_ACCOUNT_NOT_FOUND, NOT_FOUND, FORBIDDEN, AUTH_ERROR, BAD_REQUEST, REQUEST_PARSING_ERROR,
 PEY_CONSISTENCY_ERROR, CONCURRENT_UPDATE, SERVICE_UNAVAILABLE, FLAGS_UNAVAILABLE, INTERNAL_SERVER_ERROR
 ```
 
@@ -120,7 +120,7 @@ tests/
 - **Auth**: ASP.NET Core Identity con la **UI scaffoldeada** (Razor Pages en `Areas/Identity`, personalizada en español y adaptada al layout), cookie segura, roles `Merchant` / `Admin`, login externo Google y Facebook.
 - **Frontend**: MVC con vistas Razor; `_Layout` Bootstrap 5 móvil primero (barra inferior en el área del vendedor, sidebar/Offcanvas en admin). Bootstrap, cliente JS de SignalR y demás librerías cliente vía **LibMan** en `wwwroot/lib` (sin npm ni build de JS). Validación con jQuery Validation Unobtrusive en cliente + FluentValidation en servidor; antiforgery en todos los formularios. JS ligero solo donde hace falta (teclado numérico, carrito, cuenta regresiva del QR).
 - **Multi-tenant**: toda entidad de negocio lleva `MerchantId`; filtro global de EF Core + política de autorización.
-- **PeyClient**: `HttpClient` tipado + Polly (reintentos en 503/5xx, timeout), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
+- **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → responder 200 → procesar. Procesamiento idempotente por `transactionId`.
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
 - **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · corte semanal (lunes 00:05 `America/Mexico_City`) · vencimiento y suspensión.
@@ -176,7 +176,14 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.
 
 ### Fase 2 — Ventas (núcleo) (≈2.5 semanas)
-1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores.
+1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores. ✅ *(hecho 2026-11-10:*
+   - *Contratos tomados del OpenAPI oficial (`https://docs.pey.mx/openapi.json`, versión 2026-10-20). Apareció un `error.type` nuevo: `INVALID_PARAMETERS` (plural, en los listados). `POST /codi/qr` responde 201; `codi/pn` y `bank-account`, 200.*
+   - *`Domain/Pey`: enums en PascalCase (en el cable, `UPPER_SNAKE`), `PeyErrorType` (con `Unknown`), `PeyWebhookEventTypes` y `PeyLimits`.*
+   - *`Application/Payments`: `IPaymentGateway` (8 operaciones), DTOs y excepciones `PaymentGatewayException` → `Validation` (+ `InvalidClabe`), `NotFound`, `Authentication`, `State` (`CONCURRENT_UPDATE` es transitorio) y `Unavailable`. Sin `error.type` reconocible se clasifica por código HTTP.*
+   - *`Infrastructure/Pey`: `PeyClient` + `AddPeyGateway` (sección `Pey`; `Pey:ApiKey` en user-secrets, opcional al arrancar). `Microsoft.Extensions.Http.Resilience` 9.10.0 (pipeline estándar). **Reintentos por método**: GET en cualquier falla transitoria; POST solo en 503/429, porque Pey no tiene llave de idempotencia y un reintento tras un 500 o un timeout podría duplicar un QR o un push. Un timeout de POST se reporta como `Unavailable` con resultado incierto.*
+   - *Las reglas de Pey se validan antes de llamar (`ArgumentException`): expiración 0/≥360, centavos, `numRef` ≤ 7 dígitos, celular de 10, CLABE de 18 dígitos (el dígito verificador llega en 2.2), metadata 50/40/500. Sin `bankAccountId` el campo se omite (cobro a la cuenta de la plataforma). Logs con `requestId`, sin bodies ni API key.*
+   - *60 pruebas nuevas contra WireMock (`WireMock.Net.Minimal` 2.20.0) en `tests/Local133.IntegrationTests/Pey`: cuerpos y respuestas de cada operación, los 18 `error.type`, clasificación por código, reintentos GET/POST, timeout, cancelación, validación previa y falta de API key. No usan SQL Server, así que corren en CI. 106/106 verdes en local (64 en CI).*
+   - *Sin llamadas reales a Pey todavía: la primera prueba en producción ($0.01, CLABE de prueba) llega con 2.2/2.4.)*
 2. **Cuenta bancaria mínima**: formulario (titular, CLABE con validación, alias, tipo de titular) → `POST /bank-account`; pantalla de estatus.
 3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus.
 4. **Venta por monto directo**: teclado numérico → crea `Sale` → `POST /codi/qr` → vista con el QR (SVG generado en servidor con QRCoder a partir de `qrString`) y cuenta regresiva en JS.
