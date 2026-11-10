@@ -25,7 +25,7 @@ dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS
 dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web
 ```
 
-Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM SystemSettings"` devuelve la fila semilla (comisión 3%, IVA 16%).
+Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM SystemSettings"` devuelve la fila semilla (comisión 3%, IVA 16%), y `SELECT Name FROM AspNetRoles` los roles `Merchant` y `Admin` (migración `Identity`).
 
 ## Desarrollo diario
 
@@ -41,13 +41,16 @@ dotnet run --project src/Local133.Web --launch-profile http
 | `/admin` (`/admin/clientes`, `/admin/transacciones`, `/admin/parametros`) | Portal administrador (sidebar / Offcanvas) |
 | `/api/health` | Salud (JSON); `/api/*` inexistente ⇒ 404 ProblemDetails |
 | `/swagger` | Swagger (solo en Development) |
+| `/Identity/Account/Register`, `/Login`, `/ForgotPassword`, `/Manage` | Cuenta (ASP.NET Core Identity scaffoldeado, en español). Registro ⇒ rol `Merchant`; `/app` exige `Merchant` y `/admin` exige `Admin` |
+
+**Correos en desarrollo**: no se envían; `FileEmailSender` guarda cada uno como `.html` en `src/Local133.Web/App_Data/emails` (ignorada en git) y escribe la liga en el log. Ábrelo para confirmar la cuenta o restablecer la contraseña. Carpeta configurable con `EmailPickup:Directory`.
 
 ## Comandos
 
 | Tarea | Comando |
 |---|---|
 | Compilar | `dotnet build` (advertencias = errores) |
-| Pruebas | `dotnet test` · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"` |
+| Pruebas | `dotnet test` (las de integración usan la base `Local133_Tests` en `localhost\SQLEXPRESS`, creada con migraciones y limpiada con Respawn; otra instancia con la variable `LOCAL133_TEST_DB`) · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"` · como CI: `dotnet test --filter "Category!=SqlServer"` |
 | Nueva migración | `dotnet ef migrations add <Nombre> --project src/Local133.Infrastructure --startup-project src/Local133.Web` |
 | Aplicar migraciones | `dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web` |
 | Librerías cliente | editar `src/Local133.Web/libman.json` y, desde esa carpeta, `dotnet tool run libman restore` (versionar el resultado en `wwwroot/lib`) |
@@ -59,6 +62,6 @@ En equipos con Smart App Control activo, Windows puede bloquear DLL recién comp
 
 ## Integración continua
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) corre en cada PR y en push a `main`: restore, build Release, verificación de que las migraciones están al día con el modelo (`dotnet ef migrations has-pending-model-changes`) y `dotnet test` (los proyectos de prueba se agregan en Fase 1).
+[.github/workflows/ci.yml](.github/workflows/ci.yml) corre en cada PR y en push a `main`: restore, build Release, verificación de que las migraciones están al día con el modelo (`dotnet ef migrations has-pending-model-changes`) y `dotnet test --filter "Category!=SqlServer"` (las pruebas de integración marcadas `Category=SqlServer` necesitan SQL Server y solo corren en local).
 
 CI no usa SQL Server ni llama a Pey.

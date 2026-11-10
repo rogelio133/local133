@@ -1,3 +1,4 @@
+@using Local133.Application.Auth
 <!DOCTYPE html>
 <html lang="es-MX">
 <head>
@@ -7,10 +8,17 @@
     <nav class="navbar navbar-expand bg-primary sticky-top" data-bs-theme="dark">
         <div class="container">
             <a class="navbar-brand" href="~/">Local133</a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="~/app">Vendedor</a>
-                <a class="nav-link" href="~/admin">Admin</a>
+            <div class="navbar-nav ms-auto me-2">
+                @if (User.IsInRole(Roles.Merchant))
+                {
+                    <a class="nav-link" href="~/app">Mi puesto</a>
+                }
+                @if (User.IsInRole(Roles.Admin))
+                {
+                    <a class="nav-link" href="~/admin">Admin</a>
+                }
             </div>
+            <partial name="_LoginPartial" />
         </div>
     </nav>
 

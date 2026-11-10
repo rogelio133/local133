@@ -1,5 +1,6 @@
 using Local133.Application;
 using Local133.Infrastructure;
+using Local133.Web.Identity;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -19,14 +20,23 @@ try
         options.CustomizeProblemDetails = ctx =>
             ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier);
 
-    builder.Services.AddControllersWithViews();
-    // Razor Pages: las usa la UI de Identity scaffoldeada (Areas/Identity, paso 1.2).
-    builder.Services.AddRazorPages();
+    builder.Services.AddControllersWithViews(options => options.ModelBindingMessageProvider.UseSpanishMessages());
+    // Razor Pages: las usa la UI de Identity scaffoldeada (Areas/Identity). Sin AddDefaultUI estas
+    // convenciones no vienen solas: Manage y Logout requieren sesión.
+    builder.Services.AddRazorPages(options =>
+    {
+        options.Conventions.AuthorizeAreaFolder("Identity", "/Account/Manage");
+        options.Conventions.AuthorizeAreaPage("Identity", "/Account/Logout");
+    });
+    // Razor no escapa acentos ni ñ como entidades (&#xF3;): el HTML sale legible en español.
+    builder.Services.Configure<Microsoft.Extensions.WebEncoders.WebEncoderOptions>(options =>
+        options.TextEncoderSettings = new System.Text.Encodings.Web.TextEncoderSettings(System.Text.Unicode.UnicodeRanges.All));
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddAppIdentity(builder.Environment);
 
     var app = builder.Build();
 
@@ -56,6 +66,7 @@ try
 
     app.UseHttpsRedirection();
     app.UseRouting();
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapStaticAssets();

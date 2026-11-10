@@ -1,0 +1,19 @@
+﻿@page
+@model ConfirmEmailModel
+@{
+    ViewData["Title"] = "Confirmar correo";
+}
+<div class="row justify-content-center">
+    <div class="col-sm-10 col-md-7 col-lg-5">
+        <h1 class="h3">@ViewData["Title"]</h1>
+        <partial name="_StatusMessage" model="Model.StatusMessage" />
+        @if (Model.Succeeded)
+        {
+            <a class="btn btn-primary w-100" asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Entrar</a>
+        }
+        else
+        {
+            <p><a asp-page="./ResendEmailConfirmation">Pedir una liga nueva</a></p>
+        }
+    </div>
+</div>

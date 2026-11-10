@@ -145,7 +145,17 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 
 ### Fase 1 — Registro y autenticación (≈1 semana)
 1. **Limpieza y paso a MVC**: eliminar `src/Local133.CustomerPortal` (y su `.esproj` de la solución), el target `BuildSpaForPublish` / `SkipSpaBuild` del `.csproj`, el job `spa` de `.github/workflows/ci.yml` y el `MapFallbackToFile("index.html")`. Renombrar `Local133.Api` → `Local133.Web` (carpeta, `.csproj`, namespaces, `.sln`, CI, README). `AddControllersWithViews` + `MapRazorPages`; `_Layout` Bootstrap 5 (LibMan) móvil primero; áreas `Merchant` y `Admin`; rutas `/api/*` desconocidas siguen respondiendo 404 ProblemDetails. ✅ *(hecho 2026-11-09: rutas por atributo en español — `/`, `/app` (+`cobrar`, `ventas`, `mas`) y `/admin` (+`clientes`, `transacciones`, `parametros`) con las mismas pantallas placeholder de la SPA (parcial `_ComingSoon`); errores separados: `/api/*` ⇒ ProblemDetails, resto ⇒ vistas `/error` y `/error/{code}`; LibMan como herramienta local con Bootstrap 5.3.8, Bootstrap Icons, jQuery y jQuery Validation Unobtrusive, `wwwroot/lib` versionado; `MapStaticAssets` con fingerprint. Verificado arrancando el sitio: todas las rutas 200, `/api/nada` 404 problem+json, `/nada` 404 HTML, Swagger solo con `/api/health`. Sin guards por rol hasta 1.2.)*
-2. **Scaffold de Identity** (`dotnet aspnet-codegenerator identity`) sobre `AppDbContext` + roles, solo con las páginas necesarias (Register, Login, Logout, ConfirmEmail, ForgotPassword, ResetPassword, ExternalLogin, Manage); traducir al español y adaptarlas al layout. Registro con correo/contraseña, verificación de correo, login, logout, recuperación.
+2. **Scaffold de Identity** (`dotnet aspnet-codegenerator identity`) sobre `AppDbContext` + roles, solo con las páginas necesarias (Register, Login, Logout, ConfirmEmail, ForgotPassword, ResetPassword, ExternalLogin, Manage); traducir al español y adaptarlas al layout. Registro con correo/contraseña, verificación de correo, login, logout, recuperación. ✅ *(hecho 2026-11-09:*
+   - *Generador `dotnet-aspnet-codegenerator` 9.0.0 (corrió bien). Se deshicieron su `AppDbContext`/`IdentityUser` propios y sus cambios en `Program.cs`/`appsettings`.*
+   - *`ApplicationUser` y un `AppDbContext : IdentityDbContext<ApplicationUser>` en Infrastructure. Migración `Identity` con los roles `Merchant`/`Admin` sembrados con Id fijo.*
+   - *Se usa `AddIdentity` sin `AddDefaultUI`: solo existen las páginas scaffoldeadas; 2FA y datos personales dan 404. Rutas por defecto `/Identity/Account/*`.*
+   - *Páginas, validación y correos en español, más `SpanishIdentityErrorDescriber` y mensajes de model binding. Contraseña de 8+ caracteres con número; bloqueo tras 5 intentos.*
+   - *El registro asigna el rol `Merchant`. Tras el login, sin `returnUrl`, Admin va a `/admin` y Merchant a `/app`.*
+   - *Áreas con `[Authorize(Roles=…)]`. `/api/*` sin sesión responde 401/403 en vez de redirigir.*
+   - *`FileEmailSender` en dev (`App_Data/emails` + log).*
+   - *`tests/Local133.IntegrationTests` con 26 pruebas (`Category=SqlServer`, base `Local133_Tests`, Respawn), todas verdes en local. CI las excluye con `--filter "Category!=SqlServer"`.*
+   - *Prueba de arranque del sitio real: redirección a login, registro y `.html` del correo generado, Swagger solo con `/api/health`.*
+   - *Pendiente: el admin sembrado (1.5); mientras tanto el rol `Admin` se asigna a mano.)*
 3. Login externo Google y Facebook.
 4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada.
 5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.

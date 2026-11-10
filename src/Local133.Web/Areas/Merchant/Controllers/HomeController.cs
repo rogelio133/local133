@@ -1,9 +1,12 @@
+using Local133.Application.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Local133.Web.Areas.Merchant.Controllers;
 
-/// <summary>Portal del vendedor (/app). Los guards por rol llegan con Identity (paso 1.2).</summary>
+/// <summary>Portal del vendedor (/app): solo rol Merchant.</summary>
 [Area("Merchant")]
+[Authorize(Roles = Roles.Merchant)]
 [Route("app")]
 [ApiExplorerSettings(IgnoreApi = true)]
 public class HomeController : Controller

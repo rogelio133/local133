@@ -1,0 +1,49 @@
+﻿@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Entrar";
+}
+<div class="row justify-content-center">
+    <div class="col-sm-10 col-md-7 col-lg-5">
+        <h1 class="h3 mb-3">@ViewData["Title"]</h1>
+        <form id="account" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nombre@ejemplo.com" />
+                <label asp-for="Input.Email"></label>
+                <span asp-validation-for="Input.Email" class="text-danger small"></span>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="contraseña" />
+                <label asp-for="Input.Password"></label>
+                <span asp-validation-for="Input.Password" class="text-danger small"></span>
+            </div>
+            <div class="form-check mb-3">
+                <input class="form-check-input" asp-for="Input.RememberMe" />
+                <label class="form-check-label" asp-for="Input.RememberMe"></label>
+            </div>
+            <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Entrar</button>
+        </form>
+
+        <div class="mt-3 d-grid gap-1 text-center small">
+            <a id="forgot-password" asp-page="./ForgotPassword">¿Olvidaste tu contraseña?</a>
+            <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Crear una cuenta nueva</a>
+            <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Reenviar correo de confirmación</a>
+        </div>
+
+        @if ((Model.ExternalLogins?.Count ?? 0) > 0)
+        {
+            <div class="text-center text-secondary small my-3">o entra con</div>
+            <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="d-grid gap-2">
+                @foreach (var provider in Model.ExternalLogins!)
+                {
+                    <button type="submit" class="btn btn-outline-secondary" name="provider" value="@provider.Name" title="Entra con tu cuenta de @provider.DisplayName">@provider.DisplayName</button>
+                }
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -37,6 +37,7 @@ jobs:
           dotnet ef migrations has-pending-model-changes --configuration Release --no-build \
             --project src/Local133.Infrastructure --startup-project src/Local133.Web
 
-      # Aún no hay proyectos de prueba (se crean en Fase 1); el paso queda listo.
+      # CI no tiene SQL Server: las pruebas que lo usan (Trait Category=SqlServer, base Local133_Tests)
+      # solo corren en local con `dotnet test`.
       - name: Tests
-        run: dotnet test -c Release --no-build
+        run: dotnet test -c Release --no-build --filter "Category!=SqlServer"

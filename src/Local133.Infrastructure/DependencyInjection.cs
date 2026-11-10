@@ -1,4 +1,6 @@
+using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,10 @@ public static class DependencyInjection
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(connectionString, sql =>
                 sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+
+        // Correo: en desarrollo se guarda en disco; el SMTP real llega con Notificaciones.
+        services.Configure<EmailPickupOptions>(configuration.GetSection(EmailPickupOptions.SectionName));
+        services.AddTransient<IEmailSender, FileEmailSender>();
 
         return services;
     }
