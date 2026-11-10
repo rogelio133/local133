@@ -33,7 +33,9 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
 - Rutas del sitio por **atributo** y en español (`/app/cobrar`, `/admin/clientes`); controladores de vistas con `[ApiExplorerSettings(IgnoreApi = true)]`. Errores: `/api/*` ⇒ ProblemDetails; resto ⇒ vistas `/error` y `/error/{code}`. Pantallas pendientes usan el parcial `_ComingSoon`.
 - Scaffold de Identity: `dotnet aspnet-codegenerator identity -dc Local133.Infrastructure.Persistence.AppDbContext --files "Account.Register;Account.Login;..."` desde `src/Local133.Web` (requiere `dotnet-aspnet-codegenerator` en `.config/dotnet-tools.json` y el paquete `Microsoft.VisualStudio.Web.CodeGeneration.Design`). Las páginas generadas se traducen al español y se adaptan al `_Layout`.
 - Publicar: `dotnet publish src/Local133.Web -c Release -o <carpeta>`.
-- CI: `.github/workflows/ci.yml` (GitHub Actions): .NET build Release + `dotnet ef migrations has-pending-model-changes` + `dotnet test`. Sin SQL Server ni llamadas a Pey.
+- CI: `.github/workflows/ci.yml` (GitHub Actions): .NET build Release + `dotnet ef migrations has-pending-model-changes` + `dotnet test --filter "Category!=SqlServer"`. Sin SQL Server ni llamadas a Pey. Toda prueba que use la base lleva `[Trait("Category","SqlServer")]` (heredado de `WebTestBase`) y solo corre en local.
+- Identity: `AddIdentity` **sin** `AddDefaultUI` (páginas no scaffoldeadas ⇒ 404; para agregar una, scaffoldearla y traducirla). Roles en `Local133.Application.Auth.Roles`, sembrados en la migración `Identity`. Textos y `ErrorMessage` de cada atributo en español.
+- Correo en dev: `FileEmailSender` guarda `.html` en `src/Local133.Web/App_Data/emails` y escribe la liga en el log (SMTP real llega con Notificaciones).
 - Webhook en local: túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en portal.mipey.mx.
 
 ## Smart App Control (este equipo)

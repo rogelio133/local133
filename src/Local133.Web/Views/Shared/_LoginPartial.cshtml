@@ -1,0 +1,22 @@
+@using Microsoft.AspNetCore.Identity
+@using Local133.Infrastructure.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@* Sesión en la barra superior de los tres layouts. "Salir" es un POST con antiforgery. *@
+<div class="navbar-nav flex-row align-items-center gap-2">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <a id="manage" class="nav-link text-truncate login-partial-user" asp-area="Identity" asp-page="/Account/Manage/Index" title="Mi cuenta">
+            <i class="bi bi-person-circle" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline">@UserManager.GetUserName(User)</span>
+        </a>
+        <form id="logoutForm" class="d-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Content("~/")" method="post">
+            <button id="logout" type="submit" class="btn btn-sm btn-outline-light">Salir</button>
+        </form>
+    }
+    else
+    {
+        <a class="nav-link" id="login" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
+        <a class="btn btn-sm btn-light" id="register" asp-area="Identity" asp-page="/Account/Register">Crear cuenta</a>
+    }
+</div>

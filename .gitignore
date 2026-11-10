@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Correos de desarrollo (FileEmailSender)
+App_Data/
