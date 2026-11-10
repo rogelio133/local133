@@ -31,6 +31,8 @@ Dependencias: Domain ← Application ← Infrastructure/Api. Pey solo se usa des
 - Build / pruebas: `dotnet build` · `dotnet test` · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"`
 - SPA: `cd src/Local133.CustomerPortal && npm install && npm run dev` → `http://localhost:5173`; proxy de `/api` y `/hubs` a la API en `http://localhost:5231` (perfil `http`; otro destino con la variable `API_URL`). Arrancar la API antes.
 - SPA build / lint: `npm run build` (`tsc -b` + Vite; publica en `src/Local133.Api/wwwroot`, ignorado en git, y la API lo sirve con fallback a `index.html`) · `npm run lint` (oxlint). Alias de imports `@/` → `src/Local133.CustomerPortal/src`. El portal admin se carga con `lazy` (cada página admin exporta `Component`).
+- Publicar: `dotnet publish src/Local133.Api -c Release -o <carpeta>` ejecuta `npm ci` + `npm run build` antes del build (target `BuildSpaForPublish` en `Local133.Api.csproj`) e incluye `wwwroot`; `-p:SkipSpaBuild=true` lo omite. `dotnet build` nunca compila la SPA.
+- CI: `.github/workflows/ci.yml` (GitHub Actions): .NET build Release + `dotnet ef migrations has-pending-model-changes` + `dotnet test`; SPA `npm ci` + lint + build. Sin SQL Server ni llamadas a Pey.
 - Webhook en local: túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en portal.mipey.mx.
 
 ## Smart App Control (este equipo)
