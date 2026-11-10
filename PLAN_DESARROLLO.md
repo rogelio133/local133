@@ -164,7 +164,15 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
    - *Cancelar o fallar en el proveedor regresa a Login (o a Cuentas externas) con mensaje en español. Botones con icono (parcial `_ExternalProviderButton`).*
    - *12 pruebas nuevas: 9 de flujo con un proveedor falso (`FakeExternalAuthHandler`, `Category=SqlServer`) y 3 de registro condicional que corren en CI. 38/38 verdes en local.*
    - *Pendiente: prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar `https://localhost:7180/signin-google` y `/signin-facebook`).)*
-4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada.
+4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada. ✅ *(hecho 2026-11-10:*
+   - *Entidad `Merchant` (`Domain/Merchants`: `UserId` 1:1 con `AspNetUsers`, FK `Restrict`, índice único; `Status` como texto; `BusinessName` y `CommissionRateOverride` vacíos hasta Fases 4/6) y enum `MerchantStatus`.*
+   - *Toda alta de vendedor pasa por `AccountRegistration` (Web/Identity): usuario + rol `Merchant` + cuenta externa + `Merchant` en **una transacción**; si algo falla no queda usuario sin Merchant.*
+   - ***Una sola casilla** "Acepto los Términos y condiciones y el Aviso de privacidad" (base `LegalAcceptanceInput`, parcial `_AcceptLegalCheckbox`) en Register y en `/Identity/Account/ExternalLogin` (alta con Google/Facebook; quien ya tiene la cuenta ligada entra sin volver a aceptar). Validación `[MustBeTrue]` en servidor + adaptador en `wwwroot/js/validation.js`.*
+   - *`AspNetUsers` guarda `TermsAcceptedAt`/`TermsVersion` y `PrivacyNoticeAcceptedAt`/`PrivacyNoticeVersion`; la versión vigente está en `Domain/Legal/LegalDocuments` (subirla al cambiar el texto).*
+   - *Páginas públicas `/terminos` y `/aviso-de-privacidad` con texto **borrador pendiente de revisión legal**; ligas en el pie del layout.*
+   - *Migración `Merchants` con backfill: los usuarios con rol `Merchant` que ya existían reciben su `Merchant` pendiente (sin términos aceptados).*
+   - *7 pruebas nuevas (`MerchantRegistrationTests`); los helpers de prueba crean vendedores con `AccountRegistration`. 46/46 verdes en local (4 corren en CI).*
+   - *Pendiente: probar en navegador que la validación en cliente bloquea el envío con la casilla sin marcar (el HTML ya emite `data-val-mustbetrue` y carga `validation.js`).)*
 5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.
 
 ### Fase 2 — Ventas (núcleo) (≈2.5 semanas)

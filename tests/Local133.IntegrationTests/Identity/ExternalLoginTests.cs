@@ -177,7 +177,7 @@ public class ExternalLoginTests(Local133WebFactory factory) : WebTestBase(factor
     }
 
     /// <summary>Pulsa el botón del proveedor en Login; devuelve la URL del callback a la que manda el proveedor.</summary>
-    private static async Task<string> StartExternalLoginAsync(HttpClient client)
+    internal static async Task<string> StartExternalLoginAsync(HttpClient client)
     {
         var challenge = await PostFormAsync(client, LoginUrl,
             new Dictionary<string, string> { ["provider"] = FakeExternalAuthHandler.SchemeName },
@@ -189,11 +189,15 @@ public class ExternalLoginTests(Local133WebFactory factory) : WebTestBase(factor
         return callback;
     }
 
-    private static Task<HttpResponseMessage> ConfirmExternalAsync(HttpClient client, string callbackUrl, string email) =>
-        PostFormAsync(client, callbackUrl, new Dictionary<string, string> { ["Input.Email"] = email },
-            "/Identity/Account/ExternalLogin?handler=Confirmation");
+    internal static Task<HttpResponseMessage> ConfirmExternalAsync(
+        HttpClient client, string callbackUrl, string email, bool acceptLegal = true) =>
+        PostFormAsync(client, callbackUrl, new Dictionary<string, string>
+        {
+            ["Input.Email"] = email,
+            ["Input.AcceptLegal"] = acceptLegal ? "true" : "false",
+        }, "/Identity/Account/ExternalLogin?handler=Confirmation");
 
-    private static async Task<string> HtmlAsync(HttpClient client, string url)
+    internal static async Task<string> HtmlAsync(HttpClient client, string url)
     {
         var response = await client.GetAsync(url);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

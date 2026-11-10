@@ -1,0 +1,46 @@
+@using Local133.Domain.Legal
+@{
+    ViewData["Title"] = "Términos y condiciones";
+}
+<article class="mx-auto" style="max-width: 46rem;">
+    <h1 class="h3">@ViewData["Title"]</h1>
+    <p class="text-secondary small">Versión @LegalDocuments.CurrentTermsVersion</p>
+
+    <div class="alert alert-warning" role="alert">
+        <strong>Borrador pendiente de revisión legal.</strong> Este texto es provisional y puede cambiar antes del lanzamiento.
+    </div>
+
+    <h2 class="h5 mt-4">1. El servicio</h2>
+    <p>Local133 es una plataforma que permite a vendedores (tianguis, mercados, bazares y puestos) generar cobros con CoDi®
+        a través de un proveedor de pagos. Los pagos de tus clientes se depositan <strong>directamente en la cuenta bancaria
+        (CLABE) que registres</strong>; Local133 no recibe ni retiene ese dinero.</p>
+
+    <h2 class="h5 mt-4">2. Registro y cuenta</h2>
+    <p>Para usar el servicio debes registrarte con datos verdaderos y mantenerlos actualizados. Eres responsable de la
+        confidencialidad de tu contraseña y de las operaciones hechas con tu cuenta. La cuenta bancaria que registres debe
+        estar a tu nombre o al de tu negocio; su activación depende de la validación del sistema CoDi de Banxico y puede
+        tardar hasta 5 días hábiles.</p>
+
+    <h2 class="h5 mt-4">3. Comisión</h2>
+    <p>Por cada pago recibido se genera una comisión sobre el monto cobrado (3 % por defecto, más los impuestos aplicables),
+        conforme a la tasa vigente al momento del cobro. Las comisiones se agrupan en un <strong>estado de cuenta semanal</strong>
+        que se paga con un QR CoDi dentro de la plataforma antes de su fecha de vencimiento.</p>
+
+    <h2 class="h5 mt-4">4. Falta de pago y suspensión</h2>
+    <p>Si un estado de cuenta no se paga después de los días de gracia, tu cuenta puede ser <strong>suspendida</strong> y no
+        podrás generar cobros hasta liquidar el adeudo. Al pagar, la cuenta se reactiva.</p>
+
+    <h2 class="h5 mt-4">5. Uso permitido</h2>
+    <p>No puedes usar la plataforma para actividades ilícitas, para cobrar bienes o servicios prohibidos ni para operaciones
+        a nombre de terceros sin su autorización. Podemos suspender cuentas que incumplan estos términos.</p>
+
+    <h2 class="h5 mt-4">6. Responsabilidad</h2>
+    <p>Los pagos se procesan por el sistema CoDi y el proveedor de pagos; Local133 no es responsable de interrupciones de
+        esos servicios ni de la banca de tus clientes. Verifica siempre en la plataforma que el pago fue recibido antes de
+        entregar tu mercancía.</p>
+
+    <h2 class="h5 mt-4">7. Cambios</h2>
+    <p>Podemos modificar estos términos; te avisaremos por correo y publicaremos la nueva versión en esta página.</p>
+
+    <p class="mt-4">Consulta también nuestro <a href="~/aviso-de-privacidad">Aviso de privacidad</a>.</p>
+</article>

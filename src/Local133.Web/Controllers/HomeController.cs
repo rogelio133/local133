@@ -9,6 +9,14 @@ public class HomeController : Controller
     [HttpGet("")]
     public IActionResult Index() => View();
 
+    /// <summary>Términos y condiciones (públicos; se aceptan al registrarse).</summary>
+    [HttpGet("terminos")]
+    public IActionResult Terms() => View();
+
+    /// <summary>Aviso de privacidad (público; se acepta al registrarse).</summary>
+    [HttpGet("aviso-de-privacidad")]
+    public IActionResult PrivacyNotice() => View();
+
     /// <summary>Destino de <c>UseExceptionHandler("/error")</c> para peticiones fuera de /api.</summary>
     [Route("error")]
     public IActionResult Error()
