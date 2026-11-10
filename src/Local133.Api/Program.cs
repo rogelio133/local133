@@ -43,8 +43,17 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    // SPA compilada por `npm run build` en src/Local133.CustomerPortal (sale en wwwroot).
+    app.UseStaticFiles();
+
     app.UseAuthorization();
     app.MapControllers();
+
+    // Rutas /api inexistentes siguen respondiendo 404 ProblemDetails, no index.html.
+    app.MapFallback("api/{**slug}", () => Results.Problem(statusCode: StatusCodes.Status404NotFound));
+    // Cualquier otra ruta sin archivo la resuelve el ruteo del cliente (React Router).
+    app.MapFallbackToFile("index.html");
 
     app.Run();
 }

@@ -112,7 +112,7 @@ src/
   Local133.Application     casos de uso, DTOs, validadores (FluentValidation), interfaces
   Local133.Infrastructure  EF Core (SQL Server), PeyClient, webhooks, storage, email, jobs
   Local133.Api             endpoints REST, SignalR hub, endpoint webhook, sirve la SPA
-  web/                     React + Vite + TS + React-Bootstrap + React Router + TanStack Query
+  Local133.CustomerPortal  React + Vite + TS + React-Bootstrap + React Router + TanStack Query
 tests/
   Local133.UnitTests · Local133.IntegrationTests (WebApplicationFactory + base de pruebas `Local133_Tests` en el SQL Server local, recreada con migraciones y limpiada entre pruebas con Respawn)
 ```
@@ -137,8 +137,8 @@ tests/
 Cada fase termina con algo demostrable. Ventas va inmediatamente después del registro; lo mínimo de cuenta bancaria se construye dentro de la fase de ventas porque es prerrequisito para generar un QR.
 
 ### Fase 0 — Cimientos (≈3 días)
-1. ✅ Solución .NET 9 con los 4 proyectos, EF Core + migración inicial, Serilog, ProblemDetails, Swagger. *(hecho 2026-11-09: migración `Initial` = `SystemSettings` + semilla; API con controladores; build sin advertencias. Pendiente: prueba de arranque (Swagger, `/api/health`, 404 ProblemDetails), bloqueada por Smart App Control; ver CLAUDE.md.)*
-2. SPA con Vite + TS + React-Bootstrap, layout móvil primero, proxy a la API en dev, ruteo cliente/admin.
+1. ✅ Solución .NET 9 con los 4 proyectos, EF Core + migración inicial, Serilog, ProblemDetails, Swagger. *(hecho 2026-11-09: migración `Initial` = `SystemSettings` + semilla; API con controladores; build sin advertencias. Prueba de arranque verificada el mismo día: Swagger, `/api/health` y 404 ProblemDetails.)*
+2. ✅ SPA con Vite + TS + React-Bootstrap, layout móvil primero, proxy a la API en dev, ruteo cliente/admin. *(hecho 2026-11-09: `src/Local133.CustomerPortal` (Vite 8, React 19, React Router 7, TanStack Query 5, oxlint); `/app` vendedor con pestañas inferiores, `/admin` con Offcanvas/sidebar cargado bajo demanda, `/login`, `/registro`, 404; `apiFetch` con ProblemDetails; proxy `/api` y `/hubs` a :5231; `npm run build` publica en `src/Local133.Api/wwwroot` (ignorado en git) y la API lo sirve con fallback a `index.html` (rutas `/api/*` desconocidas ⇒ 404 ProblemDetails). Sin guards por rol hasta Fase 1. El build de npm no está enganchado a `dotnet build`; se decide en 0.3 (CI).)*
 3. Base de datos en el **SQL Server local del equipo** (sin Docker): crear la base `Local133`, cadena de conexión en user-secrets (`ConnectionStrings:Default`, p. ej. `Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True`) y aplicar migraciones con `dotnet ef database update`; `README` con arranque local y requisitos (instancia de SQL Server instalada); CI (build + tests).
 
 ### Fase 1 — Registro y autenticación (≈1 semana)
