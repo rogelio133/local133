@@ -1,25 +1,89 @@
+@using Local133.Domain.Merchants
+@using Local133.Web.Areas.Merchant.Models
+@model MerchantHomeViewModel
 @{
     ViewData["Title"] = "Inicio";
-    // Checklist estático; en el paso 1.5 se alimenta del estatus real del Merchant.
-    var onboarding = new (string Label, int Phase)[]
-    {
-        ("Crear tu cuenta", 1),
-        ("Registrar tu cuenta bancaria (CLABE)", 2),
-        ("Revisión de Banxico (hasta 5 días hábiles)", 2),
-        ("¡Listo para cobrar con CoDi!", 2),
-    };
 }
-<h1 class="h4 mb-3">Inicio</h1>
+<div data-merchant-status="@Model.Status">
+    <h1 class="h4 mb-3">Hola, @Model.DisplayName</h1>
 
-<div class="card">
-    <div class="card-header">Activa tu cuenta</div>
-    <ol class="list-group list-group-flush list-group-numbered">
-        @foreach (var step in onboarding)
-        {
-            <li class="list-group-item d-flex justify-content-between align-items-start">
-                <span class="ms-2 me-auto">@step.Label</span>
-                <span class="badge text-bg-light border">Fase @step.Phase</span>
-            </li>
-        }
-    </ol>
+    @switch (Model.Status)
+    {
+        case MerchantStatus.Active:
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="h5 card-title"><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Ya puedes cobrar</h2>
+                    <p class="card-text text-secondary">Tu cuenta está activa. Genera un QR CoDi y el dinero llega directo a tu cuenta bancaria.</p>
+                    <a class="btn btn-primary btn-lg w-100" href="~/app/cobrar"><i class="bi bi-qr-code me-1" aria-hidden="true"></i> Cobrar</a>
+                </div>
+            </div>
+            break;
+
+        case MerchantStatus.Suspended:
+            <div class="alert alert-danger" role="alert">
+                <h2 class="h6 alert-heading"><i class="bi bi-exclamation-octagon-fill me-1" aria-hidden="true"></i> Tu cuenta está suspendida</h2>
+                Por ahora no puedes generar cobros. Ponte en contacto con nosotros para reactivarla.
+            </div>
+            break;
+
+        case MerchantStatus.Disabled:
+            <div class="alert alert-secondary" role="alert">
+                <h2 class="h6 alert-heading">Tu cuenta está dada de baja</h2>
+                No puedes generar cobros con esta cuenta.
+            </div>
+            break;
+
+        default:
+            var total = Model.Steps.Count;
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Activa tu cuenta</span>
+                        <small class="text-secondary">Paso @Model.CurrentStepNumber de @total</small>
+                    </div>
+                    <div class="progress mt-2" role="progressbar" aria-label="Avance de activación"
+                         aria-valuenow="@Model.DoneCount" aria-valuemin="0" aria-valuemax="@total" style="height: .5rem">
+                        <div class="progress-bar" style="width: @(Model.DoneCount * 100 / total)%"></div>
+                    </div>
+                </div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var step in Model.Steps)
+                    {
+                        var (icon, textClass) = step.State switch
+                        {
+                            OnboardingStepState.Done => ("bi-check-circle-fill text-success", "text-secondary"),
+                            OnboardingStepState.Current => ("bi-arrow-right-circle-fill text-primary", "fw-semibold"),
+                            _ => ("bi-circle text-secondary", "text-secondary"),
+                        };
+                        <li class="list-group-item d-flex gap-3 align-items-start" data-step="@step.Kind" data-state="@step.State"
+                            aria-current="@(step.State == OnboardingStepState.Current ? "step" : null)">
+                            <i class="bi @icon fs-5 lh-1 mt-1" aria-hidden="true"></i>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <span class="@textClass">@step.Label</span>
+                                    @if (step.State == OnboardingStepState.Current)
+                                    {
+                                        <span class="badge text-bg-primary">En curso</span>
+                                    }
+                                    else if (step.State == OnboardingStepState.Done)
+                                    {
+                                        <span class="visually-hidden">(hecho)</span>
+                                    }
+                                </div>
+                                @if (step.State == OnboardingStepState.Current)
+                                {
+                                    <div class="small text-secondary mt-1">@step.Description</div>
+                                    @if (step.Kind == OnboardingStepKind.RegisterBankAccount)
+                                    {
+                                        @* La pantalla de cuenta bancaria llega en el paso 2.2. *@
+                                        <button type="button" class="btn btn-primary btn-sm mt-2" disabled>Disponible pronto</button>
+                                    }
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+            break;
+    }
 </div>

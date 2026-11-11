@@ -19,7 +19,7 @@ src/
   Local133.Infrastructure  EF Core, PeyClient, procesamiento de webhooks, storage, email, jobs Hangfire
   Local133.Web             MVC (áreas Merchant/Admin, vistas Razor), Identity scaffoldeado, endpoints /api, hub SignalR, POST /api/webhooks/pey
 tests/
-  Local133.UnitTests
+  Local133.UnitTests         (solo Domain; corre en CI)
   Local133.IntegrationTests  (base `Local133_Tests` en SQL Server local, recreada con migraciones, limpiada con Respawn)
 ```
 Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa desde Infrastructure detrás de `IPaymentGateway`.
@@ -37,6 +37,8 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
 - Identity: `AddIdentity` **sin** `AddDefaultUI` (páginas no scaffoldeadas ⇒ 404; para agregar una, scaffoldearla y traducirla). Roles en `Local133.Application.Auth.Roles`, sembrados en la migración `Identity`. Textos y `ErrorMessage` de cada atributo en español.
 - Login externo: Google/Facebook se registran en `IdentitySetup` **solo si** existen `Authentication:Google:ClientId/ClientSecret` y `Authentication:Facebook:AppId/AppSecret` (user-secrets). Google lleva `prompt=select_account` (selector de cuentas en cada login). Callbacks `/signin-google` y `/signin-facebook` (perfil `https`, `https://localhost:7180`). Cancelar o fallar en el proveedor regresa al callback de la página con `remoteError` (`ExternalLoginErrors`). Correo del proveedor conservado ⇒ `EmailConfirmed`; correo ya existente ⇒ no se liga solo. En pruebas se usa el esquema falso `FakeExternalAuthHandler` ("Fake"), nunca Google/Facebook.
 - Alta de vendedores: siempre con `AccountRegistration` (Web/Identity), que crea usuario + rol `Merchant` + cuenta externa + `Merchant` (`PendingBankAccount`) en una transacción. Los formularios de alta heredan de `LegalAcceptanceInput` (casilla única de Términos y Aviso de privacidad, parcial `_AcceptLegalCheckbox`); la versión aceptada sale de `Domain/Legal/LegalDocuments` (subirla al cambiar `/terminos` o `/aviso-de-privacidad`).
+- Admin: se siembra **al arrancar** (`AdminSeeder`, Web/Identity) si existen `Seed:Admin:Email` y `Seed:Admin:Password` (dev: `dotnet user-secrets set "Seed:Admin:Email" "<correo>" --project src/Local133.Web` y lo mismo con `Seed:Admin:Password`; prod: variables `Seed__Admin__Email` / `Seed__Admin__Password`). Es idempotente: no cambia la contraseña de un admin existente y nunca promueve a un `Merchant`. Las pruebas vacían `Seed:Admin` en `Local133WebFactory`.
+- Inicio del vendedor (`/app`): checklist calculado con `Domain/Merchants/OnboardingChecklist.For(MerchantStatus)`; los textos van en `Areas/Merchant/Models/MerchantHomeViewModel`. Pruebas unitarias en `tests/Local133.UnitTests` (solo Domain, corren en CI).
 - Correo en dev: `FileEmailSender` guarda `.html` en `src/Local133.Web/App_Data/emails` y escribe la liga en el log (SMTP real llega con Notificaciones).
 - Webhook en local: túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en portal.mipey.mx.
 

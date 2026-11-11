@@ -155,7 +155,7 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
    - *`FileEmailSender` en dev (`App_Data/emails` + log).*
    - *`tests/Local133.IntegrationTests` con 26 pruebas (`Category=SqlServer`, base `Local133_Tests`, Respawn), todas verdes en local. CI las excluye con `--filter "Category!=SqlServer"`.*
    - *Prueba de arranque del sitio real: redirección a login, registro y `.html` del correo generado, Swagger solo con `/api/health`.*
-   - *Pendiente: el admin sembrado (1.5); mientras tanto el rol `Admin` se asigna a mano.)*
+   - *El admin sembrado quedó en 1.5.)*
 3. Login externo Google y Facebook. ✅ *(hecho 2026-11-10:*
    - *Las páginas `ExternalLogin` y `Manage/ExternalLogins` ya venían del scaffold de 1.2. Se agregaron los paquetes `Microsoft.AspNetCore.Authentication.Google`/`.Facebook` 9.0.22.*
    - *Los proveedores se registran solo si hay credenciales (`Authentication:Google:ClientId/ClientSecret`, `Authentication:Facebook:AppId/AppSecret` en user-secrets). Sin ellas no hay botones y CI/pruebas no dependen de ellos.*
@@ -173,7 +173,17 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
    - *Migración `Merchants` con backfill: los usuarios con rol `Merchant` que ya existían reciben su `Merchant` pendiente (sin términos aceptados).*
    - *7 pruebas nuevas (`MerchantRegistrationTests`); los helpers de prueba crean vendedores con `AccountRegistration`. 46/46 verdes en local (4 corren en CI).*
    - *Pendiente: probar en navegador que la validación en cliente bloquea el envío con la casilla sin marcar (el HTML ya emite `data-val-mustbetrue` y carga `validation.js`).)*
-5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin.
+5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin. ✅ *(hecho 2026-11-11:*
+   - *Regla pura `Domain/Merchants/OnboardingChecklist.For(MerchantStatus)`: 4 pasos (crear cuenta → cuenta bancaria → revisión de Banxico → listo para cobrar) con estado Done/Current/Pending. Para `Suspended`/`Disabled` la lista viene vacía. **Sin paso de perfil**: se agrega en la Fase 4 junto con la pantalla.*
+   - *`/app` carga el `Merchant` del usuario. Muestra "Hola, {nombre del negocio o correo}" y:*
+     - *en onboarding: tarjeta "Activa tu cuenta" con "Paso X de 4", barra de avance y el paso en curso con su descripción. El botón de cuenta bancaria dice "Disponible pronto" hasta 2.2;*
+     - *`Active`: "Ya puedes cobrar" con botón a `/app/cobrar`;*
+     - *`Suspended`/`Disabled`: aviso.*
+   - *Los textos están en `Areas/Merchant/Models/MerchantHomeViewModel`. Atributos `data-merchant-status`, `data-step` y `data-state` para las pruebas.*
+   - *Seed del admin al arrancar (`Web/Identity/AdminSeeder`) si existen `Seed:Admin:Email` y `Seed:Admin:Password` (user-secrets o variables de entorno). Crea el usuario con correo confirmado y rol `Admin` en una transacción. Es idempotente: si ya es Admin no cambia la contraseña. No promueve a un `Merchant` (log de error). A un usuario sin roles le agrega `Admin`. Si la contraseña no cumple la política no crea nada. Una falla se registra en el log y el sitio sigue arrancando.*
+   - *Nuevo `tests/Local133.UnitTests` (Domain, corre en CI) con 12 pruebas del checklist. 11 de integración: Inicio por estatus + aislamiento entre dos vendedores (`MerchantHomeTests`) y casos del seeder + siembra real al arrancar (`AdminSeederTests`). La fábrica de pruebas vacía `Seed:Admin` para que los user-secrets no siembren nada. 129/129 verdes en local (76 en CI).*
+   - *Prueba de arranque del sitio real con `Seed__Admin__*`: se creó el admin y su login va a `/admin`; un vendedor registrado y confirmado ve el paso 2 en curso; con `UPDATE Merchants SET Status=…` se vieron los otros cuatro estatus.*
+   - *Pendiente: revisión visual en navegador a 375 px.)*
 
 ### Fase 2 — Ventas (núcleo) (≈2.5 semanas)
 1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores. ✅ *(hecho 2026-11-10:*
