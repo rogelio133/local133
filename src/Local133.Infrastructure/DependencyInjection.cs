@@ -1,5 +1,6 @@
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
+using Local133.Infrastructure.Pey;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -28,6 +29,9 @@ public static class DependencyInjection
         // Correo: en desarrollo se guarda en disco; el SMTP real llega con Notificaciones.
         services.Configure<EmailPickupOptions>(configuration.GetSection(EmailPickupOptions.SectionName));
         services.AddTransient<IEmailSender, FileEmailSender>();
+
+        // Pey (CoDi): una API key para todos los vendedores; la key va en user-secrets (Pey:ApiKey).
+        services.AddPeyGateway(configuration);
 
         return services;
     }

@@ -25,7 +25,7 @@ tests/
 Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa desde Infrastructure detrás de `IPaymentGateway`.
 
 ## Comandos (una vez creado el scaffold de Fase 0)
-- Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings).
+- Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings: `dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web`; sin ella el sitio arranca y solo fallan las llamadas a Pey).
 - Migraciones: `dotnet ef migrations add <Nombre> --project src/Local133.Infrastructure --startup-project src/Local133.Web` · `dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web`
 - Build / pruebas: `dotnet build` · `dotnet test` · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"`
 - Arrancar: `dotnet run --project src/Local133.Web` → `http://localhost:5231` (perfil `http`).
@@ -56,7 +56,7 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - **Snapshots**: `SaleItems` copia nombre/precio; `Products` usa baja lógica (`IsDeleted`).
 - **Restricciones de Pey**: `expiration` = 0 o ≥ 360 s (venta dinámica usa 600); `amount: 0` + `expiration: 0` = QR fijo; `numRef` ≤ 7 dígitos; `metadata` ≤ 50 pares escalares; `POST /bank-account` requiere `alias`, `name`, `clabe`, `entity` (PERSON/BUSINESS), sin `taxId`. Validar dígito verificador de la CLABE antes de enviar.
 - `bank.account.updated` solo llega al pasar a `ACTIVE`; `ERROR` se detecta con **polling** (job cada 30 min a `GET /bank-account/{id}`).
-- **PeyClient**: `HttpClient` tipado + Polly (reintentos en 503/5xx, timeout), mapear `error.type` a excepciones de dominio, loguear `requestId`.
+- **PeyClient** (`Infrastructure/Pey`, registrado con `AddPeyGateway`; contratos del OpenAPI `https://docs.pey.mx/openapi.json`): `HttpClient` tipado + `AddStandardResilienceHandler` (Polly v8), mapea `error.type` a las excepciones de `Application/Payments` (`PaymentGatewayValidationException`, `InvalidClabeException`, `…NotFound…`, `…Authentication…`, `…State…`, `…Unavailable…`) y loguea `requestId` (nunca bodies ni la API key). **Reintentos por método**: GET en cualquier falla transitoria; POST **solo en 503/429**: Pey no tiene llave de idempotencia y reintentar tras un 500 o un timeout podría duplicar un QR o un push. Reglas de Pey (`Domain/Pey/PeyLimits`) se validan antes de llamar (`ArgumentException`). Pruebas contra WireMock en `tests/Local133.IntegrationTests/Pey` (sin SQL Server, corren en CI).
 - Solo vendedores `Active` pueden generar cobros. Tiempo real por SignalR (grupo por vendedor, evento `PaymentReceived`) con respaldo de polling desde la vista a `GET /api/sales/{id}` cada 3 s.
 - Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}`), corte semanal lunes 00:05 `America/Mexico_City`, vencimiento/suspensión.
 - Archivos vía `IFileStorage` (disco en dev, blob en prod). CLABE enmascarada en UI. Cambios de comisión/estatus quedan en `AuditLogs`.
