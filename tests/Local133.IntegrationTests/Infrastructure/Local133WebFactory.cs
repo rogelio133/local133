@@ -1,4 +1,5 @@
 using Local133.Infrastructure.Persistence;
+using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Respawn;
@@ -42,6 +44,13 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
+        // Los user-secrets de desarrollo también se cargan aquí: el admin solo se siembra si la prueba lo pide
+        // (fuente agregada al final, gana sobre user-secrets).
+        builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [AdminSeeder.EmailKey] = "",
+            [AdminSeeder.PasswordKey] = "",
+        }));
 
         builder.ConfigureTestServices(services =>
         {

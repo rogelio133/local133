@@ -77,7 +77,10 @@ try
     // Rutas /api inexistentes: 404 ProblemDetails. Las demás rutas sin coincidencia caen en /error/404.
     app.MapFallback("api/{**slug}", () => Results.Problem(statusCode: StatusCodes.Status404NotFound));
 
-    app.Run();
+    // Admin desde Seed:Admin:Email/Password (si están configurados); idempotente.
+    await app.SeedAdminAsync();
+
+    await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {

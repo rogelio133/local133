@@ -23,7 +23,13 @@ dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS
 
 # 3. Crear la base Local133 y aplicar migraciones (EF crea la base si no existe)
 dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web
+
+# 4. Usuario administrador: se crea al arrancar el sitio (correo ya confirmado, rol Admin)
+dotnet user-secrets set "Seed:Admin:Email" "<correo-admin>" --project src/Local133.Web
+dotnet user-secrets set "Seed:Admin:Password" "<contraseña de 8+ caracteres con un número>" --project src/Local133.Web
 ```
+
+El seed del admin es idempotente: si el usuario ya existe no cambia su contraseña (cámbiala en `/Identity/Account/Manage`), y nunca convierte en admin el correo de un vendedor. En producción usa las variables de entorno `Seed__Admin__Email` y `Seed__Admin__Password`. Sin ellas no se siembra nada.
 
 Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM SystemSettings"` devuelve la fila semilla (comisión 3%, IVA 16%), y `SELECT Name FROM AspNetRoles` los roles `Merchant` y `Admin` (migración `Identity`).
 
@@ -37,7 +43,7 @@ dotnet run --project src/Local133.Web --launch-profile http
 | URL | Qué es |
 |---|---|
 | `/` | Portada pública |
-| `/app` (`/app/cobrar`, `/app/ventas`, `/app/mas`) | Portal del vendedor (pestañas inferiores en móvil) |
+| `/app` (`/app/cobrar`, `/app/ventas`, `/app/mas`) | Portal del vendedor (pestañas inferiores en móvil). Inicio con el checklist de activación según su estatus |
 | `/admin` (`/admin/clientes`, `/admin/transacciones`, `/admin/parametros`) | Portal administrador (sidebar / Offcanvas) |
 | `/api/health` | Salud (JSON); `/api/*` inexistente ⇒ 404 ProblemDetails |
 | `/swagger` | Swagger (solo en Development) |

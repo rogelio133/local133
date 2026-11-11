@@ -62,6 +62,7 @@ public static class IdentitySetup
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<AccountRegistration>();
+        services.AddScoped<AdminSeeder>();
 
         return services;
     }
