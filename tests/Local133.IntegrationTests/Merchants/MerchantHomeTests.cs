@@ -24,6 +24,7 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         AssertStep(html, OnboardingStepKind.BankReview, OnboardingStepState.Pending);
         AssertStep(html, OnboardingStepKind.ReadyToCharge, OnboardingStepState.Pending);
         Assert.Contains("Paso 2 de 4", html);
+        Assert.Contains("href=\"/app/cuenta-bancaria\">Registrar mi CLABE", html);
     }
 
     [Fact]
@@ -35,6 +36,7 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         AssertStep(html, OnboardingStepKind.BankReview, OnboardingStepState.Current);
         Assert.Contains("Paso 3 de 4", html);
         Assert.Contains("hasta 5 días hábiles", html);
+        Assert.Contains("href=\"/app/cuenta-bancaria\">Ver estatus", html);
     }
 
     [Fact]

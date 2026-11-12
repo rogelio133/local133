@@ -1,3 +1,6 @@
+using Local133.Application.BankAccounts;
+using Local133.Application.Tenancy;
+using Local133.Infrastructure.BankAccounts;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
 using Local133.Infrastructure.Pey;
@@ -5,6 +8,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Local133.Infrastructure;
 
@@ -32,6 +36,13 @@ public static class DependencyInjection
 
         // Pey (CoDi): una API key para todos los vendedores; la key va en user-secrets (Pey:ApiKey).
         services.AddPeyGateway(configuration);
+
+        // Sin alcance por defecto (jobs, webhook, dotnet ef); el sitio lo reemplaza por el vendedor de la sesión.
+        services.TryAddScoped<ITenantContext, SystemTenantContext>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddScoped<IBankAccountRegistration, BankAccountRegistration>();
+        // Botón "Verificar estatus" y job de sondeo (2.3) comparten este caso de uso.
+        services.AddScoped<IBankAccountStatusSync, BankAccountStatusSync>();
 
         return services;
     }

@@ -1,6 +1,9 @@
 @{
     // Portal del vendedor: móvil primero (pestañas inferiores); en ≥md las pestañas pasan a la barra superior.
-    var current = ViewContext.RouteData.Values["action"] as string;
+    // Pestaña activa: las acciones de Home tienen la suya; las demás pantallas (cuenta bancaria…) viven en "Más".
+    var current = ViewContext.RouteData.Values["controller"] as string == "Home"
+        ? ViewContext.RouteData.Values["action"] as string
+        : "More";
     var tabs = new (string Action, string Href, string Label, string Icon)[]
     {
         ("Index", "~/app", "Inicio", "bi-house"),

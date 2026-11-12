@@ -3,12 +3,17 @@ using Local133.Domain.Merchants;
 namespace Local133.Web.Areas.Merchant.Models;
 
 /// <summary>Inicio del vendedor (/app): saludo, estatus y checklist de activación.</summary>
-public sealed record MerchantHomeViewModel(string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps)
+public sealed record MerchantHomeViewModel(
+    string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null)
 {
-    public static MerchantHomeViewModel From(Domain.Merchants.Merchant merchant, string? userName) => new(
+    public const string DefaultRejection = "Banxico no pudo registrarla para CoDi.";
+
+    /// <param name="bankAccountRejection">Motivo del rechazo de su cuenta bancaria, si Pey la rechazó.</param>
+    public static MerchantHomeViewModel From(Domain.Merchants.Merchant merchant, string? userName, string? bankAccountRejection = null) => new(
         string.IsNullOrWhiteSpace(merchant.BusinessName) ? userName ?? "vendedor" : merchant.BusinessName,
         merchant.Status,
-        OnboardingChecklist.For(merchant.Status).Select(OnboardingStepViewModel.From).ToArray());
+        OnboardingChecklist.For(merchant.Status).Select(OnboardingStepViewModel.From).ToArray(),
+        bankAccountRejection);
 
     public bool IsOnboarding => Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview;
 

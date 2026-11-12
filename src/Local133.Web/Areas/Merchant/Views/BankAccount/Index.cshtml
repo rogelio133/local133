@@ -1,0 +1,66 @@
+@using Local133.Domain.Pey
+@using Local133.Web.Areas.Merchant.Models
+@model BankAccountFormViewModel
+@{
+    ViewData["Title"] = "Cuenta bancaria";
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h4 mb-1">@(Model.IsRetry ? "Corrige tu cuenta bancaria" : "Registra tu cuenta bancaria")</h1>
+        <p class="text-secondary">Aquí recibirás el dinero de tus cobros con CoDi, directo y completo: nosotros nunca tocamos tu dinero.</p>
+
+        @if (Model.IsRetry)
+        {
+            <div class="alert alert-danger" role="alert" data-previous-error>
+                <h2 class="h6 alert-heading"><i class="bi bi-x-octagon-fill me-1" aria-hidden="true"></i> Tu cuenta @Model.PreviousMaskedClabe fue rechazada</h2>
+                @(Model.PreviousError ?? "Banxico no pudo registrarla para CoDi.")
+                Revisa los datos y envíala de nuevo.
+            </div>
+        }
+
+        <form asp-area="Merchant" asp-controller="BankAccount" asp-action="Register" method="post" data-bank-account-form data-disable-on-submit>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6 mb-1">Tipo de titular</legend>
+                <div class="form-check">
+                    <input asp-for="Input.Entity" type="radio" value="@PeyEntity.Person" id="entity-person" class="form-check-input" />
+                    <label class="form-check-label" for="entity-person">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Person) <span class="text-secondary small">(la cuenta está a tu nombre)</span></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Input.Entity" type="radio" value="@PeyEntity.Business" id="entity-business" class="form-check-input" />
+                    <label class="form-check-label" for="entity-business">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Business) <span class="text-secondary small">(la cuenta es de una empresa)</span></label>
+                </div>
+                <span asp-validation-for="Input.Entity" class="d-block text-danger small"></span>
+            </fieldset>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.HolderName" class="form-control" autocomplete="name" aria-required="true" placeholder="Nombre del titular" />
+                <label asp-for="Input.HolderName"></label>
+                <div class="form-text">Tal como aparece en tu banco.</div>
+                <span asp-validation-for="Input.HolderName" class="text-danger small"></span>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Clabe" class="form-control font-monospace" inputmode="numeric" autocomplete="off" spellcheck="false" aria-required="true" placeholder="18 dígitos" />
+                <label asp-for="Input.Clabe"></label>
+                <div class="form-text">18 dígitos; la encuentras en tu app o estado de cuenta del banco. No es el número de tarjeta.</div>
+                <span asp-validation-for="Input.Clabe" class="text-danger small"></span>
+            </div>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Alias" class="form-control" autocomplete="organization" aria-required="true" placeholder="Nombre de tu negocio" />
+                <label asp-for="Input.Alias"></label>
+                <div class="form-text">Así te identificarán tus clientes al pagar.</div>
+                <span asp-validation-for="Input.Alias" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Enviar a revisión</button>
+            <p class="small text-secondary mt-2 mb-0">Banxico valida la cuenta para CoDi; puede tardar hasta 5 días hábiles.</p>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
