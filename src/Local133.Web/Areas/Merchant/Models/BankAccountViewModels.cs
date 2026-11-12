@@ -56,7 +56,9 @@ public sealed record BankAccountStatusViewModel(
     string? EntityLabel,
     string? MaskedClabe,
     string? SubmittedOn,
-    string? ErrorMessage)
+    string? ErrorMessage,
+    bool CanCheckStatus = false,
+    string? LastCheckedOn = null)
 {
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
     private static readonly TimeZoneInfo MexicoCity = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
@@ -71,7 +73,18 @@ public sealed record BankAccountStatusViewModel(
             EntityLabelOf(account.Entity),
             Clabe.Mask(account.Clabe),
             TimeZoneInfo.ConvertTime(account.SubmittedAt, MexicoCity).ToString("d 'de' MMMM 'de' yyyy", Spanish),
-            account.ErrorMessage);
+            account.ErrorMessage,
+            CanCheck(merchant, account),
+            account.StatusCheckedAt is { } checkedAt
+                ? TimeZoneInfo.ConvertTime(checkedAt, MexicoCity).ToString("d 'de' MMMM, h:mm tt", Spanish)
+                : null);
+
+    /// <summary>
+    /// El vendedor puede pedir "Verificar estatus": su cuenta está en revisión de Banxico y él sigue en el onboarding
+    /// (un vendedor suspendido o dado de baja no consulta a Pey desde aquí).
+    /// </summary>
+    public static bool CanCheck(Domain.Merchants.Merchant merchant, BankAccount account) =>
+        account.IsInReview && merchant.Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview;
 
     public static string EntityLabelOf(PeyEntity entity) => entity switch
     {

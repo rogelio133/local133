@@ -204,7 +204,18 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
    - *Pruebas: 48 unitarias (`ClabeTests`, `MerchantBankAccountStatusTests`) y 21 de integración (`BankAccountTests`: alta, activación inmediata, CLABE inválida sin llamar a Pey, errores de la pasarela, segundo envío, reintento sobre la misma fila, antiforgery, suspendido, admin, aislamiento por página y por filtro de EF). `FakePaymentGateway` reemplaza a Pey en `Local133WebFactory`: ninguna prueba del sitio llama a la API real. 198/198 verdes en local (124 en CI).*
    - *Prueba de arranque del sitio real: registro → Inicio con "Registrar mi CLABE" → formulario → CLABE con dígito incorrecto rechazada en servidor sin llamar a Pey.*
    - *Pendiente: alta real contra Pey (producción) con la CLABE de prueba, y revisión en navegador de la validación en cliente a 375 px.)*
+   - ***Verificar estatus** (agregado 2026-11-11):*
+     - *Con la cuenta en revisión, `/app/cuenta-bancaria` muestra el botón "Verificar estatus" (`POST /app/cuenta-bancaria/verificar`, antiforgery). Consulta `GET /bank-account/{id}` y aplica el resultado:*
+       - *`Active` ⇒ vendedor `Active` + "Comenzar a vender" (`/app/cobrar`);*
+       - *`Error` ⇒ formulario de reintento con el motivo;*
+       - *`Pending`/`Processing` ⇒ aviso.*
+     - *Freno de 1 min entre consultas manuales (`BankAccountStatusChecks.ManualMinInterval`), sobre la nueva columna `BankAccounts.StatusCheckedAt` (migración `BankAccountStatusCheckedAt`). El alta y el reintento cuentan como lectura.*
+     - *La lógica es el caso de uso `IBankAccountStatusSync.SyncAsync(bankAccountId, minInterval)` (Application/BankAccounts; implementación en Infrastructure/BankAccounts): sin sesión ni claims, con `IgnoreQueryFilters()`. Guarda en un solo `SaveChanges` `BankAccount.RecordStatusCheck` + `Merchant.ApplyBankAccountStatus`. Si Pey falla no guarda nada.*
+     - *Pruebas: 13 unitarias (`BankAccountStatusCheckTests`) y 14 de integración en `BankAccountTests` (incluye la llamada sin sesión, como el job, y el aislamiento entre vendedores). 225/225 verdes en local (137 en CI).*
+     - *Pendiente: revisión en navegador con Playwright a 375 px y ≥ 992 px (el MCP no conectó en esta sesión) y una consulta real contra Pey con la CLABE de prueba.*
 3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus.
+   - *Sondeo (Hangfire, cada 30 min): seleccionar las cuentas `Pending`/`Processing` (con `IgnoreQueryFilters()`) ordenadas por `StatusCheckedAt` y llamar `IBankAccountStatusSync.SyncAsync(id)` **sin `minInterval`**, cada una en su propio scope de DI. Un `GatewayFailed` se registra y el job sigue con la siguiente.*
+   - *Webhook: agregar a `BankAccountStatusSync` un método por `PeyBankAccountId` que reutilice la transición privada `Apply`, usando `UpdateStatus` porque no es una lectura.*
 4. **Venta por monto directo**: teclado numérico → crea `Sale` → `POST /codi/qr` → vista con el QR (SVG generado en servidor con QRCoder a partir de `qrString`) y cuenta regresiva en JS.
 5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta.
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`.

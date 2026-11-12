@@ -4,6 +4,8 @@
 @{
     ViewData["Title"] = "Cuenta bancaria";
     var submitted = TempData[BankAccountController.SubmittedMessageKey] as string;
+    var info = TempData[BankAccountController.StatusInfoKey] as string;
+    var warning = TempData[BankAccountController.StatusWarningKey] as string;
 }
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6" data-bank-account-status="@(Model.CodiStatus?.ToString() ?? "None")">
@@ -12,6 +14,14 @@
         @if (submitted is not null)
         {
             <div class="alert alert-success" role="status"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @submitted</div>
+        }
+        @if (info is not null)
+        {
+            <div class="alert alert-info" role="status" data-status-info><i class="bi bi-info-circle-fill me-1" aria-hidden="true"></i> @info</div>
+        }
+        @if (warning is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-status-warning><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @warning</div>
         }
 
         @if (Model.CodiStatus is null)
@@ -42,9 +52,22 @@
                 </ul>
             </div>
 
+            @if (Model.CanCheckStatus)
+            {
+                <form asp-area="Merchant" asp-controller="BankAccount" asp-action="CheckStatus" method="post" class="mt-3" data-check-status data-disable-on-submit>
+                    <button type="submit" class="btn btn-outline-primary btn-lg w-100">
+                        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i> Verificar estatus
+                    </button>
+                    @if (Model.LastCheckedOn is not null)
+                    {
+                        <p class="form-text text-center mb-0">Última revisión: @Model.LastCheckedOn</p>
+                    }
+                </form>
+            }
+
             @if (Model.MerchantStatus == Local133.Domain.Merchants.MerchantStatus.Active)
             {
-                <a class="btn btn-primary btn-lg w-100 mt-3" href="~/app/cobrar"><i class="bi bi-qr-code me-1" aria-hidden="true"></i> Cobrar</a>
+                <a class="btn btn-primary btn-lg w-100 mt-3" href="~/app/cobrar" data-start-selling><i class="bi bi-qr-code me-1" aria-hidden="true"></i> Comenzar a vender</a>
             }
         }
 

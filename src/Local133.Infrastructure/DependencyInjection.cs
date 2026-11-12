@@ -41,6 +41,8 @@ public static class DependencyInjection
         services.TryAddScoped<ITenantContext, SystemTenantContext>();
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IBankAccountRegistration, BankAccountRegistration>();
+        // Botón "Verificar estatus" y job de sondeo (2.3) comparten este caso de uso.
+        services.AddScoped<IBankAccountStatusSync, BankAccountStatusSync>();
 
         return services;
     }

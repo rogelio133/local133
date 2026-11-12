@@ -70,6 +70,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
 
+                    b.Property<DateTimeOffset?>("StatusCheckedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("StatusUpdatedAt")
                         .HasColumnType("datetimeoffset");
 

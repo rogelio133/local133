@@ -16,10 +16,17 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app/cuenta-bancaria")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class BankAccountController(AppDbContext db, IBankAccountRegistration registration) : Controller
+public class BankAccountController(
+    AppDbContext db, IBankAccountRegistration registration, IBankAccountStatusSync statusSync) : Controller
 {
-    /// <summary>Mensaje de éxito tras el alta (PRG).</summary>
+    /// <summary>Mensaje de éxito tras el alta o la verificación (PRG).</summary>
     public const string SubmittedMessageKey = "BankAccountSubmitted";
+
+    /// <summary>Aviso informativo tras verificar el estatus (sigue en revisión, consulta muy seguida).</summary>
+    public const string StatusInfoKey = "BankAccountStatusInfo";
+
+    /// <summary>Aviso de falla al verificar el estatus.</summary>
+    public const string StatusWarningKey = "BankAccountStatusWarning";
 
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -87,6 +94,45 @@ public class BankAccountController(AppDbContext db, IBankAccountRegistration reg
         }
 
         return View(nameof(Index), FormFor(account, input));
+    }
+
+    /// <summary>Botón "Verificar estatus": consulta a Pey la cuenta en revisión del vendedor de la sesión.</summary>
+    [HttpPost("verificar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CheckStatus(CancellationToken cancellationToken)
+    {
+        // La cuenta sale de la sesión (filtro multi-tenant), nunca de un id enviado por el cliente.
+        var (merchant, account) = await LoadAsync(cancellationToken);
+        if (account is null || !BankAccountStatusViewModel.CanCheck(merchant, account))
+        {
+            return RedirectToAction(nameof(Index));
+        }
+
+        switch (await statusSync.SyncAsync(account.Id, BankAccountStatusChecks.ManualMinInterval, cancellationToken))
+        {
+            case BankAccountStatusSyncResult.Synced { Current: PeyCodiStatus.Active }:
+                TempData[SubmittedMessageKey] = "¡Tu cuenta ya está activa! Ya puedes comenzar a vender con CoDi.";
+                break;
+
+            case BankAccountStatusSyncResult.Synced { Current: PeyCodiStatus.Error }:
+                // Index muestra el formulario de reintento con el motivo del rechazo.
+                break;
+
+            case BankAccountStatusSyncResult.Synced:
+                TempData[StatusInfoKey] = "Banxico sigue revisando tu cuenta. Te avisaremos por correo en cuanto quede activa.";
+                break;
+
+            case BankAccountStatusSyncResult.TooSoon tooSoon:
+                var seconds = Math.Max(1, (int)Math.Ceiling(tooSoon.RetryAfter.TotalSeconds));
+                TempData[StatusInfoKey] = $"Acabamos de revisar tu cuenta. Intenta de nuevo en {seconds} segundos.";
+                break;
+
+            case BankAccountStatusSyncResult.GatewayFailed failed:
+                TempData[StatusWarningKey] = failed.Message;
+                break;
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     private async Task<(Domain.Merchants.Merchant Merchant, BankAccount? Account)> LoadAsync(CancellationToken cancellationToken)

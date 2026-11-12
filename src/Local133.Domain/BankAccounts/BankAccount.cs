@@ -43,6 +43,15 @@ public class BankAccount : Entity
     /// <summary>Último cambio de <see cref="CodiStatus"/>.</summary>
     public DateTimeOffset StatusUpdatedAt { get; set; }
 
+    /// <summary>
+    /// Última lectura del estatus en Pey (respuesta del alta o <c>GET /bank-account/{id}</c> desde el botón
+    /// "Verificar estatus" o el sondeo). El sondeo revisa primero las que llevan más tiempo sin leerse.
+    /// </summary>
+    public DateTimeOffset? StatusCheckedAt { get; set; }
+
+    /// <summary>Banxico aún la revisa (<c>PENDING</c> o <c>PROCESSING</c>): es lo que consultan el botón y el sondeo.</summary>
+    public bool IsInReview => CodiStatus is PeyCodiStatus.Pending or PeyCodiStatus.Processing;
+
     /// <summary>Alta recién aceptada por Pey.</summary>
     public static BankAccount Submit(
         int merchantId, string holderName, string clabe, string alias, PeyEntity entity,
@@ -75,6 +84,31 @@ public class BankAccount : Entity
         ErrorMessage = null;
         SubmittedAt = now;
         StatusUpdatedAt = now;
+        StatusCheckedAt = now; // la respuesta del alta ya es una lectura del estatus
+    }
+
+    /// <summary>
+    /// Resultado de consultar el estatus en Pey (botón o sondeo): registra la lectura aunque no cambie nada.
+    /// El webhook usa <see cref="UpdateStatus"/>, porque no es una consulta. Devuelve <c>true</c> si cambió el estatus.
+    /// </summary>
+    public bool RecordStatusCheck(PeyCodiStatus codiStatus, string? errorMessage, DateTimeOffset now)
+    {
+        StatusCheckedAt = now;
+        return UpdateStatus(codiStatus, errorMessage, now);
+    }
+
+    /// <summary>
+    /// Cuánto falta para poder volver a consultar a Pey con un intervalo mínimo entre lecturas; <c>null</c> si ya se puede.
+    /// </summary>
+    public TimeSpan? TimeUntilNextStatusCheck(DateTimeOffset now, TimeSpan minInterval)
+    {
+        if (StatusCheckedAt is not { } checkedAt)
+        {
+            return null;
+        }
+
+        var wait = checkedAt + minInterval - now;
+        return wait > TimeSpan.Zero ? wait : null;
     }
 
     /// <summary>Estatus reportado por Pey (webhook o sondeo). Devuelve <c>true</c> si cambió algo.</summary>

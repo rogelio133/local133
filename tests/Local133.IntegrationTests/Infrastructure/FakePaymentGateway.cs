@@ -23,11 +23,27 @@ public sealed class FakePaymentGateway : IPaymentGateway
     /// <summary>Si no es <c>null</c>, el alta lanza esta excepción.</summary>
     public Exception? RegisterException { get; set; }
 
+    /// <summary>Ids de Pey consultados con <c>GET /bank-account/{id}</c>, en orden.</summary>
+    public ConcurrentQueue<string> BankAccountLookups { get; } = new();
+
+    /// <summary>Estatus con que responde la consulta de la cuenta (por defecto <c>Pending</c>).</summary>
+    public PeyCodiStatus LookupStatus { get; set; } = PeyCodiStatus.Pending;
+
+    /// <summary><c>errorMessage</c> de la consulta (Pey solo lo manda con <c>Error</c>).</summary>
+    public string? LookupErrorMessage { get; set; }
+
+    /// <summary>Si no es <c>null</c>, la consulta lanza esta excepción.</summary>
+    public Exception? LookupException { get; set; }
+
     public void Reset()
     {
         BankAccountRequests.Clear();
         RegisterStatus = PeyCodiStatus.Pending;
         RegisterException = null;
+        BankAccountLookups.Clear();
+        LookupStatus = PeyCodiStatus.Pending;
+        LookupErrorMessage = null;
+        LookupException = null;
     }
 
     public Task<RegisteredBankAccount> RegisterBankAccountAsync(RegisterBankAccountRequest request, CancellationToken cancellationToken = default)
@@ -42,8 +58,18 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.FromResult(new RegisteredBankAccount(id, RegisterStatus));
     }
 
-    public Task<GatewayBankAccount> GetBankAccountAsync(string bankAccountId, CancellationToken cancellationToken = default) =>
-        throw NotConfigured();
+    public Task<GatewayBankAccount> GetBankAccountAsync(string bankAccountId, CancellationToken cancellationToken = default)
+    {
+        BankAccountLookups.Enqueue(bankAccountId);
+        if (LookupException is { } exception)
+        {
+            throw exception;
+        }
+
+        return Task.FromResult(new GatewayBankAccount(
+            bankAccountId, Alias: null, HolderName: null, Clabe: null, Entity: null, TaxId: null,
+            LookupStatus, LookupErrorMessage, CreatedAt: null));
+    }
 
     public Task<CodiQr> CreateCodiQrAsync(CreateCodiQrRequest request, CancellationToken cancellationToken = default) =>
         throw NotConfigured();

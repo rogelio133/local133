@@ -1,5 +1,6 @@
 using System.Net;
 using Local133.Application.Auth;
+using Local133.Application.BankAccounts;
 using Local133.Application.Payments;
 using Local133.Application.Tenancy;
 using Local133.Domain.BankAccounts;
@@ -341,6 +342,280 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
         {
             Assert.Equal(2, await system.BankAccounts.CountAsync());
         }
+    }
+
+    // ---- Verificar estatus (consulta manual a Pey; el sondeo de 2.3 usa el mismo IBankAccountStatusSync) ----
+
+    private const string CheckUrl = Url + "/verificar";
+
+    [Fact]
+    public async Task En_revision_muestra_el_boton_para_verificar_el_estatus()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.Contains("data-check-status", html);
+        Assert.Contains("action=\"/app/cuenta-bancaria/verificar\"", html);
+        Assert.Contains("Verificar estatus", html);
+        Assert.Contains("Última revisión:", html);
+        Assert.DoesNotContain("data-start-selling", html);
+    }
+
+    [Fact]
+    public async Task Con_la_cuenta_activa_no_hay_boton_de_verificar_y_puede_comenzar_a_vender()
+    {
+        Factory.Gateway.RegisterStatus = PeyCodiStatus.Active;
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.DoesNotContain("data-check-status", html);
+        Assert.Contains("data-start-selling", html);
+        Assert.Contains("Comenzar a vender", html);
+    }
+
+    [Fact]
+    public async Task Verificar_cuando_Pey_ya_la_activo_deja_al_vendedor_listo_para_vender()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        await BackdateStatusCheckAsync(Email);
+        Factory.Gateway.LookupStatus = PeyCodiStatus.Active;
+
+        var response = await CheckStatusAsync(client);
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(Url, Location(response));
+        var (merchant, account) = await LoadAsync(Email);
+        Assert.Equal(account!.PeyBankAccountId, Assert.Single(Factory.Gateway.BankAccountLookups));
+        Assert.Equal(MerchantStatus.Active, merchant.Status);
+        Assert.Equal(PeyCodiStatus.Active, account.CodiStatus);
+
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("¡Tu cuenta ya está activa!", html);
+        Assert.Contains("data-start-selling", html);
+        Assert.Contains("href=\"/app/cobrar\"", html);
+        Assert.DoesNotContain("data-check-status", html);
+        Assert.Contains("data-merchant-status=\"Active\"", await GetHtmlAsync(client, "/app"));
+    }
+
+    [Theory]
+    [InlineData(PeyCodiStatus.Pending)]
+    [InlineData(PeyCodiStatus.Processing)]
+    public async Task Verificar_cuando_sigue_en_revision_avisa_y_registra_la_lectura(PeyCodiStatus status)
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        var backdated = await BackdateStatusCheckAsync(Email);
+        Factory.Gateway.LookupStatus = status;
+
+        await CheckStatusAsync(client);
+
+        var (merchant, account) = await LoadAsync(Email);
+        Assert.Single(Factory.Gateway.BankAccountLookups);
+        Assert.Equal(MerchantStatus.BankAccountInReview, merchant.Status);
+        Assert.Equal(status, account!.CodiStatus);
+        Assert.True(account.StatusCheckedAt > backdated);
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("data-status-info", html);
+        Assert.Contains("Banxico sigue revisando tu cuenta", html);
+        Assert.Contains("data-check-status", html);
+    }
+
+    [Fact]
+    public async Task Verificar_cuando_Pey_la_rechazo_regresa_al_formulario_con_el_motivo()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        await BackdateStatusCheckAsync(Email);
+        Factory.Gateway.LookupStatus = PeyCodiStatus.Error;
+        Factory.Gateway.LookupErrorMessage = "La CLABE no pertenece al titular";
+
+        await CheckStatusAsync(client);
+
+        var (merchant, account) = await LoadAsync(Email);
+        Assert.Equal(MerchantStatus.PendingBankAccount, merchant.Status);
+        Assert.Equal(PeyCodiStatus.Error, account!.CodiStatus);
+        Assert.Equal("La CLABE no pertenece al titular", account.ErrorMessage);
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("data-bank-account-form", html);
+        Assert.Contains("data-previous-error", html);
+        Assert.Contains("La CLABE no pertenece al titular", html);
+    }
+
+    [Fact]
+    public async Task Verificar_de_nuevo_antes_de_un_minuto_no_llama_a_Pey()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client); // el alta cuenta como lectura
+
+        await CheckStatusAsync(client);
+
+        Assert.Empty(Factory.Gateway.BankAccountLookups);
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("Acabamos de revisar tu cuenta", html);
+        Assert.Contains("segundos", html);
+    }
+
+    [Fact]
+    public async Task Si_Pey_no_esta_disponible_al_verificar_avisa_y_no_guarda_nada()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        var backdated = await BackdateStatusCheckAsync(Email);
+        Factory.Gateway.LookupException = new PaymentGatewayUnavailableException("timeout");
+
+        await CheckStatusAsync(client);
+
+        var (merchant, account) = await LoadAsync(Email);
+        Assert.Equal(MerchantStatus.BankAccountInReview, merchant.Status);
+        Assert.Equal(PeyCodiStatus.Pending, account!.CodiStatus);
+        Assert.Equal(backdated, account.StatusCheckedAt);
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("data-status-warning", html);
+        Assert.Contains("Intenta de nuevo en unos minutos", html);
+    }
+
+    [Fact]
+    public async Task Si_Pey_no_encuentra_la_cuenta_muestra_mensaje_generico()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        await BackdateStatusCheckAsync(Email);
+        Factory.Gateway.LookupException = new PaymentGatewayNotFoundException(
+            "not found", PeyErrorType.BankAccountNotFound, 404, "req-9", "Bank account not found");
+
+        await CheckStatusAsync(client);
+
+        var (merchant, _) = await LoadAsync(Email);
+        Assert.Equal(MerchantStatus.BankAccountInReview, merchant.Status);
+        var html = await GetHtmlAsync(client, Url);
+        Assert.Contains("problema de nuestro lado", html);
+        Assert.DoesNotContain("Bank account not found", html);
+    }
+
+    [Fact]
+    public async Task Verificar_sin_token_antiforgery_responde_400()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        await BackdateStatusCheckAsync(Email);
+
+        var response = await client.PostAsync(CheckUrl, new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(Factory.Gateway.BankAccountLookups);
+    }
+
+    [Fact]
+    public async Task Verificar_sin_cuenta_o_con_la_cuenta_activa_no_llama_a_Pey()
+    {
+        var sinCuenta = await LoggedInMerchantAsync("sin-cuenta@prueba.mx");
+        var response = await CheckStatusAsync(sinCuenta, tokenFrom: "/Identity/Account/Manage");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(Url, Location(response));
+
+        Factory.Gateway.RegisterStatus = PeyCodiStatus.Active;
+        var activo = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(activo);
+        await BackdateStatusCheckAsync(Email);
+        response = await CheckStatusAsync(activo, tokenFrom: "/Identity/Account/Manage");
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+
+        Assert.Empty(Factory.Gateway.BankAccountLookups);
+    }
+
+    [Fact]
+    public async Task Suspendido_con_cuenta_en_revision_no_puede_verificar()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        await BackdateStatusCheckAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.Status = MerchantStatus.Suspended);
+
+        Assert.DoesNotContain("data-check-status", await GetHtmlAsync(client, Url));
+        await CheckStatusAsync(client, tokenFrom: "/Identity/Account/Manage");
+
+        Assert.Empty(Factory.Gateway.BankAccountLookups);
+        var (merchant, _) = await LoadAsync(Email);
+        Assert.Equal(MerchantStatus.Suspended, merchant.Status);
+    }
+
+    [Fact]
+    public async Task Cada_vendedor_solo_verifica_su_propia_cuenta()
+    {
+        var uno = await LoggedInMerchantAsync("uno@prueba.mx");
+        var dos = await LoggedInMerchantAsync("dos@prueba.mx");
+        await SubmitAsync(uno, holderName: "Titular Uno");
+        await SubmitAsync(dos, holderName: "Titular Dos", clabe: OtherValidClabe);
+        await BackdateStatusCheckAsync("uno@prueba.mx");
+        await BackdateStatusCheckAsync("dos@prueba.mx");
+        Factory.Gateway.LookupStatus = PeyCodiStatus.Active;
+
+        await CheckStatusAsync(dos);
+
+        var (merchantUno, accountUno) = await LoadAsync("uno@prueba.mx");
+        var (merchantDos, accountDos) = await LoadAsync("dos@prueba.mx");
+        Assert.Equal(accountDos!.PeyBankAccountId, Assert.Single(Factory.Gateway.BankAccountLookups));
+        Assert.Equal(MerchantStatus.Active, merchantDos.Status);
+        Assert.Equal(MerchantStatus.BankAccountInReview, merchantUno.Status);
+        Assert.Equal(PeyCodiStatus.Pending, accountUno!.CodiStatus);
+    }
+
+    [Fact]
+    public async Task El_caso_de_uso_se_puede_llamar_sin_sesion_como_lo_hara_el_job_de_sondeo()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+        await SubmitAsync(client);
+        var (_, account) = await LoadAsync(Email);
+
+        // Sin HttpContext ni minInterval (como el job): no aplica el freno de un minuto.
+        BankAccountStatusSyncResult first, second;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            first = await scope.ServiceProvider.GetRequiredService<IBankAccountStatusSync>().SyncAsync(account!.Id);
+        }
+
+        Factory.Gateway.LookupStatus = PeyCodiStatus.Active;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            second = await scope.ServiceProvider.GetRequiredService<IBankAccountStatusSync>().SyncAsync(account.Id);
+        }
+
+        Assert.Equal(
+            new BankAccountStatusSyncResult.Synced(PeyCodiStatus.Pending, PeyCodiStatus.Pending, MerchantStatus.BankAccountInReview, Changed: false),
+            first);
+        Assert.Equal(
+            new BankAccountStatusSyncResult.Synced(PeyCodiStatus.Pending, PeyCodiStatus.Active, MerchantStatus.Active, Changed: true),
+            second);
+        Assert.Equal(2, Factory.Gateway.BankAccountLookups.Count);
+        var (merchant, _) = await LoadAsync(Email);
+        Assert.Equal(MerchantStatus.Active, merchant.Status);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            Assert.IsType<BankAccountStatusSyncResult.NotFound>(
+                await scope.ServiceProvider.GetRequiredService<IBankAccountStatusSync>().SyncAsync(-1));
+        }
+    }
+
+    private static Task<HttpResponseMessage> CheckStatusAsync(HttpClient client, string tokenFrom = Url) =>
+        PostFormAsync(client, tokenFrom, new Dictionary<string, string>(), postUrl: CheckUrl);
+
+    /// <summary>Mueve la última lectura dos minutos atrás para que el freno de un minuto no aplique.</summary>
+    private async Task<DateTimeOffset> BackdateStatusCheckAsync(string email)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
+        var merchantId = await db.Merchants.Where(m => m.UserId == userId).Select(m => m.Id).SingleAsync();
+        var account = await db.BankAccounts.SingleAsync(b => b.MerchantId == merchantId);
+        account.StatusCheckedAt = DateTimeOffset.UtcNow.AddMinutes(-2);
+        await db.SaveChangesAsync();
+        return account.StatusCheckedAt.Value;
     }
 
     private async Task<HttpClient> LoggedInMerchantAsync(string email)
