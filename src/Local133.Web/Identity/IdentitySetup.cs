@@ -1,5 +1,7 @@
+using Local133.Application.Tenancy;
 using Local133.Infrastructure.Identity;
 using Local133.Infrastructure.Persistence;
+using Local133.Web.Tenancy;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -36,7 +38,12 @@ public static class IdentitySetup
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders()
-            .AddErrorDescriber<SpanishIdentityErrorDescriber>();
+            .AddErrorDescriber<SpanishIdentityErrorDescriber>()
+            .AddClaimsPrincipalFactory<AppClaimsPrincipalFactory>();
+
+        // Tenant por petición: el vendedor de la sesión (claim local133:merchant_id) filtra sus entidades en EF Core.
+        services.AddHttpContextAccessor();
+        services.Replace(ServiceDescriptor.Scoped<ITenantContext, HttpTenantContext>());
 
         services.ConfigureApplicationCookie(options =>
         {

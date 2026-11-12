@@ -1,0 +1,53 @@
+@using Local133.Web.Areas.Merchant.Controllers
+@using Local133.Web.Areas.Merchant.Models
+@model BankAccountStatusViewModel
+@{
+    ViewData["Title"] = "Cuenta bancaria";
+    var submitted = TempData[BankAccountController.SubmittedMessageKey] as string;
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6" data-bank-account-status="@(Model.CodiStatus?.ToString() ?? "None")">
+        <h1 class="h4 mb-3">Cuenta bancaria</h1>
+
+        @if (submitted is not null)
+        {
+            <div class="alert alert-success" role="status"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @submitted</div>
+        }
+
+        @if (Model.CodiStatus is null)
+        {
+            <div class="alert alert-secondary" role="alert">
+                No tienes una cuenta bancaria registrada y por ahora tu cuenta no permite registrar una. Ponte en contacto con nosotros.
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <h2 class="h5 card-title mb-0">@Model.Alias</h2>
+                        <span class="badge @Model.BadgeClass">@Model.StatusLabel</span>
+                    </div>
+                    <p class="card-text text-secondary small">@Model.Description</p>
+                    @if (Model.ErrorMessage is not null)
+                    {
+                        <p class="card-text text-danger small">Motivo: @Model.ErrorMessage</p>
+                    }
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">CLABE</span> <span class="font-monospace">@Model.MaskedClabe</span></li>
+                    <li class="list-group-item d-flex justify-content-between gap-3"><span class="text-secondary">Titular</span> <span class="text-end">@Model.HolderName</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">Tipo</span> <span>@Model.EntityLabel</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">Enviada</span> <span>@Model.SubmittedOn</span></li>
+                </ul>
+            </div>
+
+            @if (Model.MerchantStatus == Local133.Domain.Merchants.MerchantStatus.Active)
+            {
+                <a class="btn btn-primary btn-lg w-100 mt-3" href="~/app/cobrar"><i class="bi bi-qr-code me-1" aria-hidden="true"></i> Cobrar</a>
+            }
+        }
+
+        <a class="btn btn-link w-100 mt-2" href="~/app">Volver al inicio</a>
+    </div>
+</div>

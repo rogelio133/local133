@@ -75,8 +75,17 @@
                                     <div class="small text-secondary mt-1">@step.Description</div>
                                     @if (step.Kind == OnboardingStepKind.RegisterBankAccount)
                                     {
-                                        @* La pantalla de cuenta bancaria llega en el paso 2.2. *@
-                                        <button type="button" class="btn btn-primary btn-sm mt-2" disabled>Disponible pronto</button>
+                                        @if (Model.BankAccountRejection is not null)
+                                        {
+                                            <div class="alert alert-danger small py-2 mt-2 mb-0" role="alert" data-bank-account-rejected>
+                                                Tu cuenta fue rechazada: @Model.BankAccountRejection
+                                            </div>
+                                        }
+                                        <a class="btn btn-primary btn-sm mt-2" href="~/app/cuenta-bancaria">@(Model.BankAccountRejection is null ? "Registrar mi CLABE" : "Corregir mi cuenta")</a>
+                                    }
+                                    else if (step.Kind == OnboardingStepKind.BankReview)
+                                    {
+                                        <a class="btn btn-outline-primary btn-sm mt-2" href="~/app/cuenta-bancaria">Ver estatus</a>
                                     }
                                 }
                             </div>

@@ -39,6 +39,9 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
 - Alta de vendedores: siempre con `AccountRegistration` (Web/Identity), que crea usuario + rol `Merchant` + cuenta externa + `Merchant` (`PendingBankAccount`) en una transacción. Los formularios de alta heredan de `LegalAcceptanceInput` (casilla única de Términos y Aviso de privacidad, parcial `_AcceptLegalCheckbox`); la versión aceptada sale de `Domain/Legal/LegalDocuments` (subirla al cambiar `/terminos` o `/aviso-de-privacidad`).
 - Admin: se siembra **al arrancar** (`AdminSeeder`, Web/Identity) si existen `Seed:Admin:Email` y `Seed:Admin:Password` (dev: `dotnet user-secrets set "Seed:Admin:Email" "<correo>" --project src/Local133.Web` y lo mismo con `Seed:Admin:Password`; prod: variables `Seed__Admin__Email` / `Seed__Admin__Password`). Es idempotente: no cambia la contraseña de un admin existente y nunca promueve a un `Merchant`. Las pruebas vacían `Seed:Admin` en `Local133WebFactory`.
 - Inicio del vendedor (`/app`): checklist calculado con `Domain/Merchants/OnboardingChecklist.For(MerchantStatus)`; los textos van en `Areas/Merchant/Models/MerchantHomeViewModel`. Pruebas unitarias en `tests/Local133.UnitTests` (solo Domain, corren en CI).
+- Cuenta bancaria (`/app/cuenta-bancaria`): alta con `IBankAccountRegistration` (Application/BankAccounts; implementación en Infrastructure/BankAccounts). Reglas en `Domain/BankAccounts/Clabe` (dígito verificador, `Mask`) y en `Merchant.CanSubmitBankAccount` / `ApplyBankAccountStatus` (reutilizar en webhook y sondeo). La CLABE solo se muestra o loguea con `Clabe.Mask`. Una cuenta por vendedor (índice único en `MerchantId`) hasta la Fase 4.
+- Multi-tenant: `ITenantContext` (Application/Tenancy). `AppDbContext` aplica `HasQueryFilter(e => !IsMerchantScoped || e.MerchantId == CurrentMerchantId)` a cada entidad de negocio nueva (agregarla en `OnModelCreating`). En el sitio el tenant sale del claim `local133:merchant_id` (`AppClaimsPrincipalFactory` + `Web/Tenancy/HttpTenantContext`). Sin alcance: admin, anónimo, jobs (`SystemTenantContext`).
+- Pruebas del sitio: `Local133WebFactory` reemplaza `IPaymentGateway` por `FakePaymentGateway` (`Factory.Gateway`: respuesta o excepción configurable, se restablece entre pruebas). Nunca se llama a Pey desde estas pruebas.
 - Correo en dev: `FileEmailSender` guarda `.html` en `src/Local133.Web/App_Data/emails` y escribe la liga en el log (SMTP real llega con Notificaciones).
 - Webhook en local: túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en portal.mipey.mx.
 
@@ -67,5 +70,17 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - Implementar **por fases en el orden del plan** (0 Cimientos → 1 Registro/auth → 2 Ventas → 3 Productos/carrito → 4 Mi información → 5 Estados de cuenta/cobranza → 6 Admin → 7 Endurecimiento). Cada fase debe terminar en algo demostrable. La cuenta bancaria mínima se construye dentro de la Fase 2.
 - Módulos fuera del MVP (inventario, cajeros, CFDI, Excel, links de pago con tarjeta, PWA offline) no se implementan sin pedirlo.
 - Pruebas exigidas por el plan: unitarias (comisión y redondeo, jerarquía de tasas, CLABE, corte semanal con zona horaria y bordes, transiciones de estatus); integración (webhook con firma válida/inválida/duplicada, `PeyClient` contra WireMock por cada `error.type`, aislamiento entre vendedores, acceso a áreas e Identity según rol).
+- **Validación del frontend con Playwright (obligatoria)**: toda implementación o ajuste que toque vistas Razor, páginas de Identity, layouts, CSS o JS se revisa en el navegador con el MCP de Playwright antes de darla por terminada. Las pruebas de integración no sustituyen esta revisión.
+  - Configuración (una vez): `claude mcp add playwright --scope project -- cmd /c npx @playwright/mcp@latest --browser msedge --viewport-size "375,812"` y reiniciar la sesión. Se usa Edge instalado (firmado), no el Chromium que descarga Playwright, por Smart App Control.
+  - Arranque: `dotnet build` y luego, desde `src/Local133.Web`, `dotnet bin/Debug/net9.0/Local133.Web.dll --urls http://localhost:5231` en segundo plano con `ASPNETCORE_ENVIRONMENT=Development`. Usuarios de prueba: registrar uno y confirmarlo con el `.html` de `App_Data/emails`, o usar el admin sembrado. Al terminar, detener el sitio.
+  - Qué revisar en cada pantalla tocada:
+    - a **375 px** (móvil, prioridad) y a ≥ 992 px;
+    - sin scroll horizontal y sin elementos tapados por la barra inferior;
+    - pestaña activa correcta;
+    - validación en cliente (los errores aparecen sin enviar al servidor);
+    - flujo feliz y errores principales;
+    - **consola sin errores** y recursos sin 404.
+  - Reporte: capturas de lo revisado y lo que se corrigió. Si algo no se pudo validar (MCP sin configurar, Smart App Control), decirlo y anotarlo como verificación pendiente en `PLAN_DESARROLLO.md`. Nunca darlo por validado.
+  - Durante esta revisión **no se llama a Pey real**. Las pantallas que lo requieren se prueban hasta antes del envío, o con la confirmación descrita abajo.
 - **No hay sandbox**: pruebas reales contra producción de Pey con **$0.01** y la CLABE de prueba `012180015826225713` (activa de inmediato; los pagos no se devuelven). No hacer llamadas a Pey con otros montos/cuentas sin confirmación.
 - Pendientes por confirmar con soporte de Pey (no asumir): si un QR con monto se paga más de una vez, webhook de rechazo/expiración de push, reintentos de webhooks, límites.

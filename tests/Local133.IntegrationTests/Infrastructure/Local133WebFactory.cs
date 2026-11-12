@@ -1,3 +1,4 @@
+using Local133.Application.Payments;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -37,6 +38,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public InMemoryEmailSender Emails { get; } = new();
 
+    /// <summary>Pey simulado: ninguna prueba del sitio llama a la API real.</summary>
+    public FakePaymentGateway Gateway { get; } = new();
+
     /// <summary>Lo que devuelve el proveedor externo falso; cada prueba lo ajusta (se restablece en <see cref="ResetAsync"/>).</summary>
     public FakeExternalUser ExternalUser { get; } = new();
 
@@ -61,6 +65,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Emails);
+
+            services.RemoveAll<IPaymentGateway>();
+            services.AddSingleton<IPaymentGateway>(Gateway);
 
             services.AddTransient<IStartupFilter, ChallengeEndpointsStartupFilter>();
 
@@ -90,6 +97,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task ResetAsync()
     {
         Emails.Clear();
+        Gateway.Reset();
         var defaults = new FakeExternalUser();
         ExternalUser.ProviderKey = defaults.ProviderKey;
         ExternalUser.Email = defaults.Email;

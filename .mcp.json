@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "C:/",
+        "npx",
+        "@playwright/mcp@latest",
+        "--browser",
+        "msedge",
+        "--viewport-size",
+        "375,812"
+      ],
+      "env": {}
+    }
+  }
+}

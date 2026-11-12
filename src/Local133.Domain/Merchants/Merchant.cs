@@ -1,4 +1,6 @@
+using Local133.Domain.BankAccounts;
 using Local133.Domain.Common;
+using Local133.Domain.Pey;
 
 namespace Local133.Domain.Merchants;
 
@@ -29,4 +31,38 @@ public class Merchant : Entity
         Status = MerchantStatus.PendingBankAccount,
         CreatedAt = now,
     };
+
+    /// <summary>
+    /// Puede capturar (o volver a capturar) su CLABE: aún no la registra, o Pey rechazó la que envió.
+    /// </summary>
+    public bool CanSubmitBankAccount(BankAccount? current) =>
+        Status == MerchantStatus.PendingBankAccount && (current is null || current.CodiStatus == PeyCodiStatus.Error);
+
+    /// <summary>
+    /// Transición por el estatus CoDi de su cuenta (alta, webhook <c>bank.account.updated</c> o sondeo). Solo aplica
+    /// durante el onboarding; un vendedor activo, suspendido o dado de baja no cambia aquí.
+    /// Devuelve <c>true</c> si cambió el estatus.
+    /// </summary>
+    public bool ApplyBankAccountStatus(PeyCodiStatus codiStatus)
+    {
+        if (Status is not (MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview))
+        {
+            return false;
+        }
+
+        var next = codiStatus switch
+        {
+            PeyCodiStatus.Pending or PeyCodiStatus.Processing => MerchantStatus.BankAccountInReview,
+            PeyCodiStatus.Active => MerchantStatus.Active,
+            PeyCodiStatus.Error => MerchantStatus.PendingBankAccount,
+            _ => throw new ArgumentOutOfRangeException(nameof(codiStatus), codiStatus, "Estatus CoDi desconocido."),
+        };
+        if (next == Status)
+        {
+            return false;
+        }
+
+        Status = next;
+        return true;
+    }
 }

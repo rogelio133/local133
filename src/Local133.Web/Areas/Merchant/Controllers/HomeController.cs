@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using Local133.Application.Auth;
+using Local133.Domain.Pey;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -18,12 +18,15 @@ public class HomeController(AppDbContext db) : Controller
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        // Todo usuario Merchant tiene su Merchant (AccountRegistration y el backfill de la migración Merchants).
-        var merchant = await db.Merchants.AsNoTracking().SingleOrDefaultAsync(m => m.UserId == userId, cancellationToken)
-            ?? throw new InvalidOperationException($"El usuario {userId} tiene rol Merchant pero no tiene Merchant.");
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        // Si Pey rechazó la cuenta, el Inicio muestra el motivo junto al paso de la CLABE.
+        var rejection = await db.BankAccounts
+            .Where(b => b.MerchantId == merchant.Id && b.CodiStatus == PeyCodiStatus.Error)
+            .Select(b => new { b.ErrorMessage })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        return View(MerchantHomeViewModel.From(merchant, User.Identity?.Name));
+        return View(MerchantHomeViewModel.From(merchant, User.Identity?.Name,
+            rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection));
     }
 
     [HttpGet("cobrar")]
