@@ -35,8 +35,19 @@ public sealed class FakePaymentGateway : IPaymentGateway
     /// <summary>Si no es <c>null</c>, la consulta lanza esta excepción.</summary>
     public Exception? LookupException { get; set; }
 
+    /// <summary>QRs pedidos con <c>POST /codi/qr</c>, en orden.</summary>
+    public ConcurrentQueue<CreateCodiQrRequest> CodiQrRequests { get; } = new();
+
+    /// <summary>Si no es <c>null</c>, la creación del QR lanza esta excepción.</summary>
+    public Exception? CodiQrException { get; set; }
+
+    /// <summary>Contenido simulado del QR con el IDC dado (Pey devuelve un JSON de Banxico).</summary>
+    public static string QrStringFor(string idc) => $$$"""{"TYP":20,"v":{"DEV":"FAKE"},"ic":{"IDC":"{{{idc}}}","SER":0}}""";
+
     public void Reset()
     {
+        CodiQrRequests.Clear();
+        CodiQrException = null;
         BankAccountRequests.Clear();
         RegisterStatus = PeyCodiStatus.Pending;
         RegisterException = null;
@@ -71,8 +82,17 @@ public sealed class FakePaymentGateway : IPaymentGateway
             LookupStatus, LookupErrorMessage, CreatedAt: null));
     }
 
-    public Task<CodiQr> CreateCodiQrAsync(CreateCodiQrRequest request, CancellationToken cancellationToken = default) =>
-        throw NotConfigured();
+    public Task<CodiQr> CreateCodiQrAsync(CreateCodiQrRequest request, CancellationToken cancellationToken = default)
+    {
+        CodiQrRequests.Enqueue(request);
+        if (CodiQrException is { } exception)
+        {
+            throw exception;
+        }
+
+        var idc = $"IDCFAKE{Interlocked.Increment(ref _sequence):D10}";
+        return Task.FromResult(new CodiQr(idc, QrStringFor(idc)));
+    }
 
     public Task<CodiPushNotification> CreateCodiPushNotificationAsync(CreateCodiPushNotificationRequest request, CancellationToken cancellationToken = default) =>
         throw NotConfigured();

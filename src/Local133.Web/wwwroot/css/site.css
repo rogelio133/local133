@@ -55,3 +55,27 @@ body {
   color: var(--bs-primary-text-emphasis);
   font-weight: 600;
 }
+
+/* Cobrar: monto grande y QR siempre sobre blanco (también en modo oscuro) para que la cámara lo lea. */
+.amount-input {
+  font-size: 2rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sale-qr {
+  width: 100%;
+  max-width: 18rem;
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: var(--bs-border-radius-lg);
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.sale-qr canvas,
+.sale-qr img {
+  display: block;
+  width: 100%;
+  height: auto;
+}

@@ -24,4 +24,14 @@
         return (10 - sum % 10) % 10 === digits.charCodeAt(17) - 48;
     });
     $.validator.unobtrusive.adapters.addBool('clabe');
+
+    // data-val-trim: las reglas se evalúan sobre el valor sin espacios en los extremos (así "   " cuenta como vacío,
+    // igual que [Required] en servidor). Corre después de que unobtrusive crea el validador del formulario.
+    $(function () {
+        $('[data-val-trim]').each(function () {
+            if (this.form && $.data(this.form, 'validator')) {
+                $(this).rules('add', { normalizer: function (value) { return String(value).trim(); } });
+            }
+        });
+    });
 })(jQuery);

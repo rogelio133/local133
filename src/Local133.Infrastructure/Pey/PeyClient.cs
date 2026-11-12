@@ -51,6 +51,7 @@ internal sealed class PeyClient(HttpClient http, IOptions<PeyOptions> options, I
             request.Concept,
             request.ExpirationSeconds,
             FormatNumRef(request.NumRef),
+            GenerateImage: false, // el QR se dibuja en cliente a partir de qrString
             request.BankAccountId,
             request.Metadata);
         var response = await SendAsync<PeyCreateQrResponse>(HttpMethod.Post, "codi/qr", body, cancellationToken);

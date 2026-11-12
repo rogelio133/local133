@@ -75,7 +75,7 @@ public sealed class PeyClientTests : IDisposable
         Assert.Equal("123", body.GetProperty("numRef").GetString());
         Assert.Equal("01JBAV", body.GetProperty("bankAccountId").GetString());
         Assert.Equal("sale", body.GetProperty("metadata").GetProperty("kind").GetString());
-        Assert.False(body.TryGetProperty("generateImage", out _));
+        Assert.False(body.GetProperty("generateImage").GetBoolean()); // siempre explícito: el QR se dibuja en cliente
     }
 
     [Fact]
@@ -92,6 +92,7 @@ public sealed class PeyClientTests : IDisposable
         Assert.False(body.TryGetProperty("numRef", out _));
         Assert.False(body.TryGetProperty("metadata", out _));
         Assert.False(body.TryGetProperty("concept", out _));
+        Assert.False(body.GetProperty("generateImage").GetBoolean());
     }
 
     [Fact]

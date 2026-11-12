@@ -1,9 +1,11 @@
 using Local133.Application.BankAccounts;
+using Local133.Application.Sales;
 using Local133.Application.Tenancy;
 using Local133.Infrastructure.BankAccounts;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
 using Local133.Infrastructure.Pey;
+using Local133.Infrastructure.Sales;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -43,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IBankAccountRegistration, BankAccountRegistration>();
         // Botón "Verificar estatus" y job de sondeo (2.3) comparten este caso de uso.
         services.AddScoped<IBankAccountStatusSync, BankAccountStatusSync>();
+        services.AddScoped<ISaleCharging, SaleCharging>();
 
         return services;
     }
