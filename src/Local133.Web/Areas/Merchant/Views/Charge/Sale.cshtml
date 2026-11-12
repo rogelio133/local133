@@ -1,0 +1,46 @@
+@using Local133.Web.Areas.Merchant.Models
+@model SaleQrViewModel
+@{
+    ViewData["Title"] = $"Venta {Model.Folio}";
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 text-center" data-sale="@Model.Id" data-sale-status="@Model.Status" data-expired="@(Model.IsExpired ? "true" : "false")">
+        <p class="text-secondary mb-1">Venta @Model.Folio</p>
+        <p class="display-5 fw-semibold @(Model.Concept is null ? "mb-3" : "mb-1")" data-sale-amount>@Model.AmountText</p>
+        @if (Model.Concept is not null)
+        {
+            <p class="text-secondary text-break mb-3" data-sale-concept>@Model.Concept</p>
+        }
+
+        @if (Model.ShowQr)
+        {
+            <div data-pending-only>
+                <div class="sale-qr mx-auto mb-3" data-sale-qr data-qr-string="@Model.QrString" role="img" aria-label="Código QR CoDi para pagar @Model.AmountText">
+                    <noscript><p class="text-danger small mb-0">Activa JavaScript para mostrar el código QR.</p></noscript>
+                </div>
+                <p class="text-danger small d-none" data-qr-error role="alert">No pudimos dibujar el código QR. Genera un cobro nuevo.</p>
+                <p class="mb-1">Pídele a tu cliente que lo escanee con la app de su banco.</p>
+                @if (Model.RemainingSeconds is not null)
+                {
+                    <p class="text-secondary" aria-live="polite">
+                        Expira en <span class="fw-semibold font-monospace" data-expires-in="@Model.RemainingSeconds">@Model.RemainingText</span>
+                    </p>
+                }
+            </div>
+        }
+
+        <div class="alert alert-warning @(Model.IsExpired ? null : "d-none")" role="status" data-expired-only>
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Este QR expiró sin pago. Genera un cobro nuevo.
+        </div>
+
+        <a class="btn btn-primary btn-lg w-100" href="~/app/cobrar" data-new-charge><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo cobro</a>
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.ShowQr)
+    {
+        <script src="~/lib/qrcodejs/qrcode.min.js"></script>
+        <script src="~/js/sale-qr.js"></script>
+    }
+}

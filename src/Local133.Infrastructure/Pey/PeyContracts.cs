@@ -22,11 +22,16 @@ internal sealed record PeyBankAccountResponse(
     string? ErrorMessage,
     long? DateCreated);
 
+/// <param name="GenerateImage">
+/// Siempre <c>false</c>: el QR se dibuja en el navegador (QRCode.js) a partir de <c>qrString</c>; con imagen Pey
+/// responde más lento. Es un <c>bool</c> no nulo, así que viaja explícito aunque se omitan los nulos.
+/// </param>
 internal sealed record PeyCreateQrBody(
     decimal Amount,
     string? Concept,
     int Expiration,
     string? NumRef,
+    bool GenerateImage,
     string? BankAccountId,
     IReadOnlyDictionary<string, string>? Metadata);
 

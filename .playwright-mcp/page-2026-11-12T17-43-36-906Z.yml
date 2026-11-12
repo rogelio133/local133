@@ -1,0 +1,53 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "Local133" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - link "Entrar" [ref=e6] [cursor=pointer]:
+          - /url: /Identity/Account/Login
+        - link "Crear cuenta" [ref=e7] [cursor=pointer]:
+          - /url: /Identity/Account/Register
+  - main [ref=e8]:
+    - generic [ref=e10]:
+      - heading "Crear cuenta" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Regístrate para cobrar con CoDi desde tu puesto.
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - textbox "Correo" [ref=e15]:
+            - /placeholder: nombre@ejemplo.com
+          - generic: Correo
+        - generic [ref=e16]:
+          - textbox "Contraseña" [ref=e17]:
+            - /placeholder: contraseña
+          - generic: Contraseña
+          - generic [ref=e18]: Mínimo 8 caracteres y al menos un número.
+        - generic [ref=e19]:
+          - textbox "Confirmar contraseña" [ref=e20]:
+            - /placeholder: contraseña
+          - generic: Confirmar contraseña
+        - generic [ref=e21]:
+          - checkbox "Acepto los Términos y condiciones y el Aviso de privacidad." [ref=e22]
+          - generic [ref=e23]:
+            - text: Acepto los
+            - link "Términos y condiciones" [ref=e24] [cursor=pointer]:
+              - /url: /terminos
+            - text: y el
+            - link "Aviso de privacidad" [ref=e25] [cursor=pointer]:
+              - /url: /aviso-de-privacidad
+            - text: .
+        - button "Crear cuenta" [ref=e26] [cursor=pointer]
+      - paragraph [ref=e27]:
+        - text: ¿Ya tienes cuenta?
+        - link "Entrar" [ref=e28] [cursor=pointer]:
+          - /url: /Identity/Account/Login
+      - generic [ref=e29]: o regístrate con
+      - button "Regístrate con Google" [ref=e31] [cursor=pointer]:
+        - generic [aria-hidden] [ref=e32]: 
+        - text: Regístrate con Google
+  - contentinfo [ref=e33]:
+    - link "Términos y condiciones" [ref=e34] [cursor=pointer]:
+      - /url: /terminos
+    - text: ·
+    - link "Aviso de privacidad" [ref=e35] [cursor=pointer]:
+      - /url: /aviso-de-privacidad

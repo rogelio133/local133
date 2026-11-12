@@ -29,9 +29,6 @@ public class HomeController(AppDbContext db) : Controller
             rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection));
     }
 
-    [HttpGet("cobrar")]
-    public IActionResult Charge() => View();
-
     [HttpGet("ventas")]
     public IActionResult Sales() => View();
 

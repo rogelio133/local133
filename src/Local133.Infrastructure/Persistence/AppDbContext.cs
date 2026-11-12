@@ -1,6 +1,7 @@
 using Local133.Application.Tenancy;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
+using Local133.Domain.Sales;
 using Local133.Domain.Settings;
 using Local133.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -24,6 +25,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
 
     public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
 
+    public DbSet<Sale> Sales => Set<Sale>();
+
     /// <summary>La petición es de un vendedor: las entidades de negocio se filtran por <see cref="CurrentMerchantId"/>.</summary>
     public bool IsMerchantScoped => _tenant.IsMerchantScoped;
 
@@ -37,5 +40,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
 
         // Filtros multi-tenant (referencian propiedades del contexto para que se parametricen por instancia).
         modelBuilder.Entity<BankAccount>().HasQueryFilter(b => !IsMerchantScoped || b.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<Sale>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
     }
 }

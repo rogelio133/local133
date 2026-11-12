@@ -39,6 +39,13 @@ public class Merchant : Entity
         Status == MerchantStatus.PendingBankAccount && (current is null || current.CodiStatus == PeyCodiStatus.Error);
 
     /// <summary>
+    /// Puede generar cobros: el vendedor está activo y su cuenta bancaria está activa en CoDi (cada cobro se
+    /// deposita en ella con su <c>bankAccountId</c>).
+    /// </summary>
+    public bool CanCharge(BankAccount? account) =>
+        Status == MerchantStatus.Active && account is { CodiStatus: PeyCodiStatus.Active };
+
+    /// <summary>
     /// Transición por el estatus CoDi de su cuenta (alta, webhook <c>bank.account.updated</c> o sondeo). Solo aplica
     /// durante el onboarding; un vendedor activo, suspendido o dado de baja no cambia aquí.
     /// Devuelve <c>true</c> si cambió el estatus.
