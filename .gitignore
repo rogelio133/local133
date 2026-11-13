@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 
 # Correos de desarrollo (FileEmailSender)
 App_Data/
+.playwright.mcp/*
