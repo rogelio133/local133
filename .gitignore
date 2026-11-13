@@ -485,4 +485,6 @@ $RECYCLE.BIN/
 
 # Correos de desarrollo (FileEmailSender)
 App_Data/
-.playwright.mcp/*
+
+# Capturas y snapshots del MCP de Playwright
+.playwright-mcp/
