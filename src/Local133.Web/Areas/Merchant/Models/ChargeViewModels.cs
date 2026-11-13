@@ -83,7 +83,10 @@ public sealed class ChargeFormViewModel
 
 public sealed record ChargeBlockedNotice(string Title, string Message, string LinkHref, string LinkText);
 
-/// <summary>Pantalla del QR de una venta.</summary>
+/// <summary>
+/// Pantalla del QR de una venta: pendiente (QR + cuenta regresiva + cancelar), pagada («Pago recibido»), vencida o
+/// cancelada. El servidor la dibuja en su estado actual y <c>sale-qr.js</c> pasa a «Pago recibido» o «expirado» sin recargar.
+/// </summary>
 public sealed record SaleQrViewModel(
     int Id,
     int Folio,
@@ -91,15 +94,27 @@ public sealed record SaleQrViewModel(
     string? Concept,
     SaleStatus Status,
     string? QrString,
-    int? RemainingSeconds)
+    int? RemainingSeconds,
+    string? PaidAtText)
 {
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
+    private static readonly TimeZoneInfo MexicoCity = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
 
     /// <summary>Se puede mostrar el QR para pagar: pendiente, con QR y sin vencer.</summary>
     public bool ShowQr => Status == SaleStatus.Pending && QrString is not null && RemainingSeconds is not 0;
 
     /// <summary>Venció por tiempo (o nunca tuvo QR) sin pagarse.</summary>
     public bool IsExpired => Status == SaleStatus.Expired || (Status == SaleStatus.Pending && !ShowQr);
+
+    public bool IsPaid => Status == SaleStatus.Paid;
+
+    public bool IsCancelled => Status == SaleStatus.Cancelled;
+
+    /// <summary>La vista escucha el pago (SignalR + polling): pendiente, o vencida/cancelada por si llega un pago tardío.</summary>
+    public bool ListensForPayment => !IsPaid;
+
+    /// <summary>El vendedor puede cancelar: el QR sigue vigente.</summary>
+    public bool CanCancel => ShowQr;
 
     public string? RemainingText => RemainingSeconds is { } s ? FormatCountdown(s) : null;
 
@@ -110,9 +125,14 @@ public sealed record SaleQrViewModel(
         sale.Concept,
         sale.Status,
         sale.QrString,
-        sale.RemainingSeconds(now));
+        sale.RemainingSeconds(now),
+        sale.PaidAt is { } paidAt ? FormatPaidAt(paidAt) : null);
 
     public static string FormatAmount(decimal amount) => amount.ToString("C2", Spanish);
+
+    /// <summary>Hora del pago en la hora del centro de México, p. ej. «12 de noviembre, 3:45 p. m.».</summary>
+    public static string FormatPaidAt(DateTimeOffset paidAt) =>
+        TimeZoneInfo.ConvertTime(paidAt, MexicoCity).ToString("d 'de' MMMM, h:mm tt", Spanish);
 
     /// <summary><c>mm:ss</c>, igual que la cuenta regresiva de <c>sale-qr.js</c>.</summary>
     public static string FormatCountdown(int seconds) =>

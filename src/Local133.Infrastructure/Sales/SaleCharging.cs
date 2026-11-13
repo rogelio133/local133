@@ -115,6 +115,55 @@ internal sealed class SaleCharging(
         return new CreateDirectSaleResult.Created(sale.Id);
     }
 
+    public async Task<CancelSaleResult> CancelSaleAsync(CancelSaleCommand command, CancellationToken cancellationToken = default)
+    {
+        var merchantId = await db.Merchants.AsNoTracking()
+            .Where(m => m.UserId == command.UserId)
+            .Select(m => (int?)m.Id)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException($"El usuario {command.UserId} no tiene Merchant.");
+
+        // Explícito por MerchantId: la venta de otro vendedor no existe para este.
+        var sale = await db.Sales.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == command.SaleId && s.MerchantId == merchantId, cancellationToken);
+        if (sale is null)
+        {
+            return new CancelSaleResult.NotFound();
+        }
+
+        var now = clock.GetUtcNow();
+        if (!sale.CanCancel || sale.EffectiveStatus(now) != SaleStatus.Pending)
+        {
+            return NotCancellable(sale.EffectiveStatus(now));
+        }
+
+        // UPDATE condicional (atómico): si el webhook la marcó pagada o el job la venció mientras tanto, no se pisa.
+        var cancelled = await db.Sales.IgnoreQueryFilters()
+            .Where(s => s.Id == sale.Id && s.MerchantId == merchantId && s.Status == SaleStatus.Pending
+                && (s.ExpiresAt == null || s.ExpiresAt > now))
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(s => s.Status, SaleStatus.Cancelled)
+                .SetProperty(s => s.CancelledAt, now), cancellationToken);
+        if (cancelled == 0)
+        {
+            var current = await db.Sales.IgnoreQueryFilters().AsNoTracking()
+                .Where(s => s.Id == sale.Id)
+                .SingleAsync(cancellationToken);
+            return NotCancellable(current.EffectiveStatus(now));
+        }
+
+        logger.LogInformation("Vendedor {MerchantId} canceló la venta {SaleId} (folio {Folio})", merchantId, sale.Id, sale.Folio);
+        return new CancelSaleResult.Cancelled();
+    }
+
+    private static CancelSaleResult.NotCancellable NotCancellable(SaleStatus status) => new(status switch
+    {
+        SaleStatus.Paid => "Este cobro ya se pagó; no se puede cancelar.",
+        SaleStatus.Expired => "Este cobro ya expiró; no hace falta cancelarlo.",
+        SaleStatus.Cancelled => "Este cobro ya estaba cancelado.",
+        _ => "Este cobro no se puede cancelar.",
+    });
+
     /// <summary>Inserta la venta con el siguiente folio del vendedor; si otra venta simultánea lo tomó, reintenta.</summary>
     private async Task<Sale> InsertWithNextFolioAsync(
         int merchantId, string concept, decimal amount, DateTimeOffset? expiresAt, DateTimeOffset now,

@@ -130,6 +130,74 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Local133.Domain.Payments.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CommissionAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("PaidAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("PayerBankCode")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PeyTransactionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("StatementId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrackingKey")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PeyTransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("SaleId");
+
+                    b.HasIndex("MerchantId", "PaidAt");
+
+                    b.ToTable("Payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Payments_Amount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_Payments_CommissionAmount", "[CommissionAmount] >= 0");
+
+                            t.HasCheckConstraint("CK_Payments_CommissionRate", "[CommissionRate] >= 0 AND [CommissionRate] < 1");
+                        });
+                });
+
             modelBuilder.Entity("Local133.Domain.Sales.Sale", b =>
                 {
                     b.Property<int>("Id")
@@ -141,6 +209,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Concept")
                         .HasMaxLength(250)
@@ -162,6 +233,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("PeyQrId")
                         .HasMaxLength(64)
@@ -189,6 +263,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("MerchantId", "Folio")
                         .IsUnique();
+
+                    b.HasIndex("Status", "ExpiresAt");
 
                     b.ToTable("Sales", null, t =>
                         {
@@ -237,6 +313,61 @@ namespace Local133.Infrastructure.Persistence.Migrations
                             SaleQrExpirationSeconds = 600,
                             VatRate = 0.16m
                         });
+                });
+
+            modelBuilder.Entity("Local133.Domain.Webhooks.WebhookEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WebhookId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTimeOffset>("WebhookTimestamp")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WebhookId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ReceivedAt");
+
+                    b.ToTable("WebhookEvents", (string)null);
                 });
 
             modelBuilder.Entity("Local133.Infrastructure.Identity.ApplicationUser", b =>
@@ -481,6 +612,21 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasOne("Local133.Infrastructure.Identity.ApplicationUser", null)
                         .WithOne()
                         .HasForeignKey("Local133.Domain.Merchants.Merchant", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Local133.Domain.Payments.Payment", b =>
+                {
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Local133.Domain.Sales.Sale", null)
+                        .WithMany()
+                        .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

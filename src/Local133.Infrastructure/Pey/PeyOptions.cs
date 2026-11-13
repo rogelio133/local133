@@ -10,6 +10,12 @@ public sealed class PeyOptions
     /// <summary>API key de la plataforma (<c>Pey:ApiKey</c>). Sin ella el sitio arranca, pero cualquier llamada falla.</summary>
     public string? ApiKey { get; set; }
 
+    /// <summary>
+    /// Secreto de firma del webhook (<c>Pey:WebhookSecret</c>, <c>whsec_…</c>, en portal.mipey.mx). Sin él el sitio arranca,
+    /// pero <c>POST /api/webhooks/pey</c> responde 500 (Pey reintenta).
+    /// </summary>
+    public string? WebhookSecret { get; set; }
+
     /// <summary>Tiempo máximo de cada intento.</summary>
     public TimeSpan AttemptTimeout { get; set; } = TimeSpan.FromSeconds(30);
 

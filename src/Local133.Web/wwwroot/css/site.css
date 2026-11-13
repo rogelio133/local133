@@ -79,3 +79,9 @@ body {
   width: 100%;
   height: auto;
 }
+
+/* Pago recibido: palomita grande. */
+.paid-icon {
+  font-size: 4.5rem;
+  line-height: 1;
+}

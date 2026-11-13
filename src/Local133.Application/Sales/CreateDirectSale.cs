@@ -73,4 +73,10 @@ public abstract record CreateDirectSaleResult
 public interface ISaleCharging
 {
     Task<CreateDirectSaleResult> CreateDirectSaleAsync(CreateDirectSaleCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancela una venta pendiente del vendedor. Solo es local: CoDi no permite anular el QR, así que si aun así llega
+    /// un pago la venta queda pagada.
+    /// </summary>
+    Task<CancelSaleResult> CancelSaleAsync(CancelSaleCommand command, CancellationToken cancellationToken = default);
 }

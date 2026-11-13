@@ -1,6 +1,9 @@
 using Local133.Application;
+using Local133.Application.Sales;
 using Local133.Infrastructure;
+using Local133.Web.Hubs;
 using Local133.Web.Identity;
+using Local133.Web.Jobs;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -38,6 +41,13 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddAppIdentity(builder.Configuration, builder.Environment);
 
+    // Tiempo real: SignalR (grupo por vendedor). Reemplaza al notificador vacío de Infrastructure.
+    builder.Services.AddSignalR();
+    builder.Services.AddSingleton<ISaleNotifier, SignalRSaleNotifier>();
+
+    // Jobs (Hangfire): sondeo de cuentas bancarias y expiración de ventas. Jobs:Enabled=false los apaga.
+    builder.Services.AddAppJobs(builder.Configuration);
+
     var app = builder.Build();
 
     // /api responde ProblemDetails; el resto del sitio, vistas HTML de error.
@@ -73,12 +83,15 @@ try
     // Todos los controladores (API y vistas) usan rutas por atributo; las URLs del sitio van en español.
     app.MapControllers().WithStaticAssets();
     app.MapRazorPages().WithStaticAssets();
+    app.MapHub<SalesHub>(SalesHub.Path);
 
     // Rutas /api inexistentes: 404 ProblemDetails. Las demás rutas sin coincidencia caen en /error/404.
     app.MapFallback("api/{**slug}", () => Results.Problem(statusCode: StatusCodes.Status404NotFound));
 
     // Admin desde Seed:Admin:Email/Password (si están configurados); idempotente.
     await app.SeedAdminAsync();
+
+    app.ScheduleAppJobs();
 
     await app.RunAsync();
 }
