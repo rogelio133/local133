@@ -34,14 +34,46 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
     protected static async Task<HttpResponseMessage> PostFormAsync(
         HttpClient client, string pageUrl, IDictionary<string, string> fields, string? postUrl = null)
     {
+        var form = new Dictionary<string, string>(fields) { ["__RequestVerificationToken"] = await GetAntiforgeryTokenAsync(client, pageUrl) };
+        return await client.PostAsync(postUrl ?? pageUrl, new FormUrlEncodedContent(form));
+    }
+
+    /// <summary>Archivo de un formulario multipart (<c>enctype="multipart/form-data"</c>).</summary>
+    protected sealed record FormFile(string FieldName, string FileName, byte[] Content, string ContentType = "image/jpeg");
+
+    /// <summary>Como <see cref="PostFormAsync"/>, pero multipart y con archivos.</summary>
+    protected static async Task<HttpResponseMessage> PostMultipartAsync(
+        HttpClient client, string pageUrl, IDictionary<string, string> fields, IEnumerable<FormFile>? files = null,
+        string? postUrl = null)
+    {
+        using var content = new MultipartFormDataContent
+        {
+            { new StringContent(await GetAntiforgeryTokenAsync(client, pageUrl)), "__RequestVerificationToken" },
+        };
+        foreach (var (name, value) in fields)
+        {
+            content.Add(new StringContent(value), name);
+        }
+
+        foreach (var file in files ?? [])
+        {
+            var part = new ByteArrayContent(file.Content);
+            part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(part, file.FieldName, file.FileName);
+        }
+
+        return await client.PostAsync(postUrl ?? pageUrl, content);
+    }
+
+    /// <summary>GET de la página (para el token antiforgery y su cookie); devuelve el primer token de la página.</summary>
+    protected static async Task<string> GetAntiforgeryTokenAsync(HttpClient client, string pageUrl)
+    {
         var page = await client.GetAsync(pageUrl);
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         var html = await page.Content.ReadAsStringAsync();
         var token = AntiforgeryRegex().Match(html);
         Assert.True(token.Success, $"No se encontró el token antiforgery en {pageUrl}.");
-
-        var form = new Dictionary<string, string>(fields) { ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value) };
-        return await client.PostAsync(postUrl ?? pageUrl, new FormUrlEncodedContent(form));
+        return WebUtility.HtmlDecode(token.Groups[1].Value);
     }
 
     protected static Task<HttpResponseMessage> LoginAsync(HttpClient client, string email, string password = Password) =>

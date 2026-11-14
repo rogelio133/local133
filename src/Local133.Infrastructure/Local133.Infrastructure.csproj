@@ -13,6 +13,9 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="SkiaSharp" />
+    <!-- Binarios nativos de Skia para Linux (CI y servidores Linux); Windows y macOS vienen en SkiaSharp. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
   </ItemGroup>
 
 </Project>

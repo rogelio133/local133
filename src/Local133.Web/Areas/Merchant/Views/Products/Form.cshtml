@@ -1,0 +1,136 @@
+@using Local133.Application.Products
+@using Local133.Domain.Products
+@using Local133.Web.Areas.Merchant.Models
+@model ProductFormViewModel
+@{
+    var title = Model.IsNew ? "Nuevo producto" : "Editar producto";
+    ViewData["Title"] = title;
+    var action = Model.IsNew ? ProductUrls.New : ProductUrls.Edit(Model.ProductId!.Value);
+    var hasPhoto = Model.CurrentPhotoUrl is not null;
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <a class="link-secondary small d-inline-flex align-items-center gap-1 mb-2" href="@Url.Content($"~{ProductUrls.List}")">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i> Productos
+        </a>
+        <h1 class="h4 mb-3">@title</h1>
+
+        <form method="post" action="@Url.Content($"~{action}")" enctype="multipart/form-data" data-product-form data-disable-on-submit novalidate
+              data-max-photo-bytes="@ProductPhotoRules.MaxUploadBytes">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <span class="form-label d-block text-body-secondary" id="product-photo-label">Foto</span>
+                    <div class="product-photo mb-2" data-photo-preview aria-labelledby="product-photo-label">
+                        <img class="product-photo-image rounded object-fit-cover @(hasPhoto ? null : "d-none")" src="@Model.CurrentPhotoUrl"
+                             alt="Foto del producto" data-photo-image data-current-src="@Model.CurrentPhotoUrl" />
+                        <div class="product-photo-placeholder rounded bg-body-secondary d-flex flex-column align-items-center justify-content-center text-body-secondary @(hasPhoto ? "d-none" : null)"
+                             data-photo-placeholder>
+                            <i class="bi bi-image fs-1" aria-hidden="true"></i>
+                            <span class="small">Sin foto</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        @* Cámara trasera del celular. En equipos sin pantalla táctil «capture» no aplica y el botón se oculta (site.scss). *@
+                        <label class="btn btn-outline-primary flex-fill" for="product-photo-camera" role="button" tabindex="0" data-photo-camera data-photo-trigger>
+                            <i class="bi bi-camera me-1" aria-hidden="true"></i> Tomar foto
+                        </label>
+                        <input type="file" id="product-photo-camera" name="Input.Photo" accept="image/*" capture="environment"
+                               class="visually-hidden" tabindex="-1" data-photo-input />
+                        <label class="btn btn-outline-primary flex-fill" for="product-photo-file" role="button" tabindex="0" data-photo-trigger>
+                            <i class="bi bi-image me-1" aria-hidden="true"></i> Elegir imagen
+                        </label>
+                        <input type="file" id="product-photo-file" name="Input.Photo" accept="@ProductPhotoRules.AcceptedMimeTypes"
+                               class="visually-hidden" tabindex="-1" data-photo-input />
+                    </div>
+                    <button type="button" class="btn btn-link link-danger px-0 @(hasPhoto ? null : "d-none")" data-photo-remove>
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i> Quitar foto
+                    </button>
+                    <input type="hidden" name="Input.RemovePhoto" value="@(Model.Input.RemovePhoto ? "true" : "false")" data-photo-remove-flag />
+
+                    @if (Model.PhotoNeedsReselect)
+                    {
+                        <p class="small text-warning-emphasis mt-2 mb-0" data-photo-reselect>
+                            <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i> Corrige los datos y vuelve a elegir la foto.
+                        </p>
+                    }
+                    <span asp-validation-for="Input.Photo" class="d-block text-danger small mt-1" data-photo-error></span>
+                    <p class="small text-body-secondary mt-1 mb-0 d-none" data-photo-busy role="status">
+                        <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Preparando la foto…
+                    </p>
+                    <div class="form-text">JPG, PNG o WebP de hasta 10 MB. Se guarda reducida y sin la ubicación de tu celular.</div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <label asp-for="Input.Name" class="form-label text-body-secondary"></label>
+                    <input asp-for="Input.Name" type="text" autocomplete="off" autocapitalize="sentences"
+                           maxlength="@Product.NameMaxLength" class="form-control form-control-lg" aria-required="true"
+                           placeholder="Ej. Taco al pastor" data-val-trim data-product-name />
+                    <span asp-validation-for="Input.Name" class="d-block text-danger small mt-1"></span>
+
+                    <label asp-for="Input.Price" class="form-label text-body-secondary mt-3"></label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text" aria-hidden="true">$</span>
+                        <input asp-for="Input.Price" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
+                               maxlength="9" class="form-control" aria-required="true" placeholder="0.00" data-amount-input data-product-price />
+                        <span class="input-group-text" aria-hidden="true">MXN</span>
+                    </div>
+                    <span asp-validation-for="Input.Price" class="d-block text-danger small mt-1"></span>
+
+                    <label asp-for="Input.Description" class="form-label text-body-secondary mt-3"></label>
+                    <textarea asp-for="Input.Description" rows="3" maxlength="@Product.DescriptionMaxLength" class="form-control"
+                              placeholder="Ej. Tortilla de maíz con piña y cilantro" data-product-description></textarea>
+                    <span asp-validation-for="Input.Description" class="d-block text-danger small mt-1"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100" data-product-submit>
+                <i class="bi bi-check-lg me-1" aria-hidden="true"></i> @(Model.IsNew ? "Guardar producto" : "Guardar cambios")
+            </button>
+        </form>
+
+        @if (!Model.IsNew)
+        {
+            <div class="text-center mt-2">
+                <button type="button" class="btn btn-link link-danger" data-bs-toggle="modal" data-bs-target="#delete-product" data-delete-product>
+                    Eliminar producto
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@if (!Model.IsNew)
+{
+    <div class="modal fade" id="delete-product" tabindex="-1" aria-labelledby="delete-product-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="delete-product-title">¿Eliminar este producto?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Ya no aparecerá en tu catálogo. Las ventas en las que lo cobraste no cambian.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No, conservarlo</button>
+                    <form method="post" action="@Url.Content($"~{ProductUrls.Delete(Model.ProductId!.Value)}")" data-disable-on-submit data-delete-form>
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/amount-input.js"></script>
+    <script src="~/js/product-form.js"></script>
+}

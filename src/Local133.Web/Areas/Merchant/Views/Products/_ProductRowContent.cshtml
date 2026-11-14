@@ -1,0 +1,17 @@
+@using Local133.Web.Areas.Merchant.Models
+@model ProductListItem
+@* Miniatura, nombre y precio de una fila de la lista (dentro de un enlace o, en solo lectura, de un div). *@
+@if (Model.ThumbnailUrl is not null)
+{
+    <img class="product-thumb rounded object-fit-cover" src="@Model.ThumbnailUrl" alt="" width="56" height="56" loading="lazy" />
+}
+else
+{
+    <span class="product-thumb rounded bg-body-secondary d-flex align-items-center justify-content-center" aria-hidden="true">
+        <i class="bi bi-image text-body-secondary fs-4"></i>
+    </span>
+}
+<span class="flex-grow-1 product-info">
+    <span class="d-block fw-semibold text-truncate" data-product-name>@Model.Name</span>
+    <span class="d-block text-body-secondary" data-product-price>@Model.PriceText</span>
+</span>

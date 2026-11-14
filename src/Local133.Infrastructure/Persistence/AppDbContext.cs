@@ -2,6 +2,7 @@ using Local133.Application.Tenancy;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Domain.Payments;
+using Local133.Domain.Products;
 using Local133.Domain.Sales;
 using Local133.Domain.Settings;
 using Local133.Domain.Webhooks;
@@ -31,6 +32,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
 
     public DbSet<Payment> Payments => Set<Payment>();
 
+    /// <summary>Catálogo del vendedor; la baja lógica no va en el filtro global (consultar con <c>!IsDeleted</c>).</summary>
+    public DbSet<Product> Products => Set<Product>();
+
     /// <summary>Bitácora de webhooks de Pey (sin filtro: no es de un vendedor).</summary>
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
@@ -49,5 +53,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<BankAccount>().HasQueryFilter(b => !IsMerchantScoped || b.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Sale>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Payment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<Product>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
     }
 }

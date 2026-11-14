@@ -26,9 +26,15 @@ public class HomeController : Controller
     }
 
     /// <summary>Destino de <c>UseStatusCodePagesWithReExecute("/error/{0}")</c>.</summary>
-    [Route("error/{code:int}")]
-    public IActionResult StatusCodePage(int code)
+    /// <remarks>
+    /// El código se lee de la ruta y no por model binding: al re-ejecutar un POST cuyo formulario no se puede leer (p. ej.
+    /// una foto que pasa el límite de la petición) MVC intenta leer el formulario, el enlazado falla y quedaría
+    /// <c>code = 0</c> (⇒ excepción y 500).
+    /// </remarks>
+    [Route("error/{code:int:range(400,599)}")]
+    public IActionResult StatusCodePage()
     {
+        var code = int.Parse((string)RouteData.Values["code"]!, System.Globalization.CultureInfo.InvariantCulture);
         Response.StatusCode = code;
         return code == StatusCodes.Status404NotFound ? View("NotFound") : View("Error");
     }

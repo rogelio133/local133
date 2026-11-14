@@ -46,6 +46,12 @@ public class Merchant : Entity
         Status == MerchantStatus.Active && account is { CodiStatus: PeyCodiStatus.Active };
 
     /// <summary>
+    /// Puede dar de alta, editar y dar de baja productos: cualquier vendedor salvo uno dado de baja. Durante la
+    /// revisión de su cuenta ya puede armar su catálogo, y la suspensión (por cobranza) solo frena los cobros.
+    /// </summary>
+    public bool CanManageProducts => Status != MerchantStatus.Disabled;
+
+    /// <summary>
     /// Transición por el estatus CoDi de su cuenta (alta, webhook <c>bank.account.updated</c> o sondeo). Solo aplica
     /// durante el onboarding; un vendedor activo, suspendido o dado de baja no cambia aquí.
     /// Devuelve <c>true</c> si cambió el estatus.
