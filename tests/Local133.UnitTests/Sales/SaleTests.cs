@@ -167,4 +167,106 @@ public class SaleTests
         Assert.Null(sale.RemainingSeconds(Now.AddYears(1)));
         Assert.False(sale.IsExpiredAt(Now.AddYears(1)));
     }
+
+    // --- Cobro por celular (notificación push) ----------------------------------------------------------------------
+
+    private const string Phone = "5512345678";
+
+    [Fact]
+    public void StartPush_crea_una_venta_por_monto_cobrada_al_celular()
+    {
+        var sale = Sale.StartPush(7, 3, 150.50m, $"  {Concept}  ", Phone, Now.AddSeconds(600), Now);
+
+        Assert.Equal(ChargeMethod.PushNotification, sale.Method);
+        Assert.Equal(SaleSource.DirectAmount, sale.Source);
+        Assert.Equal(SaleStatus.Pending, sale.Status);
+        Assert.Equal(150.50m, sale.Amount);
+        Assert.Equal(Concept, sale.Concept);
+        Assert.Equal(Phone, sale.PhoneNumber);
+        Assert.Equal(3, sale.Folio);
+        Assert.Equal(Now.AddSeconds(600), sale.ExpiresAt);
+        Assert.Null(sale.PeyTransactionId);
+        Assert.Null(sale.PeyQrId);
+        Assert.False(sale.HasPaymentRequest);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("551234567")]
+    [InlineData("55 1234 5678")] // debe llegar ya normalizado
+    [InlineData("+525512345678")]
+    public void StartPush_exige_un_celular_de_10_digitos(string phone) =>
+        Assert.Throws<ArgumentException>(() => Sale.StartPush(7, 1, 10, Concept, phone, Now.AddSeconds(600), Now));
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1.001")]
+    [InlineData("1000000")]
+    public void StartPush_valida_el_monto_igual_que_el_QR(string text)
+    {
+        var amount = decimal.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => Sale.StartPush(7, 1, amount, Concept, Phone, Now.AddSeconds(600), Now));
+    }
+
+    [Fact]
+    public void StartPush_valida_concepto_y_folio()
+    {
+        Assert.ThrowsAny<ArgumentException>(() => Sale.StartPush(7, 1, 10, " ", Phone, Now.AddSeconds(600), Now));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Sale.StartPush(7, 0, 10, Concept, Phone, Now.AddSeconds(600), Now));
+    }
+
+    [Fact]
+    public void AttachPushNotification_guarda_la_transaccion_una_sola_vez()
+    {
+        var sale = Sale.StartPush(7, 1, 10, Concept, Phone, Now.AddSeconds(600), Now);
+
+        sale.AttachPushNotification(" 01J5KXYZ1234567890ABCD ", "12345678901234567890");
+
+        Assert.Equal("01J5KXYZ1234567890ABCD", sale.PeyTransactionId);
+        Assert.Equal("12345678901234567890", sale.PeyCodiId);
+        Assert.True(sale.HasPaymentRequest);
+        Assert.Throws<InvalidOperationException>(() => sale.AttachPushNotification("OTRA", null));
+    }
+
+    [Fact]
+    public void AttachPushNotification_solo_aplica_al_cobro_por_celular()
+    {
+        var sale = Sale.StartDirect(7, 1, 10, Concept, Now.AddSeconds(600), Now);
+
+        Assert.Throws<InvalidOperationException>(() => sale.AttachPushNotification("01J5KXYZ1234567890ABCD", null));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void AttachPushNotification_exige_la_transaccion(string transactionId)
+    {
+        var sale = Sale.StartPush(7, 1, 10, Concept, Phone, Now.AddSeconds(600), Now);
+
+        Assert.Throws<ArgumentException>(() => sale.AttachPushNotification(transactionId, null));
+    }
+
+    [Fact]
+    public void Un_cobro_por_celular_vence_y_se_paga_como_el_QR()
+    {
+        var sale = Sale.StartPush(7, 1, 10, Concept, Phone, Now.AddSeconds(600), Now);
+        sale.AttachPushNotification("01J5KXYZ1234567890ABCD", null);
+
+        Assert.Equal(SaleStatus.Pending, sale.EffectiveStatus(Now.AddSeconds(599)));
+        Assert.Equal(SaleStatus.Expired, sale.EffectiveStatus(Now.AddSeconds(600)));
+        Assert.True(sale.ExpireIfDue(Now.AddSeconds(600)));
+        Assert.True(sale.MarkPaid(Now.AddSeconds(700))); // el pago manda, también vencida
+        Assert.Equal(SaleStatus.Paid, sale.Status);
+    }
+
+    [Fact]
+    public void HasPaymentRequest_en_QR_depende_del_QR()
+    {
+        var sale = Sale.StartDirect(7, 1, 10, Concept, Now.AddSeconds(600), Now);
+        Assert.False(sale.HasPaymentRequest);
+
+        sale.AttachQr("IDC1", "{\"TYP\":20}");
+        Assert.True(sale.HasPaymentRequest);
+    }
 }

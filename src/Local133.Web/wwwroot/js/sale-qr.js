@@ -1,5 +1,6 @@
-// Pantalla de una venta (/app/cobrar/venta/{id}):
-// 1. Dibuja el QR CoDi con QRCode.js a partir de qrString (Pey no genera la imagen: generateImage = false).
+// Pantalla de una venta (/app/cobrar/venta/{id}), con QR o cobrada por celular (notificación push, sin QR):
+// 1. Dibuja el QR CoDi con QRCode.js a partir de qrString (Pey no genera la imagen: generateImage = false). En un
+//    cobro por celular no hay QR y este paso no hace nada.
 // 2. Lleva la cuenta regresiva; los segundos restantes los calcula el servidor, para no depender del reloj del
 //    teléfono. Al llegar a 0 la pantalla pasa a "expirado".
 // 3. Espera el pago: escucha "PaymentReceived" por SignalR (/hubs/ventas, grupo del vendedor) y lo confirma con

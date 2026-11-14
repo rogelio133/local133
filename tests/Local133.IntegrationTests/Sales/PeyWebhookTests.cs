@@ -333,7 +333,9 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     }
 
     [Theory]
-    [InlineData("{\"type\":\"codi.pn.payment_received\",\"transactionId\":\"01TX\",\"amount\":10}", "Ignored")]
+    [InlineData("{\"type\":\"codi.pn.payment_received\",\"transactionId\":\"01TX\",\"amount\":10}", "Failed")] // sin venta
+    [InlineData("{\"type\":\"codi.pn.payment_received\",\"amount\":10}", "Failed")]
+    [InlineData("{\"type\":\"codi.pn.payment_received\",\"transactionId\":\"01TX\"}", "Failed")]
     [InlineData("{\"type\":\"payment_link.status_updated\"}", "Ignored")]
     [InlineData("{\"type\":\"algo.nuevo\"}", "Failed")]
     [InlineData("{\"amount\":10}", "Failed")]

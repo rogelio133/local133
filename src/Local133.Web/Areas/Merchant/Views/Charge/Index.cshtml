@@ -1,8 +1,10 @@
 @using Local133.Web.Areas.Merchant.Models
 @using Local133.Domain.Sales
+@using Local133.Application.Sales
 @model ChargeFormViewModel
 @{
     ViewData["Title"] = "Cobrar";
+    var isPush = Model.Input.IsPushNotification;
 }
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
@@ -23,6 +25,22 @@
             <form asp-area="Merchant" asp-controller="Charge" asp-action="Create" method="post" data-charge-form data-disable-on-submit novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+                <fieldset class="mb-3">
+                    <legend class="visually-hidden">Cómo cobrar</legend>
+                    <div class="btn-group w-100" role="group" data-charge-method>
+                        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-qr" autocomplete="off"
+                               value="@ChargeMethod.DynamicQr" checked="@(!isPush)" />
+                        <label class="btn btn-outline-primary btn-lg" for="charge-method-qr">
+                            <i class="bi bi-qr-code me-1" aria-hidden="true"></i> QR
+                        </label>
+                        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-phone" autocomplete="off"
+                               value="@ChargeMethod.PushNotification" checked="@isPush" />
+                        <label class="btn btn-outline-primary btn-lg" for="charge-method-phone">
+                            <i class="bi bi-phone me-1" aria-hidden="true"></i> Celular
+                        </label>
+                    </div>
+                </fieldset>
+
                 <div class="card mb-3">
                     <div class="card-body">
                         <label asp-for="Input.Amount" class="form-label text-body-secondary"></label>
@@ -41,11 +59,22 @@
                                placeholder="Ej. 2 tacos al pastor" data-concept-input data-val-trim />
                         <span asp-validation-for="Input.Concept" class="d-block text-danger small mt-1"></span>
                         <div class="form-text">Tu cliente lo verá en su app junto con el nombre de tu negocio.</div>
+
+                        <div class="@(isPush ? null : "d-none")" data-phone-field>
+                            <label asp-for="Input.PhoneNumber" class="form-label text-body-secondary mt-3"></label>
+                            <input asp-for="Input.PhoneNumber" type="tel" inputmode="numeric" autocomplete="tel-national"
+                                   spellcheck="false" maxlength="@ChargeInput.PhoneNumberInputMaxLength"
+                                   class="form-control form-control-lg" aria-required="true" placeholder="Ej. 55 1234 5678"
+                                   data-val-required="@SalePhoneMessages.Required" data-phone-input disabled="@(!isPush)" />
+                            <span asp-validation-for="Input.PhoneNumber" class="d-block text-danger small mt-1"></span>
+                            <div class="form-text">10 dígitos. Tu cliente debe tener CoDi activo en la app de su banco con este número.</div>
+                        </div>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-qr-code me-1" aria-hidden="true"></i> Generar QR
+                <button type="submit" class="btn btn-primary btn-lg w-100" data-charge-submit>
+                    <i class="bi @(isPush ? "bi-send" : "bi-qr-code") me-1" aria-hidden="true" data-charge-submit-icon></i>
+                    <span data-charge-submit-label>@(isPush ? "Enviar cobro" : "Generar QR")</span>
                 </button>
             </form>
         }
@@ -57,5 +86,6 @@
     {
         <partial name="_ValidationScriptsPartial" />
         <script src="~/js/amount-input.js"></script>
+        <script src="~/js/charge-form.js"></script>
     }
 }

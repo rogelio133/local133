@@ -125,7 +125,7 @@ internal sealed class PeyWebhookProcessor(
             {
                 PeyWebhookEventTypes.CodiQrPaymentReceived => await CodiQrPaymentAsync(body, cancellationToken),
                 PeyWebhookEventTypes.BankAccountUpdated => await BankAccountUpdatedAsync(body, cancellationToken),
-                PeyWebhookEventTypes.CodiPnPaymentReceived => Outcome.Ignore("Cobro por celular: se procesa a partir del paso 2.6."),
+                PeyWebhookEventTypes.CodiPnPaymentReceived => await CodiPnPaymentAsync(body, cancellationToken),
                 PeyWebhookEventTypes.PaymentLinkStatusUpdated => Outcome.Ignore("Links de pago: fuera del MVP."),
                 null => Outcome.Fail("El payload no es JSON o no trae type."),
                 _ => Outcome.Fail($"Tipo de evento desconocido: {type}."),
@@ -137,25 +137,43 @@ internal sealed class PeyWebhookProcessor(
         }
     }
 
-    private async Task<Outcome> CodiQrPaymentAsync(string body, CancellationToken cancellationToken)
+    private Task<Outcome> CodiQrPaymentAsync(string body, CancellationToken cancellationToken)
     {
         var payload = PeyWebhookJson.Deserialize<PeyCodiQrPaymentReceived>(body);
-        if (payload is null || string.IsNullOrWhiteSpace(payload.TransactionId))
+        return CodiPaymentAsync(
+            CodiPaymentChannel.Qr, payload?.TransactionId, payload?.CodiQrId, payload?.Amount, payload?.DatePaid,
+            payload?.Metadata, cancellationToken);
+    }
+
+    private Task<Outcome> CodiPnPaymentAsync(string body, CancellationToken cancellationToken)
+    {
+        var payload = PeyWebhookJson.Deserialize<PeyCodiPnPaymentReceived>(body);
+        return CodiPaymentAsync(
+            CodiPaymentChannel.PushNotification, payload?.TransactionId, codiQrId: null, payload?.Amount, payload?.DatePaid,
+            payload?.Metadata, cancellationToken);
+    }
+
+    /// <summary>Pago CoDi (QR o push) ⇒ <see cref="IPaymentRecorder"/>.</summary>
+    private async Task<Outcome> CodiPaymentAsync(
+        CodiPaymentChannel channel, string? transactionId, string? codiQrId, decimal? amount, long? datePaid,
+        PeyTransactionMetadata? metadata, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(transactionId))
         {
             return Outcome.Fail("Falta transactionId.");
         }
 
-        if (payload.Amount is not { } amount)
+        if (amount is not { } paidAmount)
         {
             return Outcome.Fail("Falta amount.");
         }
 
-        var paidAt = payload.DatePaid is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : clock.GetUtcNow();
-        var external = payload.Metadata?.ExternalMetadata?.ToDictionary(p => p.Key, p => PeyJson.ScalarToString(p.Value))
+        var paidAt = datePaid is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : clock.GetUtcNow();
+        var external = metadata?.ExternalMetadata?.ToDictionary(p => p.Key, p => PeyJson.ScalarToString(p.Value))
             ?? new Dictionary<string, string?>();
-        var result = await payments.RecordCodiQrPaymentAsync(new ReceivedCodiPayment(
-            payload.TransactionId.Trim(), payload.CodiQrId, amount, paidAt, payload.Metadata?.TrackingKey,
-            payload.Metadata?.BankCode, external), cancellationToken);
+        var result = await payments.RecordCodiPaymentAsync(new ReceivedCodiPayment(
+            transactionId.Trim(), codiQrId, paidAmount, paidAt, metadata?.TrackingKey, metadata?.BankCode, external, channel),
+            cancellationToken);
 
         return result switch
         {

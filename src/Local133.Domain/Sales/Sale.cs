@@ -35,6 +35,9 @@ public partial class Sale : Entity
 
     public const int PeyIdMaxLength = 64;
 
+    /// <summary>Folio CoDi de Banxico de una notificación push (20 dígitos).</summary>
+    public const int PeyCodiIdMaxLength = 20;
+
     public int MerchantId { get; set; }
 
     /// <summary>Folio consecutivo por vendedor (1, 2, 3…); se envía a Pey como <c>numRef</c>.</summary>
@@ -58,7 +61,19 @@ public partial class Sale : Entity
     /// <summary>Contenido del QR (se dibuja en el navegador).</summary>
     public string? QrString { get; set; }
 
-    /// <summary>Vencimiento del QR; <c>null</c> = no expira.</summary>
+    /// <summary>
+    /// Transacción de Pey de un cobro por celular (la devuelve <c>POST /codi/pn</c>); con ella llega el webhook
+    /// <c>codi.pn.payment_received</c>. <c>null</c> en ventas con QR, o si el envío quedó sin confirmar.
+    /// </summary>
+    public string? PeyTransactionId { get; set; }
+
+    /// <summary>Folio CoDi de Banxico de la notificación push (soporte).</summary>
+    public string? PeyCodiId { get; set; }
+
+    /// <summary>Celular (10 dígitos) al que se envió el cobro por notificación push.</summary>
+    public string? PhoneNumber { get; set; }
+
+    /// <summary>Vencimiento del QR (o de la notificación push); <c>null</c> = no expira.</summary>
     public DateTimeOffset? ExpiresAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
@@ -74,7 +89,36 @@ public partial class Sale : Entity
 
     /// <summary>Venta por monto capturado, cobrada con un QR dinámico. El QR se adjunta con <see cref="AttachQr"/>.</summary>
     public static Sale StartDirect(
-        int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt, DateTimeOffset now)
+        int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt, DateTimeOffset now) =>
+        StartWithAmount(ChargeMethod.DynamicQr, merchantId, folio, amount, concept, expiresAt, now);
+
+    /// <summary>
+    /// Venta por monto capturado, cobrada con una notificación push al celular del pagador (ya normalizado, ver
+    /// <see cref="Sales.PhoneNumber.Normalize"/>). La transacción se adjunta con <see cref="AttachPushNotification"/>.
+    /// </summary>
+    public static Sale StartPush(
+        int merchantId, int folio, decimal amount, string concept, string phoneNumber, DateTimeOffset expiresAt,
+        DateTimeOffset now)
+    {
+        if (!Sales.PhoneNumber.IsValid(phoneNumber))
+        {
+            throw new ArgumentException($"El celular debe tener {Sales.PhoneNumber.Length} dígitos.", nameof(phoneNumber));
+        }
+
+        if (amount > PeyLimits.MaxPushAmount)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), amount,
+                $"El cobro por celular admite hasta {PeyLimits.MaxPushAmount:N0}.");
+        }
+
+        var sale = StartWithAmount(ChargeMethod.PushNotification, merchantId, folio, amount, concept, expiresAt, now);
+        sale.PhoneNumber = phoneNumber;
+        return sale;
+    }
+
+    private static Sale StartWithAmount(
+        ChargeMethod method, int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt,
+        DateTimeOffset now)
     {
         if (!IsValidAmount(amount))
         {
@@ -94,7 +138,7 @@ public partial class Sale : Entity
         {
             MerchantId = merchantId,
             Folio = folio,
-            Method = ChargeMethod.DynamicQr,
+            Method = method,
             Source = SaleSource.DirectAmount,
             Status = SaleStatus.Pending,
             Amount = amount,
@@ -147,6 +191,27 @@ public partial class Sale : Entity
         PeyQrId = peyQrId;
         QrString = qrString;
     }
+
+    /// <summary>Notificación push enviada por Pey para esta venta.</summary>
+    public void AttachPushNotification(string peyTransactionId, string? peyCodiId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(peyTransactionId);
+        if (Method != ChargeMethod.PushNotification)
+        {
+            throw new InvalidOperationException($"La venta {Id} no es un cobro por celular.");
+        }
+
+        if (PeyTransactionId is not null)
+        {
+            throw new InvalidOperationException($"La venta {Id} ya tiene una notificación push.");
+        }
+
+        PeyTransactionId = peyTransactionId.Trim();
+        PeyCodiId = string.IsNullOrWhiteSpace(peyCodiId) ? null : peyCodiId.Trim();
+    }
+
+    /// <summary>Ya tiene con qué pagarse: el QR (ventas con QR) o la notificación push enviada (cobro por celular).</summary>
+    public bool HasPaymentRequest => Method == ChargeMethod.PushNotification ? PeyTransactionId is not null : QrString is not null;
 
     /// <summary>
     /// El QR ya venció (por tiempo). No cambia <see cref="Status"/>: la transición a <see cref="SaleStatus.Expired"/>

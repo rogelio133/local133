@@ -12,9 +12,9 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Payments;
 
 /// <summary>
-/// Pago CoDi recibido en un QR ⇒ <see cref="Payment"/> con la comisión vigente + venta pagada, en un solo guardado;
-/// luego avisa al vendedor en tiempo real. Idempotente por <c>transactionId</c> (índice único). Sin dependencia de la
-/// sesión: lo usan el webhook y la conciliación (2.9).
+/// Pago CoDi recibido (QR o notificación push) ⇒ <see cref="Payment"/> con la comisión vigente + venta pagada, en un
+/// solo guardado; luego avisa al vendedor en tiempo real. Idempotente por <c>transactionId</c> (índice único). Sin
+/// dependencia de la sesión: lo usan los webhooks y la conciliación (2.9).
 /// </summary>
 internal sealed class PaymentRecorder(
     AppDbContext db,
@@ -22,7 +22,7 @@ internal sealed class PaymentRecorder(
     TimeProvider clock,
     ILogger<PaymentRecorder> logger) : IPaymentRecorder
 {
-    public async Task<PaymentRecordResult> RecordCodiQrPaymentAsync(
+    public async Task<PaymentRecordResult> RecordCodiPaymentAsync(
         ReceivedCodiPayment received, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(received);
@@ -53,10 +53,20 @@ internal sealed class PaymentRecorder(
             return new PaymentRecordResult.Unmatched($"Monto inválido: {received.Amount.ToString(CultureInfo.InvariantCulture)}.");
         }
 
-        var (sale, unmatched) = await FindSaleAsync(received, cancellationToken);
+        var (sale, unmatched) = received.Channel == CodiPaymentChannel.PushNotification
+            ? await FindPushSaleAsync(received, cancellationToken)
+            : await FindSaleAsync(received, cancellationToken);
         if (sale is null)
         {
             return new PaymentRecordResult.Unmatched(unmatched!);
+        }
+
+        if (received.Channel == CodiPaymentChannel.PushNotification && sale.PeyTransactionId is null)
+        {
+            // Push cuyo envío quedó sin confirmar (Pey no respondió): ahora sí se sabe su transacción.
+            sale.AttachPushNotification(received.TransactionId, peyCodiId: null);
+            logger.LogWarning("La venta {SaleId} del vendedor {MerchantId} (cobro por celular sin confirmar) recibió el pago {PeyTransactionId}",
+                sale.Id, sale.MerchantId, received.TransactionId);
         }
 
         var merchant = await db.Merchants.AsNoTracking().SingleAsync(m => m.Id == sale.MerchantId, cancellationToken);
@@ -147,6 +157,51 @@ internal sealed class PaymentRecorder(
             return (null, $"No hay venta con el QR {received.CodiQrId ?? "(sin codiQrId)"} ni con saleId {Value(received.External, SaleMetadata.SaleIdKey) ?? "(sin saleId)"}.");
         }
 
+        if (sale.Method == ChargeMethod.PushNotification)
+        {
+            return (null, $"La venta {sale.Id} es un cobro por celular; no puede recibir un pago de QR.");
+        }
+
+        return CheckMetadata(sale, metaMerchantId, metaSaleId, $"el QR {received.CodiQrId}");
+    }
+
+    /// <summary>
+    /// Venta de un pago de notificación push: por la transacción que devolvió <c>POST /codi/pn</c>
+    /// (<c>Sales.PeyTransactionId</c>) y, de respaldo, por <c>saleId</c> de la metadata. Por metadata solo vale un
+    /// cobro por celular sin transacción (envío sin confirmar) o con la misma.
+    /// </summary>
+    private async Task<(Sale? Sale, string? Unmatched)> FindPushSaleAsync(ReceivedCodiPayment received, CancellationToken cancellationToken)
+    {
+        var metaSaleId = IntValue(received.External, SaleMetadata.SaleIdKey);
+        var metaMerchantId = IntValue(received.External, SaleMetadata.MerchantIdKey);
+
+        var sale = await db.Sales.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(s => s.PeyTransactionId == received.TransactionId, cancellationToken);
+        if (sale is null && metaSaleId is { } saleId)
+        {
+            sale = await db.Sales.IgnoreQueryFilters().SingleOrDefaultAsync(s => s.Id == saleId, cancellationToken);
+            if (sale?.PeyTransactionId is { } otherTransaction && otherTransaction != received.TransactionId)
+            {
+                return (null, $"La venta {saleId} de la metadata tiene otra transacción ({otherTransaction}), no {received.TransactionId}.");
+            }
+        }
+
+        if (sale is null)
+        {
+            return (null, $"No hay venta con la transacción {received.TransactionId} ni con saleId {Value(received.External, SaleMetadata.SaleIdKey) ?? "(sin saleId)"}.");
+        }
+
+        if (sale.Method != ChargeMethod.PushNotification)
+        {
+            return (null, $"La venta {sale.Id} no es un cobro por celular; no puede recibir un pago de notificación push.");
+        }
+
+        return CheckMetadata(sale, metaMerchantId, metaSaleId, $"la transacción {received.TransactionId}");
+    }
+
+    /// <summary>Si la metadata trae <c>merchantId</c> o <c>saleId</c>, debe coincidir con la venta encontrada.</summary>
+    private static (Sale? Sale, string? Unmatched) CheckMetadata(Sale sale, int? metaMerchantId, int? metaSaleId, string foundBy)
+    {
         if (metaMerchantId is { } merchantId && merchantId != sale.MerchantId)
         {
             return (null, $"La metadata dice vendedor {merchantId}, pero la venta {sale.Id} es del vendedor {sale.MerchantId}.");
@@ -154,7 +209,7 @@ internal sealed class PaymentRecorder(
 
         if (metaSaleId is { } expectedSaleId && expectedSaleId != sale.Id)
         {
-            return (null, $"La metadata dice venta {expectedSaleId}, pero el QR {received.CodiQrId} es de la venta {sale.Id}.");
+            return (null, $"La metadata dice venta {expectedSaleId}, pero {foundBy} es de la venta {sale.Id}.");
         }
 
         return (sale, null);

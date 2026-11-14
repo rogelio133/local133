@@ -44,10 +44,18 @@ public sealed class FakePaymentGateway : IPaymentGateway
     /// <summary>Contenido simulado del QR con el IDC dado (Pey devuelve un JSON de Banxico).</summary>
     public static string QrStringFor(string idc) => $$$"""{"TYP":20,"v":{"DEV":"FAKE"},"ic":{"IDC":"{{{idc}}}","SER":0}}""";
 
+    /// <summary>Cobros por celular pedidos con <c>POST /codi/pn</c>, en orden.</summary>
+    public ConcurrentQueue<CreateCodiPushNotificationRequest> PushRequests { get; } = new();
+
+    /// <summary>Si no es <c>null</c>, el envío del push lanza esta excepción.</summary>
+    public Exception? PushException { get; set; }
+
     public void Reset()
     {
         CodiQrRequests.Clear();
         CodiQrException = null;
+        PushRequests.Clear();
+        PushException = null;
         BankAccountRequests.Clear();
         RegisterStatus = PeyCodiStatus.Pending;
         RegisterException = null;
@@ -94,8 +102,17 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.FromResult(new CodiQr(idc, QrStringFor(idc)));
     }
 
-    public Task<CodiPushNotification> CreateCodiPushNotificationAsync(CreateCodiPushNotificationRequest request, CancellationToken cancellationToken = default) =>
-        throw NotConfigured();
+    public Task<CodiPushNotification> CreateCodiPushNotificationAsync(CreateCodiPushNotificationRequest request, CancellationToken cancellationToken = default)
+    {
+        PushRequests.Enqueue(request);
+        if (PushException is { } exception)
+        {
+            throw exception;
+        }
+
+        var sequence = Interlocked.Increment(ref _sequence);
+        return Task.FromResult(new CodiPushNotification($"01FAKEPN{sequence:D18}", $"{sequence:D20}"));
+    }
 
     public Task<GatewayTransaction> GetTransactionAsync(string transactionId, CancellationToken cancellationToken = default) =>
         throw NotConfigured();

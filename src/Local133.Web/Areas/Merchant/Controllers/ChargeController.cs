@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Local133.Web.Areas.Merchant.Controllers;
 
-/// <summary>Cobrar (/app/cobrar): venta por monto directo con QR CoDi dinámico.</summary>
+/// <summary>Cobrar (/app/cobrar): venta por monto directo con QR CoDi dinámico o con notificación push al celular.</summary>
 [Area("Merchant")]
 [Authorize(Roles = Roles.Merchant)]
 [Route("app/cobrar")]
@@ -25,6 +25,21 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create([Bind(Prefix = "Input")] ChargeInput input, CancellationToken cancellationToken)
     {
+        const string phoneKey = $"Input.{nameof(ChargeInput.PhoneNumber)}";
+        if (input.IsPushNotification)
+        {
+            if (string.IsNullOrWhiteSpace(input.PhoneNumber))
+            {
+                ModelState.AddModelError(phoneKey, SalePhoneMessages.Required);
+            }
+        }
+        else
+        {
+            // Con QR el celular no se usa (sin JS el campo se envía aunque no aplique).
+            ModelState.Remove(phoneKey);
+            input.PhoneNumber = null;
+        }
+
         if (ModelState.IsValid)
         {
             if (!input.TryGetAmount(out var amount))
@@ -33,7 +48,8 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
             }
             else
             {
-                var command = new CreateDirectSaleCommand(User.FindFirstValue(ClaimTypes.NameIdentifier)!, amount, input.Concept);
+                var command = new CreateDirectSaleCommand(
+                    User.FindFirstValue(ClaimTypes.NameIdentifier)!, amount, input.Concept, input.Method, input.PhoneNumber);
                 switch (await charging.CreateDirectSaleAsync(command, cancellationToken))
                 {
                     case CreateDirectSaleResult.Created created:
@@ -45,11 +61,12 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
                     case CreateDirectSaleResult.Invalid invalid:
                         foreach (var (field, messages) in invalid.Errors)
                         {
-                            // Amount y Concept vienen del formulario; UserId no.
+                            // Amount, Concept y PhoneNumber vienen del formulario; UserId y Method no tienen campo propio.
                             var key = field switch
                             {
                                 nameof(CreateDirectSaleCommand.Amount) => $"Input.{nameof(ChargeInput.Amount)}",
                                 nameof(CreateDirectSaleCommand.Concept) => $"Input.{nameof(ChargeInput.Concept)}",
+                                nameof(CreateDirectSaleCommand.PhoneNumber) => phoneKey,
                                 _ => string.Empty,
                             };
                             foreach (var message in messages)
@@ -58,6 +75,10 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
                             }
                         }
                         break;
+
+                    case CreateDirectSaleResult.GatewayFailed { SaleId: { } keptSaleId }:
+                        // Push sin confirmar: la venta se conservó (cancelada) por si el cliente paga; la vista lo explica.
+                        return RedirectToAction(nameof(Sale), new { id = keptSaleId });
 
                     case CreateDirectSaleResult.GatewayFailed failed:
                         ModelState.AddModelError(string.Empty, failed.Message);

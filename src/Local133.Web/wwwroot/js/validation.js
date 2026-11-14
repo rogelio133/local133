@@ -25,6 +25,17 @@
     });
     $.validator.unobtrusive.adapters.addBool('clabe');
 
+    // [MexicanPhone]: celular de 10 dígitos. Misma regla que Domain/Sales/PhoneNumber: se ignoran espacios, guiones,
+    // paréntesis y puntos, y la lada +52 al inicio.
+    $.validator.addMethod('phone', function (value, element) {
+        if (this.optional(element)) {
+            return true;
+        }
+        var digits = value.replace(/[\s\-().]/g, '').replace(/^\+52/, '');
+        return /^\d{10}$/.test(digits);
+    });
+    $.validator.unobtrusive.adapters.addBool('phone');
+
     // data-val-trim: las reglas se evalúan sobre el valor sin espacios en los extremos (así "   " cuenta como vacío,
     // igual que [Required] en servidor). Corre después de que unobtrusive crea el validador del formulario.
     $(function () {

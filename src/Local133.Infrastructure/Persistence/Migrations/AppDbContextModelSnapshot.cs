@@ -237,10 +237,25 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("PeyCodiId")
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)");
+
                     b.Property<string>("PeyQrId")
                         .HasMaxLength(64)
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
+
+                    b.Property<string>("PeyTransactionId")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)");
 
                     b.Property<string>("QrString")
                         .HasColumnType("nvarchar(max)");
@@ -260,6 +275,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasIndex("PeyQrId")
                         .IsUnique()
                         .HasFilter("[PeyQrId] IS NOT NULL");
+
+                    b.HasIndex("PeyTransactionId")
+                        .IsUnique()
+                        .HasFilter("[PeyTransactionId] IS NOT NULL");
 
                     b.HasIndex("MerchantId", "Folio")
                         .IsUnique();

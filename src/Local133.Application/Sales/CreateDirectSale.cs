@@ -4,9 +4,19 @@ using Local133.Domain.Sales;
 
 namespace Local133.Application.Sales;
 
-/// <summary>El vendedor (por su usuario de Identity) cobra un monto capturado con un QR CoDi dinámico.</summary>
+/// <summary>
+/// El vendedor (por su usuario de Identity) cobra un monto capturado: con un QR CoDi dinámico o con una notificación
+/// push al celular del pagador.
+/// </summary>
 /// <param name="Concept">Concepto que escribe el vendedor; a Pey se envía como "{negocio} · {concepto}".</param>
-public sealed record CreateDirectSaleCommand(string UserId, decimal Amount, string? Concept);
+/// <param name="Method"><see cref="ChargeMethod.DynamicQr"/> o <see cref="ChargeMethod.PushNotification"/>.</param>
+/// <param name="PhoneNumber">Celular del pagador (solo push); se normaliza con <see cref="PhoneNumber.Normalize"/>.</param>
+public sealed record CreateDirectSaleCommand(
+    string UserId,
+    decimal Amount,
+    string? Concept,
+    ChargeMethod Method = ChargeMethod.DynamicQr,
+    string? PhoneNumber = null);
 
 /// <summary>Validación en servidor (la del formulario en cliente es solo de apoyo).</summary>
 public sealed class CreateDirectSaleCommandValidator : AbstractValidator<CreateDirectSaleCommand>
@@ -23,7 +33,23 @@ public sealed class CreateDirectSaleCommandValidator : AbstractValidator<CreateD
             .Must(c => !string.IsNullOrWhiteSpace(c)).WithMessage(SaleConceptMessages.Required)
             .Must(c => c!.Trim().Length <= Sale.ConceptTextMaxLength).WithMessage(SaleConceptMessages.TooLong)
             .Must(Sale.IsValidConceptText).WithMessage(SaleConceptMessages.Invalid);
+        RuleFor(c => c.Method)
+            .Must(m => m is ChargeMethod.DynamicQr or ChargeMethod.PushNotification).WithMessage(SalePhoneMessages.InvalidMethod);
+        When(c => c.Method == ChargeMethod.PushNotification, () =>
+            RuleFor(c => c.PhoneNumber)
+                .Cascade(CascadeMode.Stop)
+                .Must(p => !string.IsNullOrWhiteSpace(p)).WithMessage(SalePhoneMessages.Required)
+                .Must(p => PhoneNumber.IsValid(PhoneNumber.Normalize(p))).WithMessage(SalePhoneMessages.Invalid));
     }
+}
+
+public static class SalePhoneMessages
+{
+    public const string Required = "Escribe el celular de tu cliente.";
+
+    public const string Invalid = "Escribe un celular de 10 dígitos, por ejemplo 55 1234 5678.";
+
+    public const string InvalidMethod = "Elige cómo cobrar: con QR o al celular.";
 }
 
 public static class SaleConceptMessages
@@ -59,14 +85,21 @@ public abstract record CreateDirectSaleResult
     /// <summary>Venta creada con su QR.</summary>
     public sealed record Created(int SaleId) : CreateDirectSaleResult;
 
-    /// <summary>Datos inválidos; llave = propiedad del comando (<c>Amount</c>, <c>Concept</c>) o vacía para un error general.</summary>
+    /// <summary>
+    /// Datos inválidos; llave = propiedad del comando (<c>Amount</c>, <c>Concept</c>, <c>PhoneNumber</c>) o vacía para
+    /// un error general.
+    /// </summary>
     public sealed record Invalid(IReadOnlyDictionary<string, string[]> Errors) : CreateDirectSaleResult;
 
     /// <summary>El vendedor no puede cobrar (no está activo o su cuenta bancaria no está activa).</summary>
     public sealed record NotAllowed : CreateDirectSaleResult;
 
-    /// <summary>Falla de la pasarela; <see cref="Message"/> se puede mostrar al vendedor.</summary>
-    public sealed record GatewayFailed(string Message) : CreateDirectSaleResult;
+    /// <summary>
+    /// Falla de la pasarela; <see cref="Message"/> se puede mostrar al vendedor. <see cref="SaleId"/> viene solo cuando
+    /// la venta se conservó (cancelada) porque el resultado es incierto: un push sin respuesta de Pey pudo llegarle al
+    /// cliente, y si lo paga el pago se registra en esa venta.
+    /// </summary>
+    public sealed record GatewayFailed(string Message, int? SaleId = null) : CreateDirectSaleResult;
 }
 
 /// <summary>Cobros del vendedor (implementado en Infrastructure: EF Core + <c>IPaymentGateway</c>).</summary>

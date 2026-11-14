@@ -1,10 +1,24 @@
 namespace Local133.Application.Payments;
 
+/// <summary>Por dónde llegó un pago CoDi.</summary>
+public enum CodiPaymentChannel
+{
+    /// <summary>QR (dinámico o fijo): webhook <c>codi.qr.payment_received</c>; la venta se encuentra por el IDC.</summary>
+    Qr,
+
+    /// <summary>
+    /// Notificación push al celular: webhook <c>codi.pn.payment_received</c>; la venta se encuentra por el
+    /// <c>transactionId</c> que devolvió <c>POST /codi/pn</c>.
+    /// </summary>
+    PushNotification,
+}
+
 /// <summary>
-/// Pago CoDi recibido en un QR, venga del webhook <c>codi.qr.payment_received</c> o de la conciliación (2.9).
+/// Pago CoDi recibido, venga de un webhook (<c>codi.qr.payment_received</c>, <c>codi.pn.payment_received</c>) o de la
+/// conciliación (2.9).
 /// </summary>
 /// <param name="TransactionId">Id (ULID) de la transacción en Pey: llave de idempotencia.</param>
-/// <param name="CodiQrId">IDC del QR pagado (con él se encuentra la venta).</param>
+/// <param name="CodiQrId">IDC del QR pagado (con él se encuentra la venta); <c>null</c> en un push.</param>
 /// <param name="External">
 /// <c>metadata.externalMetadata</c>: los pares que enviamos al crear el cobro (<c>SaleMetadata</c>), como texto.
 /// </param>
@@ -15,12 +29,13 @@ public sealed record ReceivedCodiPayment(
     DateTimeOffset PaidAt,
     string? TrackingKey,
     int? PayerBankCode,
-    IReadOnlyDictionary<string, string?> External);
+    IReadOnlyDictionary<string, string?> External,
+    CodiPaymentChannel Channel = CodiPaymentChannel.Qr);
 
 /// <summary>Registra pagos recibidos: crea el <c>Payment</c> (con la comisión vigente) y marca la venta pagada.</summary>
 public interface IPaymentRecorder
 {
-    Task<PaymentRecordResult> RecordCodiQrPaymentAsync(ReceivedCodiPayment payment, CancellationToken cancellationToken = default);
+    Task<PaymentRecordResult> RecordCodiPaymentAsync(ReceivedCodiPayment payment, CancellationToken cancellationToken = default);
 }
 
 public abstract record PaymentRecordResult
