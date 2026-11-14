@@ -17,6 +17,7 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
 {
     private const string ListUrl = "/app/productos";
     private const string NewUrl = "/app/productos/nuevo";
+    private const string ResultsUrl = "/app/productos/resultados";
 
     private static string EditUrl(int id) => $"/app/productos/{id}/editar";
 
@@ -117,6 +118,66 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
         Assert.Equal(5, ProductNames(second).Count);
         Assert.Contains("data-products-no-results", none);
         Assert.Contains("data-clear-search", none);
+    }
+
+    [Fact]
+    public async Task La_lista_trae_el_buscador_asincrono()
+    {
+        var client = await MerchantClientAsync(Email);
+        await SeedProductsAsync(Email, ["Gringa"]);
+
+        var html = await GetHtmlAsync(client, ListUrl);
+
+        Assert.Contains($"data-results-url=\"{ResultsUrl}\"", html);
+        Assert.Contains("data-product-results", html);
+        Assert.Matches("src=\"/js/product-search[^\"]*\\.js\"", html);
+    }
+
+    [Fact]
+    public async Task Resultados_devuelve_solo_el_fragmento_con_busqueda_y_pagina()
+    {
+        var client = await MerchantClientAsync(Email);
+        await SeedProductsAsync(Email,
+            Enumerable.Range(1, 25).Select(i => $"Agua de sabor {i:D2}").Concat(["Taco al pastor", "Gringa"]));
+
+        var response = await client.GetAsync($"{ResultsUrl}?q=%20agua%20&pagina=2");
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString());
+        Assert.DoesNotContain("<html", html);
+        Assert.DoesNotContain("data-product-search", html);
+        Assert.Equal(Enumerable.Range(21, 5).Select(i => $"Agua de sabor {i:D2}"), ProductNames(html));
+        Assert.Contains("25 resultados", html);
+        Assert.Contains("Página 2 de 2", html);
+        // Los enlaces son de la lista completa (funcionan sin JS; product-search.js los intercepta).
+        Assert.Contains("href=\"/app/productos?q=agua\"", html);
+    }
+
+    [Fact]
+    public async Task Resultados_sin_coincidencias_ofrece_ver_todos()
+    {
+        var client = await MerchantClientAsync(Email);
+        await SeedProductsAsync(Email, ["Gringa"]);
+
+        var html = await GetHtmlAsync(client, $"{ResultsUrl}?q=pozole");
+
+        Assert.Contains("data-products-no-results", html);
+        Assert.Contains("data-clear-search", html);
+        Assert.Contains("href=\"/app/productos\"", html);
+    }
+
+    [Fact]
+    public async Task Resultados_sin_busqueda_trae_la_primera_pagina()
+    {
+        var client = await MerchantClientAsync(Email);
+        await SeedProductsAsync(Email, Enumerable.Range(1, 45).Select(i => $"Producto {i:D2}"));
+
+        var html = await GetHtmlAsync(client, ResultsUrl);
+
+        Assert.Equal(Names(1, 20), ProductNames(html));
+        Assert.Contains("45 productos", html);
+        Assert.Contains("href=\"/app/productos?pagina=2\"", html);
     }
 
     // --- Alta -----------------------------------------------------------------------------------------------------------
@@ -374,7 +435,9 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
 
         var list = await GetHtmlAsync(client, $"{ListUrl}?q=Pozole");
         Assert.Contains("data-products-no-results", list);
+        Assert.Contains("data-products-no-results", await GetHtmlAsync(client, $"{ResultsUrl}?q=Pozole"));
         Assert.Equal(["Gringa"], ProductNames(await GetHtmlAsync(client, ListUrl)));
+        Assert.Equal(["Gringa"], ProductNames(await GetHtmlAsync(client, ResultsUrl)));
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(EditUrl(foreign.Id))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(PhotoUrl(foreign.Id))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync(ThumbnailUrl(foreign.Id))).StatusCode);
@@ -422,16 +485,21 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
         var client = CreateClient();
         await LoginAsync(client, "admin@prueba.mx");
 
-        var response = await client.GetAsync(ListUrl);
+        foreach (var url in new[] { ListUrl, ResultsUrl })
+        {
+            var response = await client.GetAsync(url);
 
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.StartsWith("/Identity/Account/AccessDenied", Location(response));
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.StartsWith("/Identity/Account/AccessDenied", Location(response));
+        }
     }
 
-    [Fact]
-    public async Task Sin_sesion_redirige_al_login()
+    [Theory]
+    [InlineData(ListUrl)]
+    [InlineData(ResultsUrl)]
+    public async Task Sin_sesion_redirige_al_login(string url)
     {
-        var response = await CreateClient().GetAsync(ListUrl);
+        var response = await CreateClient().GetAsync(url);
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Identity/Account/Login", Location(response));

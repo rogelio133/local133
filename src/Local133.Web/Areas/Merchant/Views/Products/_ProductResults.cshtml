@@ -1,0 +1,59 @@
+@using Local133.Web.Areas.Merchant.Models
+@model ProductListViewModel
+@* Conteo, lista y paginación. Lo usan la lista (/app/productos) y el fragmento de la búsqueda asíncrona
+   (/app/productos/resultados). Los enlaces son de página completa: sin JS funcionan solos y product-search.js los
+   intercepta. *@
+@{
+    var total = Model.Page.TotalCount;
+    var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlForPage(p)), "Páginas de productos");
+}
+<p class="small text-body-secondary mb-2" data-products-count>
+    @if (Model.Query is null)
+    {
+        @(total == 1 ? "1 producto" : $"{total:N0} productos")
+    }
+    else
+    {
+        @(total == 1 ? "1 resultado" : $"{total:N0} resultados") @:para «@Model.Query» ·
+        <a href="@Url.Content($"~{ProductUrls.List}")" data-clear-search>Ver todos</a>
+    }
+</p>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="card" data-products-no-results>
+        <div class="card-body text-center text-body-secondary">
+            @if (Model.Query is null)
+            {
+                @:Ya no tienes productos.
+            }
+            else
+            {
+                @:No encontramos productos con «@Model.Query».
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group mb-3" data-product-list>
+        @foreach (var item in Model.Items)
+        {
+            if (Model.CanManage)
+            {
+                <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="@Url.Content("~" + ProductUrls.Edit(item.Id))" data-product="@item.Id">
+                    <partial name="_ProductRowContent" model="item" />
+                    <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
+                </a>
+            }
+            else
+            {
+                <div class="list-group-item d-flex align-items-center gap-3" data-product="@item.Id">
+                    <partial name="_ProductRowContent" model="item" />
+                </div>
+            }
+        }
+    </div>
+
+    <partial name="_Pager" model="pager" />
+}

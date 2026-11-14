@@ -109,6 +109,9 @@ public static class ProductUrls
 {
     public const string List = "/app/productos";
 
+    /// <summary>Fragmento de resultados para la búsqueda asíncrona (mismos <c>q</c> y <c>pagina</c> que la lista).</summary>
+    public const string Results = "/app/productos/resultados";
+
     public const string New = "/app/productos/nuevo";
 
     public static string Edit(int id) => $"/app/productos/{id}/editar";

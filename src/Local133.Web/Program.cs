@@ -24,7 +24,11 @@ try
         options.CustomizeProblemDetails = ctx =>
             ctx.ProblemDetails.Extensions["traceId"] = ctx.HttpContext.TraceIdentifier);
 
-    builder.Services.AddControllersWithViews(options => options.ModelBindingMessageProvider.UseSpanishMessages());
+    builder.Services.AddControllersWithViews(options =>
+    {
+        options.ModelBindingMessageProvider.UseSpanishMessages();
+        options.Filters.Add<ClientDisconnectedExceptionFilter>();
+    });
     // Razor Pages: las usa la UI de Identity scaffoldeada (Areas/Identity). Sin AddDefaultUI estas
     // convenciones no vienen solas: Manage y Logout requieren sesión.
     builder.Services.AddRazorPages(options =>

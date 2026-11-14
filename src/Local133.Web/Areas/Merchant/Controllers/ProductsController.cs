@@ -32,7 +32,36 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
+        [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken) =>
+        View(await BuildListAsync(q, page, cancellationToken));
+
+    /// <summary>
+    /// Fragmento con los resultados (conteo, lista y paginación) para la búsqueda asíncrona de
+    /// <c>product-search.js</c>. Ruta propia (no la de la lista con otro encabezado) para que el navegador nunca guarde
+    /// ni restaure al volver el fragmento en lugar de la página completa.
+    /// </summary>
+    [HttpGet("resultados")]
+    public async Task<IActionResult> Results(
         [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
+    {
+        var model = await BuildListAsync(q, page, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return PartialView("_ProductResults", model);
+    }
+
+    [HttpGet("nuevo")]
+    public async Task<IActionResult> New(CancellationToken cancellationToken)
+    {
+        if (!(await db.GetCurrentMerchantAsync(User, cancellationToken)).CanManageProducts)
+        {
+            return NotAllowed();
+        }
+
+        return View("Form", new ProductFormViewModel());
+    }
+
+    /// <summary>Lista paginada con la búsqueda por nombre (recortada a <see cref="ProductListViewModel.QueryMaxLength"/>).</summary>
+    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var query = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
@@ -55,7 +84,7 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             .Select(p => new { p.Id, p.Name, p.Price, p.PhotoKey })
             .ToListAsync(cancellationToken);
 
-        return View(new ProductListViewModel
+        return new ProductListViewModel
         {
             Items = rows.Select(p => new ProductListItem(
                 p.Id,
@@ -65,18 +94,7 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             Page = pageInfo,
             Query = query,
             CanManage = merchant.CanManageProducts,
-        });
-    }
-
-    [HttpGet("nuevo")]
-    public async Task<IActionResult> New(CancellationToken cancellationToken)
-    {
-        if (!(await db.GetCurrentMerchantAsync(User, cancellationToken)).CanManageProducts)
-        {
-            return NotAllowed();
-        }
-
-        return View("Form", new ProductFormViewModel());
+        };
     }
 
     [HttpPost("nuevo")]
