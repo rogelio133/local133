@@ -198,6 +198,57 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Local133.Domain.Products.Product", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("PhotoKey")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MerchantId", "IsDeleted", "Name");
+
+                    b.ToTable("Products", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Products_Price", "[Price] > 0");
+                        });
+                });
+
             modelBuilder.Entity("Local133.Domain.Sales.Sale", b =>
                 {
                     b.Property<int>("Id")
@@ -646,6 +697,15 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasOne("Local133.Domain.Sales.Sale", null)
                         .WithMany()
                         .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Local133.Domain.Products.Product", b =>
+                {
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

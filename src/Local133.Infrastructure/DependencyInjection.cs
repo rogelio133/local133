@@ -1,6 +1,8 @@
 using Local133.Application.BankAccounts;
 using Local133.Application.Payments;
+using Local133.Application.Products;
 using Local133.Application.Sales;
+using Local133.Application.Storage;
 using Local133.Application.Tenancy;
 using Local133.Application.Webhooks;
 using Local133.Infrastructure.BankAccounts;
@@ -9,7 +11,9 @@ using Local133.Infrastructure.Jobs;
 using Local133.Infrastructure.Payments;
 using Local133.Infrastructure.Persistence;
 using Local133.Infrastructure.Pey;
+using Local133.Infrastructure.Products;
 using Local133.Infrastructure.Sales;
+using Local133.Infrastructure.Storage;
 using Local133.Infrastructure.Webhooks;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +45,13 @@ public static class DependencyInjection
         services.Configure<EmailPickupOptions>(configuration.GetSection(EmailPickupOptions.SectionName));
         services.AddTransient<IEmailSender, FileEmailSender>();
 
+        // Archivos (fotos de productos): disco local (Storage:LocalDirectory); en producción se cambia por blob.
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.AddSingleton<IFileStorage>(sp => new LocalDiskFileStorage(
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FileStorageOptions>>(),
+            sp.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()));
+        services.AddSingleton<IProductPhotoProcessor, SkiaProductPhotoProcessor>();
+
         // Pey (CoDi): una API key para todos los vendedores; la key va en user-secrets (Pey:ApiKey).
         services.AddPeyGateway(configuration);
 
@@ -54,6 +65,7 @@ public static class DependencyInjection
         services.AddScoped<ISaleExpiration, SaleExpiration>();
         services.AddScoped<IPaymentRecorder, PaymentRecorder>();
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
+        services.AddScoped<IProductCatalog, ProductCatalog>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 

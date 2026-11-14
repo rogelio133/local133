@@ -41,6 +41,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public InMemoryEmailSender Emails { get; } = new();
 
+    /// <summary>Carpeta de <c>IFileStorage</c> (fotos de productos) de esta fábrica.</summary>
+    public string StorageDirectory { get; } = Path.Combine(Path.GetTempPath(), $"local133-tests-{Guid.NewGuid():N}");
+
     /// <summary>Pey simulado: ninguna prueba del sitio llama a la API real.</summary>
     public FakePaymentGateway Gateway { get; } = new();
 
@@ -68,6 +71,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             [AdminSeeder.EmailKey] = "",
             [AdminSeeder.PasswordKey] = "",
             ["Pey:WebhookSecret"] = WebhookSecret,
+            // Fotos de productos en una carpeta temporal propia (se vacía entre pruebas y se borra al final).
+            ["Storage:LocalDirectory"] = StorageDirectory,
         }));
 
         builder.ConfigureTestServices(services =>
@@ -125,13 +130,26 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var defaults = new FakeExternalUser();
         ExternalUser.ProviderKey = defaults.ProviderKey;
         ExternalUser.Email = defaults.Email;
+        DeleteStorageDirectory();
         if (_respawner is not null)
         {
             await _respawner.ResetAsync(ConnectionString);
         }
     }
 
-    Task IAsyncLifetime.DisposeAsync() => base.DisposeAsync().AsTask();
+    async Task IAsyncLifetime.DisposeAsync()
+    {
+        await base.DisposeAsync();
+        DeleteStorageDirectory();
+    }
+
+    private void DeleteStorageDirectory()
+    {
+        if (Directory.Exists(StorageDirectory))
+        {
+            Directory.Delete(StorageDirectory, recursive: true);
+        }
+    }
 
     /// <summary>Middleware al inicio del pipeline que lanza un challenge en las rutas de prueba.</summary>
     private sealed class ChallengeEndpointsStartupFilter : IStartupFilter

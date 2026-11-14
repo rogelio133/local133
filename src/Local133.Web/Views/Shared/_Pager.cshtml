@@ -1,0 +1,39 @@
+@model Local133.Web.Models.PagerViewModel
+@* Paginación móvil primero: «Anterior · Página X de Y · Siguiente» (sin una fila de números que no cabe en 375 px). *@
+@{
+    var info = Model.Page;
+}
+@if (info.TotalPages > 1)
+{
+    <nav aria-label="@Model.Label" data-pager data-page="@info.Page" data-total-pages="@info.TotalPages">
+        <ul class="pagination justify-content-between align-items-center mb-0">
+            <li class="page-item @(info.HasPrevious ? null : "disabled")">
+                @if (info.HasPrevious)
+                {
+                    <a class="page-link" href="@Model.UrlForPage(info.Page - 1)" rel="prev" data-pager-previous>
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</span>
+                }
+            </li>
+            <li class="text-body-secondary small px-2 text-center" aria-current="page" data-pager-status>
+                Página @info.Page de @info.TotalPages
+            </li>
+            <li class="page-item @(info.HasNext ? null : "disabled")">
+                @if (info.HasNext)
+                {
+                    <a class="page-link" href="@Model.UrlForPage(info.Page + 1)" rel="next" data-pager-next>
+                        Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link" aria-disabled="true">Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+                }
+            </li>
+        </ul>
+    </nav>
+}
