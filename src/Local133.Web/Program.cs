@@ -92,6 +92,20 @@ try
         app.UseHsts();
     }
 
+    app.UseForwardedHeaders();//para dev tunnel
+
+
+    app.Use((context, next) =>
+    {
+        var fwdHost = context.Request.Headers["X-Forwarded-Host"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(fwdHost))
+        {
+            context.Request.Host = new HostString(fwdHost);
+            context.Request.Scheme = "https";
+        }
+        return next();
+    });
+
     app.UseHttpsRedirection();
     app.UseRouting();
     app.UseAuthentication();

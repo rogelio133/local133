@@ -81,6 +81,9 @@ public sealed class ProductListViewModel
     /// <summary>Puede dar de alta y editar (no está dado de baja).</summary>
     public bool CanManage { get; init; }
 
+    /// <summary>Ruta de la página que muestra la lista (paginación y «Ver todos»): la de productos o la del carrito.</summary>
+    public string ListPath { get; init; } = ProductUrls.List;
+
     /// <summary>No tiene ningún producto (sin búsqueda): se muestra el estado vacío.</summary>
     public bool IsCatalogEmpty => Query is null && Page.TotalCount == 0;
 
@@ -98,11 +101,16 @@ public sealed class ProductListViewModel
             parameters.Add($"{PageInfo.QueryKey}={page.ToString(CultureInfo.InvariantCulture)}");
         }
 
-        return parameters.Count == 0 ? ProductUrls.List : $"{ProductUrls.List}?{string.Join('&', parameters)}";
+        return parameters.Count == 0 ? ListPath : $"{ListPath}?{string.Join('&', parameters)}";
     }
 }
 
-public sealed record ProductListItem(int Id, string Name, string PriceText, string? ThumbnailUrl);
+/// <summary>Fila de la lista; <see cref="Price"/> lo usa el carrito (atributo <c>data-price</c>).</summary>
+public sealed record ProductListItem(int Id, string Name, decimal Price, string PriceText, string? ThumbnailUrl)
+{
+    /// <summary>Precio en texto invariante con 2 decimales (para JS).</summary>
+    public string PriceValue => Price.ToString("0.00", CultureInfo.InvariantCulture);
+}
 
 /// <summary>URLs de productos (rutas de <c>ProductsController</c>).</summary>
 public static class ProductUrls

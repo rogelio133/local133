@@ -4,6 +4,7 @@ using Local133.Application.Products;
 using Local133.Application.Storage;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
+using Local133.Web.Areas.Merchant.Services;
 using Local133.Web.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,41 +62,9 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
     }
 
     /// <summary>Lista paginada con la búsqueda por nombre (recortada a <see cref="ProductListViewModel.QueryMaxLength"/>).</summary>
-    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken)
-    {
-        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
-        var query = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
-        if (query is { Length: > ProductListViewModel.QueryMaxLength })
-        {
-            query = query[..ProductListViewModel.QueryMaxLength];
-        }
-
-        // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
-        var products = db.Products.AsNoTracking().Where(p => p.MerchantId == merchant.Id && !p.IsDeleted);
-        if (query is not null)
-        {
-            products = products.Where(p => p.Name.Contains(query));
-        }
-
-        var pageInfo = PageInfo.For(page, ProductListViewModel.PageSize, await products.CountAsync(cancellationToken));
-        var rows = await products
-            .OrderBy(p => p.Name).ThenBy(p => p.Id)
-            .Skip(pageInfo.Skip).Take(pageInfo.PageSize)
-            .Select(p => new { p.Id, p.Name, p.Price, p.PhotoKey })
-            .ToListAsync(cancellationToken);
-
-        return new ProductListViewModel
-        {
-            Items = rows.Select(p => new ProductListItem(
-                p.Id,
-                p.Name,
-                SaleQrViewModel.FormatAmount(p.Price),
-                p.PhotoKey is null ? null : Url.Content($"~{ProductUrls.Thumbnail(p.Id, p.PhotoKey)}"))).ToList(),
-            Page = pageInfo,
-            Query = query,
-            CanManage = merchant.CanManageProducts,
-        };
-    }
+    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken) =>
+        await ProductListQuery.BuildAsync(
+            db, await db.GetCurrentMerchantAsync(User, cancellationToken), q, page, Url, ProductUrls.List, cancellationToken);
 
     [HttpPost("nuevo")]
     [ValidateAntiForgeryToken]

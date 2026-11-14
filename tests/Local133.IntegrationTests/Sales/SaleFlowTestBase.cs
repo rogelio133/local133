@@ -83,6 +83,16 @@ public abstract class SaleFlowTestBase(Local133WebFactory factory) : WebTestBase
         return await LoadSaleAsync(id);
     }
 
+    /// <summary>Producto vigente en el catálogo del vendedor; devuelve su id.</summary>
+    protected Task<int> CreateProductAsync(string email, string name, decimal price) => WithDbAsync(async db =>
+    {
+        var merchant = await MerchantOfAsync(db, email);
+        var product = Domain.Products.Product.Create(merchant.Id, name, null, price, DateTimeOffset.UtcNow);
+        db.Products.Add(product);
+        await db.SaveChangesAsync();
+        return product.Id;
+    });
+
     protected Task<Sale> LoadSaleAsync(int id) =>
         WithDbAsync(db => db.Sales.AsNoTracking().SingleAsync(s => s.Id == id));
 

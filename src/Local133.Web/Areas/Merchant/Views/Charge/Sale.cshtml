@@ -27,7 +27,26 @@
         <p class="display-5 fw-semibold @(Model.Concept is null ? "mb-3" : "mb-1")" data-sale-amount>@Model.AmountText</p>
         @if (Model.Concept is not null)
         {
-            <p class="text-body-secondary text-break mb-3" data-sale-concept>@Model.Concept</p>
+            <p class="text-body-secondary text-break @(Model.IsCart ? "mb-2" : "mb-3")" data-sale-concept>@Model.Concept</p>
+        }
+        @if (Model.IsCart)
+        {
+            @* Cerrado: en el celular el QR debe verse sin desplazarse. *@
+            <details class="sale-items text-start mx-auto mb-3" data-sale-items>
+                <summary class="text-center text-body-secondary small">Ver @Model.ItemsSummary</summary>
+                <ul class="list-group list-group-flush mt-2">
+                    @foreach (var item in Model.Items)
+                    {
+                        <li class="list-group-item d-flex justify-content-between gap-3 px-0 bg-transparent" data-sale-item>
+                            <span class="product-info">
+                                <span class="d-block text-truncate">@item.Name</span>
+                                <span class="d-block small text-body-secondary">@item.Quantity × @item.UnitPriceText</span>
+                            </span>
+                            <span class="fw-semibold text-nowrap">@item.AmountText</span>
+                        </li>
+                    }
+                </ul>
+            </details>
         }
 
         <div class="text-body-secondary mb-3 @(Model.IsPaid ? null : "d-none")" data-paid-only>
@@ -98,7 +117,7 @@
             </div>
         }
 
-        <a class="btn btn-primary btn-lg w-100" href="~/app/cobrar" data-new-charge><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo cobro</a>
+        <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + Model.NewChargeHref)" data-new-charge><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo cobro</a>
 
         @if (Model.CanCancel)
         {

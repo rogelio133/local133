@@ -9,6 +9,7 @@
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <h1 class="h4 mb-3">Cobrar</h1>
+        <partial name="_ChargeModeNav" model="false" />
 
         @if (Model.Blocked is { } blocked)
         {
@@ -25,21 +26,7 @@
             <form asp-area="Merchant" asp-controller="Charge" asp-action="Create" method="post" data-charge-form data-disable-on-submit novalidate>
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-                <fieldset class="mb-3">
-                    <legend class="visually-hidden">Cómo cobrar</legend>
-                    <div class="btn-group w-100" role="group" data-charge-method>
-                        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-qr" autocomplete="off"
-                               value="@ChargeMethod.DynamicQr" checked="@(!isPush)" />
-                        <label class="btn btn-outline-primary btn-lg" for="charge-method-qr">
-                            <i class="bi bi-qr-code me-1" aria-hidden="true"></i> QR
-                        </label>
-                        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-phone" autocomplete="off"
-                               value="@ChargeMethod.PushNotification" checked="@isPush" />
-                        <label class="btn btn-outline-primary btn-lg" for="charge-method-phone">
-                            <i class="bi bi-phone me-1" aria-hidden="true"></i> Celular
-                        </label>
-                    </div>
-                </fieldset>
+                <partial name="_ChargeMethodSelector" model="isPush" />
 
                 <div class="card mb-3">
                     <div class="card-body">
@@ -60,15 +47,7 @@
                         <span asp-validation-for="Input.Concept" class="d-block text-danger small mt-1"></span>
                         <div class="form-text">Tu cliente lo verá en su app junto con el nombre de tu negocio.</div>
 
-                        <div class="@(isPush ? null : "d-none")" data-phone-field>
-                            <label asp-for="Input.PhoneNumber" class="form-label text-body-secondary mt-3"></label>
-                            <input asp-for="Input.PhoneNumber" type="tel" inputmode="numeric" autocomplete="tel-national"
-                                   spellcheck="false" maxlength="@ChargeInput.PhoneNumberInputMaxLength"
-                                   class="form-control form-control-lg" aria-required="true" placeholder="Ej. 55 1234 5678"
-                                   data-val-required="@SalePhoneMessages.Required" data-phone-input disabled="@(!isPush)" />
-                            <span asp-validation-for="Input.PhoneNumber" class="d-block text-danger small mt-1"></span>
-                            <div class="form-text">10 dígitos. Tu cliente debe tener CoDi activo en la app de su banco con este número.</div>
-                        </div>
+                        <partial name="_PhoneField" for="Input" />
                     </div>
                 </div>
 
