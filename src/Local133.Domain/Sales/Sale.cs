@@ -84,21 +84,29 @@ public partial class Sale : Entity
     /// <summary>Cuándo la canceló el vendedor.</summary>
     public DateTimeOffset? CancelledAt { get; set; }
 
+    /// <summary>Productos de una venta con carrito (<see cref="SaleSource.Cart"/>); vacío en las demás.</summary>
+    public List<SaleItem> Items { get; private set; } = [];
+
     /// <summary>Referencia numérica para Pey (hasta 7 dígitos).</summary>
     public int NumRef => Folio % (PeyLimits.MaxNumRef + 1);
 
-    /// <summary>Venta por monto capturado, cobrada con un QR dinámico. El QR se adjunta con <see cref="AttachQr"/>.</summary>
+    /// <summary>
+    /// Venta cobrada con un QR dinámico: por monto capturado o, con <paramref name="items"/>, con carrito (el monto
+    /// debe ser la suma de los productos). El QR se adjunta con <see cref="AttachQr"/>.
+    /// </summary>
     public static Sale StartDirect(
-        int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt, DateTimeOffset now) =>
-        StartWithAmount(ChargeMethod.DynamicQr, merchantId, folio, amount, concept, expiresAt, now);
+        int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt, DateTimeOffset now,
+        IReadOnlyList<SaleItem>? items = null) =>
+        StartWithAmount(ChargeMethod.DynamicQr, merchantId, folio, amount, concept, expiresAt, now, items);
 
     /// <summary>
-    /// Venta por monto capturado, cobrada con una notificación push al celular del pagador (ya normalizado, ver
-    /// <see cref="Sales.PhoneNumber.Normalize"/>). La transacción se adjunta con <see cref="AttachPushNotification"/>.
+    /// Venta cobrada con una notificación push al celular del pagador (ya normalizado, ver
+    /// <see cref="Sales.PhoneNumber.Normalize"/>), por monto capturado o con carrito (<paramref name="items"/>). La
+    /// transacción se adjunta con <see cref="AttachPushNotification"/>.
     /// </summary>
     public static Sale StartPush(
         int merchantId, int folio, decimal amount, string concept, string phoneNumber, DateTimeOffset expiresAt,
-        DateTimeOffset now)
+        DateTimeOffset now, IReadOnlyList<SaleItem>? items = null)
     {
         if (!Sales.PhoneNumber.IsValid(phoneNumber))
         {
@@ -111,14 +119,14 @@ public partial class Sale : Entity
                 $"El cobro por celular admite hasta {PeyLimits.MaxPushAmount:N0}.");
         }
 
-        var sale = StartWithAmount(ChargeMethod.PushNotification, merchantId, folio, amount, concept, expiresAt, now);
+        var sale = StartWithAmount(ChargeMethod.PushNotification, merchantId, folio, amount, concept, expiresAt, now, items);
         sale.PhoneNumber = phoneNumber;
         return sale;
     }
 
     private static Sale StartWithAmount(
         ChargeMethod method, int merchantId, int folio, decimal amount, string concept, DateTimeOffset? expiresAt,
-        DateTimeOffset now)
+        DateTimeOffset now, IReadOnlyList<SaleItem>? items)
     {
         if (!IsValidAmount(amount))
         {
@@ -134,18 +142,43 @@ public partial class Sale : Entity
             throw new ArgumentException($"El concepto admite hasta {ConceptMaxLength} caracteres.", nameof(concept));
         }
 
+        var isCart = items is { Count: > 0 };
+        if (isCart)
+        {
+            EnsureValidCart(merchantId, amount, items!);
+        }
+
         return new Sale
         {
             MerchantId = merchantId,
             Folio = folio,
             Method = method,
-            Source = SaleSource.DirectAmount,
+            Source = isCart ? SaleSource.Cart : SaleSource.DirectAmount,
             Status = SaleStatus.Pending,
             Amount = amount,
             Concept = concept,
             ExpiresAt = expiresAt,
             CreatedAt = now,
+            Items = isCart ? [.. items!] : [],
         };
+    }
+
+    private static void EnsureValidCart(int merchantId, decimal amount, IReadOnlyList<SaleItem> items)
+    {
+        if (items.Count > SaleCart.MaxLines)
+        {
+            throw new ArgumentException($"Una venta admite hasta {SaleCart.MaxLines} productos distintos.", nameof(items));
+        }
+
+        if (items.Any(i => i.MerchantId != merchantId))
+        {
+            throw new ArgumentException("Todos los productos deben ser del vendedor de la venta.", nameof(items));
+        }
+
+        if (SaleCart.Total(items) != amount)
+        {
+            throw new ArgumentException("El monto de la venta debe ser la suma de sus productos.", nameof(amount));
+        }
     }
 
     /// <summary>Monto aceptable para una venta con monto: entre <see cref="MinAmount"/> y <see cref="MaxAmount"/>, en centavos.</summary>

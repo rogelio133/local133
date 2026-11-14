@@ -30,6 +30,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
 
     public DbSet<Sale> Sales => Set<Sale>();
 
+    /// <summary>Productos de las ventas con carrito (copia del nombre y el precio).</summary>
+    public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+
     public DbSet<Payment> Payments => Set<Payment>();
 
     /// <summary>Catálogo del vendedor; la baja lógica no va en el filtro global (consultar con <c>!IsDeleted</c>).</summary>
@@ -52,6 +55,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         // Filtros multi-tenant (referencian propiedades del contexto para que se parametricen por instancia).
         modelBuilder.Entity<BankAccount>().HasQueryFilter(b => !IsMerchantScoped || b.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Sale>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<SaleItem>().HasQueryFilter(i => !IsMerchantScoped || i.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Payment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Product>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
     }

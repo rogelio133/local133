@@ -13,7 +13,7 @@ namespace Local133.Web.Areas.Merchant.Models;
 /// Monto del cobro. Llega como texto y se convierte con cultura invariante (punto decimal): así no depende de la
 /// cultura del servidor y no se aceptan signos, exponentes ni separadores de miles.
 /// </summary>
-public sealed class ChargeInput
+public sealed class ChargeInput : ChargeOptionsInput
 {
     /// <summary>Hasta 6 enteros y 2 decimales, sin signo. La misma regla aplica <c>amount-input.js</c> al teclear.</summary>
     public const string AmountPattern = @"^\d{1,6}(\.\d{1,2})?$";
@@ -26,6 +26,46 @@ public sealed class ChargeInput
     [Display(Name = "Monto a cobrar")]
     public string? Amount { get; set; } = DefaultAmount;
 
+    public bool TryGetAmount(out decimal amount) => TryParseAmount(Amount, out amount);
+
+    /// <summary>Monto en texto (<see cref="AmountPattern"/>) con cultura invariante.</summary>
+    public static bool TryParseAmount(string? text, out decimal amount) =>
+        decimal.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out amount);
+}
+
+/// <summary>
+/// Venta con carrito (/app/cobrar/productos). <c>cart.js</c> llena los productos (campos ocultos) y el total que vio
+/// el vendedor; el servidor vuelve a tomar los precios del catálogo y no cobra si el total cambió.
+/// </summary>
+public sealed class CartChargeInput : ChargeOptionsInput
+{
+    public List<CartLineInput> Lines { get; set; } = [];
+
+    /// <summary>
+    /// Total que vio el vendedor (texto invariante con 2 decimales). Sin atributos: lo revisa el controlador y el
+    /// error va al resumen general (no tiene campo visible).
+    /// </summary>
+    public string? ExpectedTotal { get; set; }
+
+    public bool TryGetExpectedTotal(out decimal total)
+    {
+        total = 0;
+        return ExpectedTotal is not null
+            && System.Text.RegularExpressions.Regex.IsMatch(ExpectedTotal, ChargeInput.AmountPattern)
+            && ChargeInput.TryParseAmount(ExpectedTotal, out total);
+    }
+}
+
+public sealed class CartLineInput
+{
+    public int ProductId { get; set; }
+
+    public int Quantity { get; set; }
+}
+
+/// <summary>Concepto, método (QR o celular) y celular: comunes al cobro por monto y al de carrito.</summary>
+public abstract class ChargeOptionsInput
+{
     /// <summary>Concepto del cobro; el pagador lo ve en su app junto con el nombre del negocio.</summary>
     [Required(ErrorMessage = SaleConceptMessages.Required)]
     [StringLength(Sale.ConceptTextMaxLength, ErrorMessage = SaleConceptMessages.TooLong)]
@@ -48,10 +88,38 @@ public sealed class ChargeInput
 
     /// <summary>Largo máximo del campo de celular: 10 dígitos más espacios, guiones o la lada (<c>+52 (55) 1234-5678</c>).</summary>
     public const int PhoneNumberInputMaxLength = 20;
-
-    public bool TryGetAmount(out decimal amount) =>
-        decimal.TryParse(Amount, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out amount);
 }
+
+/// <summary>
+/// Pantalla "Cobrar con productos": catálogo con búsqueda y carrito, o aviso si el vendedor aún no puede cobrar.
+/// </summary>
+public sealed class CartChargeViewModel
+{
+    public CartChargeInput Input { get; set; } = new();
+
+    public ChargeBlockedNotice? Blocked { get; init; }
+
+    /// <summary>Primera página del catálogo (con la búsqueda de la URL); <c>null</c> si no puede cobrar.</summary>
+    public ProductListViewModel? Catalog { get; init; }
+
+    /// <summary>
+    /// Productos enviados que siguen en el catálogo, con su precio vigente, para que <c>cart.js</c> rearme el carrito
+    /// cuando el formulario vuelve con errores. Vacío en un GET (el carrito sale de <c>sessionStorage</c>).
+    /// </summary>
+    public IReadOnlyList<CartLineView> InitialLines { get; init; } = [];
+
+    /// <summary>El formulario vuelve con errores del servidor (en móvil se abre el panel del carrito).</summary>
+    public bool HasErrors { get; init; }
+
+    /// <summary>Llave del carrito en <c>sessionStorage</c> (por vendedor).</summary>
+    public string StorageKey { get; init; } = "local133:cart";
+}
+
+/// <summary>Producto del carrito tal como lo usa <c>cart.js</c> (precio en texto invariante con 2 decimales).</summary>
+public sealed record CartLineView(int ProductId, string Name, string Price, string PriceText, string? Thumb, int Quantity);
+
+/// <summary>Producto de una venta con carrito (copia guardada al cobrar).</summary>
+public sealed record SaleItemView(string Name, int Quantity, string UnitPriceText, string AmountText);
 
 /// <summary>Pantalla "Cobrar": formulario de monto, o aviso si el vendedor aún no puede cobrar.</summary>
 public sealed class ChargeFormViewModel
@@ -100,6 +168,19 @@ public sealed class ChargeFormViewModel
 
 public sealed record ChargeBlockedNotice(string Title, string Message, string LinkHref, string LinkText);
 
+/// <summary>Rutas del cobro (relativas a la raíz del sitio, para <c>Url.Content("~" + …)</c>).</summary>
+public static class ChargeUrls
+{
+    /// <summary>Cobro por monto.</summary>
+    public const string Amount = "/app/cobrar";
+
+    /// <summary>Cobro con productos del catálogo.</summary>
+    public const string Cart = "/app/cobrar/productos";
+
+    /// <summary>Fragmento del catálogo para la búsqueda asíncrona del carrito.</summary>
+    public const string CartCatalog = "/app/cobrar/productos/catalogo";
+}
+
 /// <summary>
 /// Pantalla de una venta: pendiente (QR, o aviso del cobro enviado al celular, + cuenta regresiva + cancelar), pagada
 /// («Pago recibido»), vencida o cancelada. El servidor la dibuja en su estado actual y <c>sale-qr.js</c> pasa a
@@ -116,8 +197,24 @@ public sealed record SaleQrViewModel(
     string? MaskedPhone,
     bool HasPaymentRequest,
     int? RemainingSeconds,
-    string? PaidAtText)
+    string? PaidAtText,
+    IReadOnlyList<SaleItemView> Items)
 {
+    /// <summary>Venta con carrito: muestra sus productos y «Nuevo cobro» vuelve al catálogo.</summary>
+    public bool IsCart => Items.Count > 0;
+
+    public string NewChargeHref => IsCart ? ChargeUrls.Cart : ChargeUrls.Amount;
+
+    /// <summary>«1 producto» / «3 productos» (suma de cantidades).</summary>
+    public string ItemsSummary
+    {
+        get
+        {
+            var count = Items.Sum(i => i.Quantity);
+            return count == 1 ? "1 producto" : $"{count:N0} productos";
+        }
+    }
+
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
     private static readonly TimeZoneInfo MexicoCity = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
 
@@ -162,7 +259,11 @@ public sealed record SaleQrViewModel(
         sale.PhoneNumber is null ? null : Domain.Sales.PhoneNumber.Mask(sale.PhoneNumber),
         sale.HasPaymentRequest,
         sale.RemainingSeconds(now),
-        sale.PaidAt is { } paidAt ? FormatPaidAt(paidAt) : null);
+        sale.PaidAt is { } paidAt ? FormatPaidAt(paidAt) : null,
+        sale.Items
+            .OrderBy(i => i.Id)
+            .Select(i => new SaleItemView(i.Name, i.Quantity, FormatAmount(i.UnitPrice), FormatAmount(i.Amount)))
+            .ToList());
 
     public static string FormatAmount(decimal amount) => amount.ToString("C2", Spanish);
 

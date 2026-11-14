@@ -128,3 +128,94 @@ body {
     display: none;
   }
 }
+
+/* Cobrar con productos (carrito). */
+:root {
+  --cart-bar-height: 5.5rem; /* alto real de .cart-bar (84 px) + margen */
+}
+
+/* «+» del catálogo; con el producto en la venta muestra la cantidad. */
+.cart-add-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.cart-qty {
+  width: auto;
+  flex-wrap: nowrap;
+}
+
+/* − / + y cantidad con ancho fijo: el campo nunca queda aplastado entre los botones. */
+.cart-qty-btn {
+  width: 2.75rem;
+}
+
+.cart-qty > .cart-qty-input {
+  flex: 0 0 3.5rem;
+}
+
+.cart-total {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Panel inferior en móvil y tablet: casi toda la pantalla, para ver productos y botón sin apretar. */
+.cart-panel {
+  --bs-offcanvas-height: 88dvh;
+}
+
+/* Escritorio: la venta acompaña al catálogo al desplazarse (debajo de la barra superior fija). */
+@media (min-width: 992px) {
+  .cart-column {
+    position: sticky;
+    top: 4.5rem;
+    /* Con muchos productos la venta se desplaza sola: el botón de cobrar siempre se alcanza. */
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+  }
+}
+
+/* Resumen fijo sobre la barra de pestañas; en ≥md ya no hay barra de pestañas. */
+.cart-bar {
+  position: fixed;
+  right: 0;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  left: 0;
+  z-index: 1020;
+  padding: 0.5rem 1rem;
+  background-color: var(--bs-body-bg);
+  border-top: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.has-cart-bar .app-main {
+  padding-bottom: calc(var(--tabbar-height) + var(--cart-bar-height) + env(safe-area-inset-bottom) + 1rem);
+}
+
+@media (min-width: 768px) {
+  .cart-bar {
+    bottom: 0;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .has-cart-bar .app-main {
+    padding-bottom: calc(var(--cart-bar-height) + env(safe-area-inset-bottom) + 2rem);
+  }
+}
+
+/* Productos de la venta (vista del QR). */
+.sale-items {
+  max-width: 24rem;
+}
+
+.sale-items summary {
+  cursor: pointer;
+}
+
+@media (min-width: 992px) {
+  /* En escritorio la venta es una columna: no hay barra fija que dejar libre. */
+  .has-cart-bar .app-main {
+    padding-bottom: 2rem;
+  }
+}

@@ -1,0 +1,18 @@
+@using Local133.Domain.Sales
+@model bool
+@* Selector «QR | Celular» del formulario de cobro (charge-form.js). Modelo: true = cobro al celular. *@
+<fieldset class="mb-3">
+    <legend class="visually-hidden">Cómo cobrar</legend>
+    <div class="btn-group w-100" role="group" data-charge-method>
+        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-qr" autocomplete="off"
+               value="@ChargeMethod.DynamicQr" checked="@(!Model)" />
+        <label class="btn btn-outline-primary btn-lg" for="charge-method-qr">
+            <i class="bi bi-qr-code me-1" aria-hidden="true"></i> QR
+        </label>
+        <input type="radio" class="btn-check" name="Input.Method" id="charge-method-phone" autocomplete="off"
+               value="@ChargeMethod.PushNotification" checked="@Model" />
+        <label class="btn btn-outline-primary btn-lg" for="charge-method-phone">
+            <i class="bi bi-phone me-1" aria-hidden="true"></i> Celular
+        </label>
+    </div>
+</fieldset>

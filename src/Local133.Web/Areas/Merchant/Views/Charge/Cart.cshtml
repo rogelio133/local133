@@ -1,0 +1,158 @@
+@using Local133.Web.Areas.Merchant.Models
+@using Local133.Domain.Sales
+@model CartChargeViewModel
+@{
+    ViewData["Title"] = "Cobrar con productos";
+    var isPush = Model.Input.IsPushNotification;
+    var catalog = Model.Catalog;
+}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-12 col-xl-11">
+        <div class="row justify-content-center justify-content-lg-start">
+            <div class="col-md-10 col-lg-7">
+                <h1 class="h4 mb-3">Cobrar</h1>
+                <partial name="_ChargeModeNav" model="true" />
+            </div>
+        </div>
+
+        @if (Model.Blocked is { } blocked)
+        {
+            <div class="row justify-content-center justify-content-lg-start">
+                <div class="col-md-10 col-lg-7">
+                    <div class="card" data-charge-blocked>
+                        <div class="card-body">
+                            <h2 class="h5 card-title"><i class="bi bi-lock-fill text-body-secondary me-1" aria-hidden="true"></i> @blocked.Title</h2>
+                            <p class="card-text text-body-secondary">@blocked.Message</p>
+                            <a class="btn btn-primary btn-lg w-100" href="@Url.Content(blocked.LinkHref)">@blocked.LinkText</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (catalog is null || catalog.IsCatalogEmpty)
+        {
+            <div class="row justify-content-center justify-content-lg-start">
+                <div class="col-md-10 col-lg-7">
+                    <div class="card text-center" data-cart-catalog-empty>
+                        <div class="card-body py-5">
+                            <i class="bi bi-box-seam display-4 text-body-secondary" aria-hidden="true"></i>
+                            <h2 class="h5 mt-3">Aún no tienes productos</h2>
+                            <p class="text-body-secondary">Agrega tus productos con su precio para cobrarlos con unos toques. Mientras, puedes cobrar por monto.</p>
+                            <a class="btn btn-primary btn-lg" href="@Url.Content($"~{ProductUrls.New}")" data-new-product>
+                                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Agregar un producto
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <noscript>
+                <div class="alert alert-warning">Activa JavaScript para armar la venta con tus productos.</div>
+            </noscript>
+
+            <div class="row g-4" data-cart-page data-storage-key="@Model.StorageKey" data-has-errors="@(Model.HasErrors ? "true" : "false")">
+                <div class="col-md-10 col-lg-7 mx-auto mx-lg-0">
+                    @* Mismo buscador que /app/productos (product-search.js): busca al escribir sin recargar. *@
+                    <form method="get" action="@Url.Content("~" + ChargeUrls.Cart)" role="search" class="mb-3" data-product-search
+                          data-results-url="@Url.Content("~" + ChargeUrls.CartCatalog)">
+                        <div class="input-group">
+                            <input type="search" name="q" value="@catalog.Query" class="form-control" maxlength="@ProductListViewModel.QueryMaxLength"
+                                   placeholder="Buscar producto" aria-label="Buscar productos por nombre" autocomplete="off" enterkeyhint="search" />
+                            <button type="submit" class="btn btn-outline-primary" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+                        </div>
+                    </form>
+
+                    <div data-product-results aria-live="polite">
+                        <partial name="_CartCatalogResults" model="catalog" />
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="cart-column">
+                        @* En móvil y tablet es un panel que sube desde abajo («Ver venta»); en escritorio, una columna fija. *@
+                        <div class="offcanvas-lg offcanvas-bottom cart-panel" tabindex="-1" id="cart-panel" aria-labelledby="cart-title">
+                            <div class="offcanvas-header border-bottom">
+                                <h2 class="offcanvas-title h5" id="cart-title">Tu venta</h2>
+                                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#cart-panel" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="offcanvas-body">
+                                <div class="card w-100 cart-card">
+                                    <div class="card-body">
+                                        <h2 class="h5 d-none d-lg-block">Tu venta</h2>
+                                        <form asp-area="Merchant" asp-controller="Charge" asp-action="CreateCart" method="post"
+                                              data-charge-form data-cart-form data-disable-on-submit novalidate>
+                                            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert" data-cart-errors></div>
+
+                                            <p class="text-body-secondary mb-3" data-cart-empty>
+                                                <i class="bi bi-basket me-1" aria-hidden="true"></i> Toca un producto del catálogo para agregarlo.
+                                            </p>
+                                            <ul class="list-group list-group-flush mb-2" data-cart-lines aria-label="Productos de la venta"></ul>
+                                            <div data-cart-hidden></div>
+                                            <input type="hidden" name="Input.ExpectedTotal" value="@Model.Input.ExpectedTotal" data-cart-expected-total />
+
+                                            <div class="d-flex justify-content-between align-items-baseline border-top pt-2 mb-1">
+                                                <span class="fw-semibold">Total</span>
+                                                <span class="fs-4 fw-semibold cart-total" data-cart-total aria-live="polite">$0.00</span>
+                                            </div>
+                                            <p class="text-danger small mb-2 d-none" role="alert" data-cart-limit></p>
+
+                                            <div class="mt-3">
+                                                <partial name="_ChargeMethodSelector" model="isPush" />
+                                            </div>
+
+                                            <label asp-for="Input.Concept" class="form-label text-body-secondary"></label>
+                                            <input asp-for="Input.Concept" type="text" autocomplete="off" autocapitalize="sentences"
+                                                   maxlength="@Sale.ConceptTextMaxLength" class="form-control form-control-lg" aria-required="true"
+                                                   data-concept-input data-cart-concept data-val-trim />
+                                            <span asp-validation-for="Input.Concept" class="d-block text-danger small mt-1"></span>
+                                            <div class="form-text">
+                                                Lo armamos con tus productos; puedes cambiarlo. Tu cliente lo verá junto con el nombre de tu negocio.
+                                                <button type="button" class="btn btn-link btn-sm p-0 align-baseline d-none" data-cart-concept-auto>Usar texto automático</button>
+                                            </div>
+
+                                            <partial name="_PhoneField" for="Input" />
+
+                                            <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" data-charge-submit disabled>
+                                                <i class="bi @(isPush ? "bi-send" : "bi-qr-code") me-1" aria-hidden="true" data-charge-submit-icon></i>
+                                                <span data-charge-submit-label>@(isPush ? "Enviar cobro" : "Generar QR")</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Resumen fijo sobre la barra de pestañas (móvil y tablet); abre el panel de la venta. *@
+            <div class="cart-bar d-lg-none d-none" data-cart-bar>
+                <button type="button" class="btn btn-primary w-100 d-flex justify-content-between align-items-center gap-2"
+                        data-bs-toggle="offcanvas" data-bs-target="#cart-panel" aria-controls="cart-panel">
+                    <span class="d-flex align-items-center gap-2 text-start">
+                        <i class="bi bi-basket-fill fs-4" aria-hidden="true"></i>
+                        <span class="lh-sm" aria-live="polite">
+                            <span class="d-block small text-nowrap" data-cart-bar-count>0 productos</span>
+                            <span class="d-block fw-semibold text-nowrap" data-cart-bar-total>$0.00</span>
+                        </span>
+                    </span>
+                    <span class="text-nowrap">Ver venta <i class="bi bi-chevron-up" aria-hidden="true"></i></span>
+                </button>
+            </div>
+
+            <script type="application/json" data-cart-initial>@Json.Serialize(Model.InitialLines)</script>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.Blocked is null && catalog is { IsCatalogEmpty: false })
+    {
+        <partial name="_ValidationScriptsPartial" />
+        <script src="~/js/product-search.js"></script>
+        <script src="~/js/charge-form.js"></script>
+        <script src="~/js/cart.js"></script>
+    }
+}

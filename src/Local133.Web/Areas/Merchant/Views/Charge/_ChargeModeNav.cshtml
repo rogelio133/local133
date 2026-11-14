@@ -1,0 +1,11 @@
+@using Local133.Web.Areas.Merchant.Models
+@model bool
+@* Selector entre las dos formas de cobrar. Modelo: true = la página actual es la de productos. *@
+<nav class="nav nav-pills nav-fill charge-mode-nav mb-3" aria-label="Cómo armar el cobro" data-charge-mode-nav>
+    <a class="nav-link @(Model ? null : "active")" href="@Url.Content("~" + ChargeUrls.Amount)" aria-current="@(Model ? null : "page")" data-charge-mode="amount">
+        <i class="bi bi-123 me-1" aria-hidden="true"></i> Monto
+    </a>
+    <a class="nav-link @(Model ? "active" : null)" href="@Url.Content("~" + ChargeUrls.Cart)" aria-current="@(Model ? "page" : null)" data-charge-mode="cart">
+        <i class="bi bi-basket me-1" aria-hidden="true"></i> Productos
+    </a>
+</nav>

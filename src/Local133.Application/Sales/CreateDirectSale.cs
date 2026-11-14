@@ -28,15 +28,33 @@ public sealed class CreateDirectSaleCommandValidator : AbstractValidator<CreateD
             .GreaterThanOrEqualTo(Sale.MinAmount).WithMessage(SaleAmountMessages.TooLow)
             .LessThanOrEqualTo(Sale.MaxAmount).WithMessage(SaleAmountMessages.TooHigh)
             .Must(a => decimal.Round(a, PeyLimits.AmountDecimals) == a).WithMessage(SaleAmountMessages.TooManyDecimals);
-        RuleFor(c => c.Concept)
+        RuleFor(c => c.Concept).ValidConceptText();
+        this.ChargeMethodRules(c => c.Method, c => c.PhoneNumber);
+    }
+}
+
+/// <summary>Reglas comunes a los cobros por monto y con carrito.</summary>
+public static class SaleChargeRules
+{
+    /// <summary>Concepto que escribe el vendedor (<see cref="Sale.IsValidConceptText"/>).</summary>
+    public static IRuleBuilderOptions<T, string?> ValidConceptText<T>(this IRuleBuilderInitial<T, string?> rule) =>
+        rule
             .Cascade(CascadeMode.Stop)
             .Must(c => !string.IsNullOrWhiteSpace(c)).WithMessage(SaleConceptMessages.Required)
             .Must(c => c!.Trim().Length <= Sale.ConceptTextMaxLength).WithMessage(SaleConceptMessages.TooLong)
             .Must(Sale.IsValidConceptText).WithMessage(SaleConceptMessages.Invalid);
-        RuleFor(c => c.Method)
+
+    /// <summary>Método (QR o celular) y, con celular, el número del pagador.</summary>
+    public static void ChargeMethodRules<T>(
+        this AbstractValidator<T> validator,
+        System.Linq.Expressions.Expression<Func<T, ChargeMethod>> method,
+        System.Linq.Expressions.Expression<Func<T, string?>> phoneNumber)
+    {
+        var getMethod = method.Compile();
+        validator.RuleFor(method)
             .Must(m => m is ChargeMethod.DynamicQr or ChargeMethod.PushNotification).WithMessage(SalePhoneMessages.InvalidMethod);
-        When(c => c.Method == ChargeMethod.PushNotification, () =>
-            RuleFor(c => c.PhoneNumber)
+        validator.When(c => getMethod(c) == ChargeMethod.PushNotification, () =>
+            validator.RuleFor(phoneNumber)
                 .Cascade(CascadeMode.Stop)
                 .Must(p => !string.IsNullOrWhiteSpace(p)).WithMessage(SalePhoneMessages.Required)
                 .Must(p => PhoneNumber.IsValid(PhoneNumber.Normalize(p))).WithMessage(SalePhoneMessages.Invalid));
@@ -75,37 +93,43 @@ public static class SaleAmountMessages
     public const string TooManyDecimals = "El monto admite hasta 2 decimales.";
 }
 
-/// <summary>Resultado de crear la venta y su QR.</summary>
-public abstract record CreateDirectSaleResult
+/// <summary>Resultado de crear la venta y su QR (o su cobro al celular), por monto o con carrito.</summary>
+public abstract record CreateSaleResult
 {
-    private CreateDirectSaleResult()
+    private CreateSaleResult()
     {
     }
 
     /// <summary>Venta creada con su QR.</summary>
-    public sealed record Created(int SaleId) : CreateDirectSaleResult;
+    public sealed record Created(int SaleId) : CreateSaleResult;
 
     /// <summary>
-    /// Datos inválidos; llave = propiedad del comando (<c>Amount</c>, <c>Concept</c>, <c>PhoneNumber</c>) o vacía para
-    /// un error general.
+    /// Datos inválidos; llave = propiedad del comando (<c>Amount</c>, <c>Concept</c>, <c>PhoneNumber</c>, <c>Lines</c>,
+    /// <c>ExpectedTotal</c>…) o vacía para un error general.
     /// </summary>
-    public sealed record Invalid(IReadOnlyDictionary<string, string[]> Errors) : CreateDirectSaleResult;
+    public sealed record Invalid(IReadOnlyDictionary<string, string[]> Errors) : CreateSaleResult;
 
     /// <summary>El vendedor no puede cobrar (no está activo o su cuenta bancaria no está activa).</summary>
-    public sealed record NotAllowed : CreateDirectSaleResult;
+    public sealed record NotAllowed : CreateSaleResult;
 
     /// <summary>
     /// Falla de la pasarela; <see cref="Message"/> se puede mostrar al vendedor. <see cref="SaleId"/> viene solo cuando
     /// la venta se conservó (cancelada) porque el resultado es incierto: un push sin respuesta de Pey pudo llegarle al
     /// cliente, y si lo paga el pago se registra en esa venta.
     /// </summary>
-    public sealed record GatewayFailed(string Message, int? SaleId = null) : CreateDirectSaleResult;
+    public sealed record GatewayFailed(string Message, int? SaleId = null) : CreateSaleResult;
 }
 
 /// <summary>Cobros del vendedor (implementado en Infrastructure: EF Core + <c>IPaymentGateway</c>).</summary>
 public interface ISaleCharging
 {
-    Task<CreateDirectSaleResult> CreateDirectSaleAsync(CreateDirectSaleCommand command, CancellationToken cancellationToken = default);
+    Task<CreateSaleResult> CreateDirectSaleAsync(CreateDirectSaleCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Venta con carrito: los precios y nombres salen del catálogo vigente (se copian a <c>SaleItems</c>). Si el total
+    /// no coincide con el que vio el vendedor (<see cref="CreateCartSaleCommand.ExpectedTotal"/>) no se cobra.
+    /// </summary>
+    Task<CreateSaleResult> CreateCartSaleAsync(CreateCartSaleCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cancela una venta pendiente del vendedor. Solo es local: CoDi no permite anular el QR, así que si aun así llega
