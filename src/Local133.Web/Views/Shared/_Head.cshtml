@@ -1,9 +1,12 @@
 @* <head> común a los tres layouts (público, vendedor, admin). *@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0d6efd" />
+<meta name="theme-color" content="#E4007C" />
 <title>@(ViewData["Title"] is string title ? $"{title} · Local133" : "Local133")</title>
 <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
-<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
-<link rel="stylesheet" href="~/css/site.css" />
+@* Bootstrap compilado desde Styles/site.scss (variables en Styles/_custom.scss). *@
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />

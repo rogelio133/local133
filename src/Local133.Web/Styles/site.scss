@@ -1,3 +1,8 @@
+@import "custom";
+@import "vendor/bootstrap/scss/bootstrap";
+
+// Estilos propios del sitio (migrados desde wwwroot/css/site.css)
+
 /* Móvil primero: la barra de pestañas inferior del vendedor es fija, así que el contenido deja espacio debajo. */
 :root {
   --tabbar-height: 3.75rem;

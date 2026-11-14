@@ -59,6 +59,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         // Sin Hangfire (se lee al registrar servicios, por eso UseSetting): las pruebas llaman a los jobs directo.
         builder.UseSetting(JobsSetup.EnabledKey, "false");
+        // Sin watcher de Sass: cada factory levantaría su propio `sass --watch` sobre wwwroot/css.
+        builder.UseSetting(Program.SassWatchKey, "false");
         // Los user-secrets de desarrollo también se cargan aquí: el admin solo se siembra si la prueba lo pide
         // (fuente agregada al final, gana sobre user-secrets).
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>

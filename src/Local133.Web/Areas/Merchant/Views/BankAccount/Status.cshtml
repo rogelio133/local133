@@ -38,17 +38,17 @@
                         <h2 class="h5 card-title mb-0">@Model.Alias</h2>
                         <span class="badge @Model.BadgeClass">@Model.StatusLabel</span>
                     </div>
-                    <p class="card-text text-secondary small">@Model.Description</p>
+                    <p class="card-text text-body-secondary small">@Model.Description</p>
                     @if (Model.ErrorMessage is not null)
                     {
                         <p class="card-text text-danger small">Motivo: @Model.ErrorMessage</p>
                     }
                 </div>
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">CLABE</span> <span class="font-monospace">@Model.MaskedClabe</span></li>
-                    <li class="list-group-item d-flex justify-content-between gap-3"><span class="text-secondary">Titular</span> <span class="text-end">@Model.HolderName</span></li>
-                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">Tipo</span> <span>@Model.EntityLabel</span></li>
-                    <li class="list-group-item d-flex justify-content-between"><span class="text-secondary">Enviada</span> <span>@Model.SubmittedOn</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">CLABE</span> <span class="font-monospace">@Model.MaskedClabe</span></li>
+                    <li class="list-group-item d-flex justify-content-between gap-3"><span class="text-body-secondary">Titular</span> <span class="text-end">@Model.HolderName</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">Tipo</span> <span>@Model.EntityLabel</span></li>
+                    <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">Enviada</span> <span>@Model.SubmittedOn</span></li>
                 </ul>
             </div>
 

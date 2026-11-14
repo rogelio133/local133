@@ -1,6 +1,7 @@
 using Local133.Application;
 using Local133.Application.Sales;
 using Local133.Infrastructure;
+using Local133.Web.Hosting;
 using Local133.Web.Hubs;
 using Local133.Web.Identity;
 using Local133.Web.Jobs;
@@ -48,7 +49,20 @@ try
     // Jobs (Hangfire): sondeo de cuentas bancarias y expiración de ventas. Jobs:Enabled=false los apaga.
     builder.Services.AddAppJobs(builder.Configuration);
 
+    // Esquema real detrás de dev tunnels o del proxy de producción (ver ForwardedHeadersSetup).
+    builder.Services.AddAppForwardedHeaders(builder.Configuration);
+
+#if DEBUG
+    // Estilos: Styles/*.scss → wwwroot/css/site.css. El build y el publish compilan con dart-sass
+    // (AspNetCore.SassCompiler); en Debug además se recompila al guardar. Sass:Watch=false lo apaga (pruebas).
+    if (builder.Configuration.GetValue(SassWatchKey, defaultValue: true))
+        builder.Services.AddSassCompiler();
+#endif
+
     var app = builder.Build();
+
+    // Primero: el resto del pipeline (redirección a HTTPS, HSTS, cookies) debe ver el esquema original.
+    app.UseForwardedHeaders();
 
     // /api responde ProblemDetails; el resto del sitio, vistas HTML de error.
     app.UseWhen(ctx => IsApiRequest(ctx.Request), api =>
@@ -106,4 +120,8 @@ finally
 
 static bool IsApiRequest(HttpRequest request) => request.Path.StartsWithSegments("/api");
 
-public partial class Program;
+public partial class Program
+{
+    /// <summary>Activa el watcher de Sass en Debug (por defecto <c>true</c>; las pruebas lo apagan).</summary>
+    public const string SassWatchKey = "Sass:Watch";
+}

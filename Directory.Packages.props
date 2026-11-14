@@ -3,6 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="AspNetCore.SassCompiler" Version="1.108.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.25" />
     <PackageVersion Include="Hangfire.SqlServer" Version="1.8.25" />

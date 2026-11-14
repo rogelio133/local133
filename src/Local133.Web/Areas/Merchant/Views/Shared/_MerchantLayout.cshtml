@@ -29,7 +29,7 @@
                 @foreach (var tab in tabs)
                 {
                     var active = tab.Action == current;
-                    <a class="nav-link @(active ? "active" : null)" href="@Url.Content(tab.Href)" aria-current="@(active ? "page" : null)">@tab.Label</a>
+                    <a class="nav-link @(active ? "active fw-bold text-decoration-underline link-offset-2" : null)" href="@Url.Content(tab.Href)" aria-current="@(active ? "page" : null)">@tab.Label</a>
                 }
             </div>
             <partial name="_LoginPartial" />

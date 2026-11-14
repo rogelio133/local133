@@ -23,14 +23,14 @@
             <h1 class="h3 fw-semibold text-success mt-2 mb-1" role="status" aria-live="assertive">Pago recibido</h1>
         </div>
 
-        <p class="text-secondary mb-1">Venta @Model.Folio</p>
+        <p class="text-body-secondary mb-1">Venta @Model.Folio</p>
         <p class="display-5 fw-semibold @(Model.Concept is null ? "mb-3" : "mb-1")" data-sale-amount>@Model.AmountText</p>
         @if (Model.Concept is not null)
         {
-            <p class="text-secondary text-break mb-3" data-sale-concept>@Model.Concept</p>
+            <p class="text-body-secondary text-break mb-3" data-sale-concept>@Model.Concept</p>
         }
 
-        <div class="text-secondary mb-3 @(Model.IsPaid ? null : "d-none")" data-paid-only>
+        <div class="text-body-secondary mb-3 @(Model.IsPaid ? null : "d-none")" data-paid-only>
             <p class="mb-1">El dinero ya está en tu cuenta bancaria.</p>
             <p class="small mb-0">Pagado el <span data-paid-at>@Model.PaidAtText</span></p>
         </div>
@@ -45,11 +45,11 @@
                 <p class="mb-1">Pídele a tu cliente que lo escanee con la app de su banco.</p>
                 @if (Model.RemainingSeconds is not null)
                 {
-                    <p class="text-secondary" aria-live="polite">
+                    <p class="text-body-secondary" aria-live="polite">
                         Expira en <span class="fw-semibold font-monospace" data-expires-in="@Model.RemainingSeconds">@Model.RemainingText</span>
                     </p>
                 }
-                <p class="small text-secondary d-flex align-items-center justify-content-center gap-2 mb-3" data-waiting>
+                <p class="small text-body-secondary d-flex align-items-center justify-content-center gap-2 mb-3" data-waiting>
                     <span class="spinner-grow spinner-grow-sm text-primary" aria-hidden="true"></span>
                     Esperando el pago…
                 </p>
@@ -92,7 +92,7 @@
                 </div>
                 <div class="modal-body">
                     <p class="mb-2">La venta @Model.Folio por @Model.AmountText quedará cancelada.</p>
-                    <p class="small text-secondary mb-0">
+                    <p class="small text-body-secondary mb-0">
                         CoDi no permite anular un QR: si tu cliente ya lo escaneó, todavía podría pagarlo hasta que expire.
                         Si paga, la venta se marcará como pagada.
                     </p>

@@ -7,7 +7,7 @@
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <h1 class="h4 mb-1">@(Model.IsRetry ? "Corrige tu cuenta bancaria" : "Registra tu cuenta bancaria")</h1>
-        <p class="text-secondary">Aquí recibirás el dinero de tus cobros con CoDi, directo y completo: nosotros nunca tocamos tu dinero.</p>
+        <p class="text-body-secondary">Aquí recibirás el dinero de tus cobros con CoDi, directo y completo: nosotros nunca tocamos tu dinero.</p>
 
         @if (Model.IsRetry)
         {
@@ -25,11 +25,11 @@
                 <legend class="form-label fs-6 mb-1">Tipo de titular</legend>
                 <div class="form-check">
                     <input asp-for="Input.Entity" type="radio" value="@PeyEntity.Person" id="entity-person" class="form-check-input" />
-                    <label class="form-check-label" for="entity-person">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Person) <span class="text-secondary small">(la cuenta está a tu nombre)</span></label>
+                    <label class="form-check-label" for="entity-person">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Person) <span class="text-body-secondary small">(la cuenta está a tu nombre)</span></label>
                 </div>
                 <div class="form-check">
                     <input asp-for="Input.Entity" type="radio" value="@PeyEntity.Business" id="entity-business" class="form-check-input" />
-                    <label class="form-check-label" for="entity-business">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Business) <span class="text-secondary small">(la cuenta es de una empresa)</span></label>
+                    <label class="form-check-label" for="entity-business">@BankAccountStatusViewModel.EntityLabelOf(PeyEntity.Business) <span class="text-body-secondary small">(la cuenta es de una empresa)</span></label>
                 </div>
                 <span asp-validation-for="Input.Entity" class="d-block text-danger small"></span>
             </fieldset>
@@ -56,7 +56,7 @@
             </div>
 
             <button type="submit" class="w-100 btn btn-lg btn-primary">Enviar a revisión</button>
-            <p class="small text-secondary mt-2 mb-0">Banxico valida la cuenta para CoDi; puede tardar hasta 5 días hábiles.</p>
+            <p class="small text-body-secondary mt-2 mb-0">Banxico valida la cuenta para CoDi; puede tardar hasta 5 días hábiles.</p>
         </form>
     </div>
 </div>

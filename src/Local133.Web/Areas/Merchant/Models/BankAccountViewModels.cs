@@ -106,7 +106,7 @@ public sealed record BankAccountStatusViewModel(
         PeyCodiStatus.Pending or PeyCodiStatus.Processing => "text-bg-warning",
         PeyCodiStatus.Active => "text-bg-success",
         PeyCodiStatus.Error => "text-bg-danger",
-        _ => "text-bg-secondary",
+        _ => "text-bg-light border",
     };
 
     public string Description => CodiStatus switch

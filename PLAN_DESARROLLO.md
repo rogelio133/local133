@@ -119,6 +119,7 @@ tests/
 
 - **Auth**: ASP.NET Core Identity con la **UI scaffoldeada** (Razor Pages en `Areas/Identity`, personalizada en español y adaptada al layout), cookie segura, roles `Merchant` / `Admin`, login externo Google y Facebook.
 - **Frontend**: MVC con vistas Razor; `_Layout` Bootstrap 5 móvil primero (barra inferior en el área del vendedor, sidebar/Offcanvas en admin). Bootstrap, cliente JS de SignalR y demás librerías cliente vía **LibMan** en `wwwroot/lib` (sin npm ni build de JS). Validación con jQuery Validation Unobtrusive en cliente + FluentValidation en servidor; antiforgery en todos los formularios. JS ligero solo donde hace falta (campo de monto, carrito, QR CoDi con QRCode.js y su cuenta regresiva).
+- **Identidad visual**: Bootstrap 5.3.8 compilado desde SCSS con variables propias (rosa mexicano `#E4007C`, azul lona, cempasúchil, verde nopal, tinta ciruela; Bungee en títulos, Atkinson Hyperlegible en texto; botones y campos más altos; sombras duras) con `AspNetCore.SassCompiler` (dart-sass empacado, sin Node). Fuente en `src/Local133.Web/Styles` (`_custom.scss` variables, `site.scss` import + estilos propios); el SCSS de Bootstrap llega por LibMan (`twbs/bootstrap@v5.3.8` en `Styles/vendor`, versionado, no se edita). `wwwroot/css/site.css` es generado (build/publish, y watcher en Debug) y está en `.gitignore`. Personalizar solo con variables Sass antes del import; texto tenue con `text-body-secondary` (`secondary` es el azul). *(Cambio 2026-11-12: antes `bootstrap.min.css` precompilado + `site.css` a mano. Verificado en Edge a 375/768/1280: inicio, registro, `/app`, cobrar, QR, venta pagada, cuenta bancaria, admin con offcanvas, modal de cancelar; consola sin errores, sin 404 ni scroll horizontal; el watcher recompila al guardar `_custom.scss`.)*
 - **Multi-tenant**: toda entidad de negocio lleva `MerchantId`; filtro global de EF Core + política de autorización.
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
@@ -309,7 +310,8 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
      - *Se corrigió: doble punto tras la hora del pago y formato distinto entre JS y servidor (⇒ `paidAtText`); aviso «Cancelaste el cobro» duplicado con el bloque de cancelado; polling que seguía tras un 404.*
    - *Pendientes:*
      - *pago real de $0.01 escaneando el QR con una app bancaria, con el webhook registrado en portal.mipey.mx (túnel HTTPS);*
-     - *confirmar con Pey la tolerancia del timestamp, la política de reintentos del webhook y si un QR con monto acepta varios pagos.)*
+     - *confirmar con Pey la tolerancia del timestamp, la política de reintentos del webhook y si un QR con monto acepta varios pagos.*
+   - *Corrección (2026-11-13), primer pago real por el túnel: Pey cobró, pero el webhook no llegó. Hubo dos causas. Primero, el túnel no estaba hospedado (`devtunnel host`). Segundo, con el perfil `https` el sitio respondía 307 a `https://localhost:7180`. Se agregó `UseForwardedHeaders` (`Web/Hosting/ForwardedHeadersSetup`, solo loopback por defecto) y `ForwardedHeadersTests`. La venta 24 ($0.01) quedó pendiente de conciliar.)*
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`.
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
 8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp).
@@ -338,7 +340,7 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 4. Tablero, transacciones globales, bitácora de webhooks con reproceso.
 
 ### Fase 7 — Endurecimiento y salida (≈1 semana)
-Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx) · prueba piloto con 3–5 vendedores.
+Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx; declarar la IP o red del proxy en `ForwardedHeaders:KnownProxies`/`KnownNetworks`, o el sitio redirigirá con 307 lo que el proxy le entregue por HTTP) · prueba piloto con 3–5 vendedores.
 
 **Total estimado:** ≈10–11 semanas para una persona.
 

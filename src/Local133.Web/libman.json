@@ -6,8 +6,6 @@
       "library": "bootstrap@5.3.8",
       "destination": "wwwroot/lib/bootstrap/",
       "files": [
-        "dist/css/bootstrap.min.css",
-        "dist/css/bootstrap.min.css.map",
         "dist/js/bootstrap.bundle.min.js",
         "dist/js/bootstrap.bundle.min.js.map"
       ]
@@ -57,6 +55,13 @@
       "files": [
         "dist/browser/signalr.min.js",
         "dist/browser/signalr.min.js.map"
+      ]
+    },
+    {
+      "library": "twbs/bootstrap@v5.3.8",
+      "destination": "Styles/vendor/bootstrap",
+      "files": [
+        "scss/**/*.scss"
       ]
     }
   ]

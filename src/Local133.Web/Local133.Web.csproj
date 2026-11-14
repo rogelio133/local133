@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.SassCompiler" />
     <PackageReference Include="Hangfire.AspNetCore" />
     <PackageReference Include="Hangfire.SqlServer" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" />
