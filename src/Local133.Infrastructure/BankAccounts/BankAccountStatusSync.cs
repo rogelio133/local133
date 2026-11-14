@@ -2,6 +2,7 @@ using Local133.Application.BankAccounts;
 using Local133.Application.Payments;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
+using Local133.Domain.Pey;
 using Local133.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -10,7 +11,7 @@ namespace Local133.Infrastructure.BankAccounts;
 
 /// <summary>
 /// Lee el estatus CoDi de la cuenta en Pey y lo aplica a la cuenta y al vendedor juntos. Si Pey falla no se guarda
-/// nada. Sin dependencia de la sesión: sirve igual para el botón del vendedor y para el job de sondeo (2.3).
+/// nada. Sin dependencia de la sesión: sirve igual para el botón del vendedor, el job de sondeo y el webhook <c>bank.account.updated</c>.
 /// </summary>
 internal sealed class BankAccountStatusSync(
     AppDbContext db,
@@ -69,27 +70,50 @@ internal sealed class BankAccountStatusSync(
             return new BankAccountStatusSyncResult.GatewayFailed(GenericFailure);
         }
 
+        return await ApplyAsync(account, merchant, remote.CodiStatus, remote.ErrorMessage, isStatusCheck: true, "consulta", cancellationToken);
+    }
+
+    public async Task<BankAccountStatusSyncResult> ApplyWebhookAsync(
+        string peyBankAccountId, PeyCodiStatus codiStatus, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(peyBankAccountId);
+        var account = await db.BankAccounts.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(b => b.PeyBankAccountId == peyBankAccountId, cancellationToken);
+        if (account is null)
+        {
+            return new BankAccountStatusSyncResult.NotFound();
+        }
+
+        var merchant = await db.Merchants.IgnoreQueryFilters()
+            .SingleAsync(m => m.Id == account.MerchantId, cancellationToken);
+        // El webhook no trae errorMessage (solo se envía al pasar a ACTIVE).
+        return await ApplyAsync(account, merchant, codiStatus, errorMessage: null, isStatusCheck: false, "webhook", cancellationToken);
+    }
+
+    /// <summary>
+    /// Transición común (consulta y webhook <c>bank.account.updated</c>): estatus de la cuenta + estatus del vendedor,
+    /// en un solo guardado. La consulta registra la lectura (<c>RecordStatusCheck</c>); el webhook no es una lectura
+    /// (<c>UpdateStatus</c>).
+    /// </summary>
+    private async Task<BankAccountStatusSyncResult> ApplyAsync(
+        BankAccount account, Merchant merchant, PeyCodiStatus codiStatus, string? errorMessage, bool isStatusCheck,
+        string source, CancellationToken cancellationToken)
+    {
         var previous = account.CodiStatus;
-        var changed = Apply(account, merchant, remote);
+        var now = clock.GetUtcNow();
+        var accountChanged = isStatusCheck
+            ? account.RecordStatusCheck(codiStatus, errorMessage, now)
+            : account.UpdateStatus(codiStatus, errorMessage, now);
+        var merchantChanged = merchant.ApplyBankAccountStatus(codiStatus);
+        var changed = accountChanged || merchantChanged;
         await db.SaveChangesAsync(cancellationToken);
 
         if (changed)
         {
-            logger.LogInformation("Cuenta {Clabe} ({PeyBankAccountId}) del vendedor {MerchantId}: {Previous} → {Current}; vendedor {MerchantStatus}",
-                Clabe.Mask(account.Clabe), account.PeyBankAccountId, merchant.Id, previous, account.CodiStatus, merchant.Status);
+            logger.LogInformation("Cuenta {Clabe} ({PeyBankAccountId}) del vendedor {MerchantId} ({Source}): {Previous} → {Current}; vendedor {MerchantStatus}",
+                Clabe.Mask(account.Clabe), account.PeyBankAccountId, merchant.Id, source, previous, account.CodiStatus, merchant.Status);
         }
 
         return new BankAccountStatusSyncResult.Synced(previous, account.CodiStatus, merchant.Status, changed);
-    }
-
-    /// <summary>
-    /// Transición común (consulta y, en 2.3, webhook <c>bank.account.updated</c>): estatus de la cuenta + estatus del
-    /// vendedor. Devuelve <c>true</c> si cambió alguno de los dos.
-    /// </summary>
-    private bool Apply(BankAccount account, Merchant merchant, GatewayBankAccount remote)
-    {
-        var accountChanged = account.RecordStatusCheck(remote.CodiStatus, remote.ErrorMessage, clock.GetUtcNow());
-        var merchantChanged = merchant.ApplyBankAccountStatus(remote.CodiStatus);
-        return accountChanged || merchantChanged;
     }
 }

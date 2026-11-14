@@ -6,7 +6,7 @@
 <div class="row justify-content-center">
     <div class="col-sm-10 col-md-7 col-lg-5">
         <h1 class="h3 mb-1">@ViewData["Title"]</h1>
-        <p class="text-secondary">Regístrate para cobrar con CoDi desde tu puesto.</p>
+        <p class="text-body-secondary">Regístrate para cobrar con CoDi desde tu puesto.</p>
 
         <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
@@ -34,7 +34,7 @@
 
         @if ((Model.ExternalLogins?.Count ?? 0) > 0)
         {
-            <div class="text-center text-secondary small my-3">o regístrate con</div>
+            <div class="text-center text-body-secondary small my-3">o regístrate con</div>
             <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="d-grid gap-2">
                 @foreach (var provider in Model.ExternalLogins!)
                 {

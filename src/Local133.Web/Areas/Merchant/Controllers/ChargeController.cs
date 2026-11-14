@@ -83,6 +83,28 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
         return View(SaleQrViewModel.From(sale, clock.GetUtcNow()));
     }
 
+    /// <summary>Cancela un cobro pendiente (solo local: el QR sigue vigente en CoDi hasta que expire).</summary>
+    [HttpPost("venta/{id:int}/cancelar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(int id, CancellationToken cancellationToken)
+    {
+        var command = new CancelSaleCommand(User.FindFirstValue(ClaimTypes.NameIdentifier)!, id);
+        switch (await charging.CancelSaleAsync(command, cancellationToken))
+        {
+            case CancelSaleResult.NotFound:
+                return NotFound();
+            case CancelSaleResult.NotCancellable notCancellable:
+                TempData[SaleNoticeKey] = notCancellable.Message;
+                break;
+            // Cancelada: la vista ya lo explica con su bloque de «cancelado».
+        }
+
+        return RedirectToAction(nameof(Sale), new { id });
+    }
+
+    /// <summary>Mensaje (TempData) que la vista de la venta muestra una vez.</summary>
+    public const string SaleNoticeKey = "SaleNotice";
+
     private async Task<ChargeFormViewModel> FormAsync(ChargeInput input, CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);

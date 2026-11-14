@@ -63,6 +63,12 @@ public partial class Sale : Entity
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>Hora del primer pago recibido (la del pago en Pey).</summary>
+    public DateTimeOffset? PaidAt { get; set; }
+
+    /// <summary>Cuándo la canceló el vendedor.</summary>
+    public DateTimeOffset? CancelledAt { get; set; }
+
     /// <summary>Referencia numérica para Pey (hasta 7 dígitos).</summary>
     public int NumRef => Folio % (PeyLimits.MaxNumRef + 1);
 
@@ -147,6 +153,56 @@ public partial class Sale : Entity
     /// la hace el job de expiración.
     /// </summary>
     public bool IsExpiredAt(DateTimeOffset now) => ExpiresAt is { } expiresAt && now >= expiresAt;
+
+    /// <summary>
+    /// Llegó un pago. El dinero ya está en la cuenta del vendedor, así que el pago manda: una venta vencida o
+    /// cancelada también queda pagada (CoDi no permite anular un QR y el webhook puede llegar tarde). Si ya estaba
+    /// pagada no cambia nada (pago adicional). Devuelve <c>true</c> si cambió el estatus.
+    /// </summary>
+    public bool MarkPaid(DateTimeOffset paidAt)
+    {
+        if (Status == SaleStatus.Paid)
+        {
+            return false;
+        }
+
+        Status = SaleStatus.Paid;
+        PaidAt = paidAt;
+        return true;
+    }
+
+    /// <summary>El vendedor puede cancelarla: sigue esperando el pago.</summary>
+    public bool CanCancel => Status == SaleStatus.Pending;
+
+    /// <summary>
+    /// Cancelación del vendedor (solo local: Pey no anula el QR; si aun así llega un pago, <see cref="MarkPaid"/> gana).
+    /// </summary>
+    public void Cancel(DateTimeOffset now)
+    {
+        if (!CanCancel)
+        {
+            throw new InvalidOperationException($"La venta {Id} está {Status}; solo se cancela una venta pendiente.");
+        }
+
+        Status = SaleStatus.Cancelled;
+        CancelledAt = now;
+    }
+
+    /// <summary>Pendiente con el QR vencido ⇒ <see cref="SaleStatus.Expired"/>. Devuelve <c>true</c> si cambió.</summary>
+    public bool ExpireIfDue(DateTimeOffset now)
+    {
+        if (Status != SaleStatus.Pending || !IsExpiredAt(now))
+        {
+            return false;
+        }
+
+        Status = SaleStatus.Expired;
+        return true;
+    }
+
+    /// <summary>Estatus que ve el vendedor: una pendiente con el QR ya vencido se muestra como vencida aunque el job aún no corra.</summary>
+    public SaleStatus EffectiveStatus(DateTimeOffset now) =>
+        Status == SaleStatus.Pending && IsExpiredAt(now) ? SaleStatus.Expired : Status;
 
     /// <summary>Segundos enteros que le quedan al QR (0 si ya venció); <c>null</c> si no expira.</summary>
     public int? RemainingSeconds(DateTimeOffset now)

@@ -145,7 +145,8 @@ public static class IdentitySetup
 
     private static Task RedirectOrStatus(RedirectContext<CookieAuthenticationOptions> ctx, int statusCode)
     {
-        if (ctx.Request.Path.StartsWithSegments("/api"))
+        // /api y /hubs (SignalR) responden con el código; el resto del sitio redirige al login.
+        if (ctx.Request.Path.StartsWithSegments("/api") || ctx.Request.Path.StartsWithSegments("/hubs"))
         {
             ctx.Response.StatusCode = statusCode;
         }

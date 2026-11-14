@@ -1,0 +1,67 @@
+// --- Paleta ---------------------------------------------------
+$rosa-mexicano:   #E4007C;  // base: botones, enlaces, marca
+$rosa-profundo:   #B8005F;  // hover / texto rosa sobre fondos claros
+$azul-lona:       #1F3FA6;  // lonas azules del tianguis: secundario
+$cempasuchil:     #F7A800;  // avisos y precios (nunca texto sobre blanco)
+$verde-nopal:     #2E7D4F;  // pago recibido / éxito
+$tinta:           #2A1420;  // texto: ciruela muy oscuro, no negro plano
+$papel:           #FFFFFF;
+$rosa-papel:      #FFF0F7;  // fondos de sección suaves
+
+$primary:   $rosa-mexicano;
+$secondary: $azul-lona;
+$success:   $verde-nopal;
+$warning:   $cempasuchil;
+$dark:      $tinta;
+$light:     $rosa-papel;
+
+$body-color: $tinta;
+$body-bg:    $papel;
+$link-color: $rosa-profundo;
+$link-hover-color: $tinta;
+$min-contrast-ratio: 4.5;
+
+// --- Tipografía ----------------------------------------------
+$font-family-sans-serif: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+$headings-font-family:   "Bungee", "Atkinson Hyperlegible", system-ui, sans-serif;
+$headings-font-weight:   400;
+$headings-line-height:   1.1;
+$font-size-base:         1.0625rem;
+$line-height-base:       1.55;
+
+$h1-font-size: $font-size-base * 2.75;
+$h2-font-size: $font-size-base * 2;
+$h3-font-size: $font-size-base * 1.5;
+$h4-font-size: $font-size-base * 1.25;
+
+// --- Forma ----------------------------------------------------
+$border-radius:    .375rem;
+$border-radius-sm: .25rem;
+$border-radius-lg: .75rem;
+$border-width:     2px;
+$border-color:     rgba($tinta, .15);
+
+// Sombras duras, como un letrero pegado
+$box-shadow:    4px 4px 0 rgba($tinta, .9);
+$box-shadow-sm: 2px 2px 0 rgba($tinta, .9);
+$box-shadow-lg: 6px 6px 0 rgba($tinta, .9);
+$enable-shadows: false;
+
+// --- Botones y campos (uso con una mano, en el puesto) --------
+$btn-padding-y:    .75rem;
+$btn-padding-x:    1.5rem;
+$btn-font-weight:  700;
+$btn-padding-y-lg: 1rem;
+$btn-padding-x-lg: 2rem;
+$input-padding-y:  .75rem;
+
+// --- Sin degradados decorativos -------------------------------
+$enable-gradients: false;
+
+// --- Navbar sobre rosa ----------------------------------------
+// Bootstrap pone los enlaces de .navbar[data-bs-theme=dark] en blanco al 55 % (~2.5:1 sobre el rosa).
+// Blanco completo da ~4.6:1; el enlace activo se distingue con fw-bold + subrayado en el marcado.
+$navbar-dark-color:          #fff;
+$navbar-dark-hover-color:    #fff;
+$navbar-dark-active-color:   #fff;
+$navbar-dark-disabled-color: rgba(#fff, .5);

@@ -29,5 +29,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(s => new { s.MerchantId, s.Folio }).IsUnique();
         // El webhook codi.qr.payment_received y la conciliación buscan por el IDC del QR.
         builder.HasIndex(s => s.PeyQrId).IsUnique().HasFilter("[PeyQrId] IS NOT NULL");
+        // Job de expiración: pendientes con el QR vencido.
+        builder.HasIndex(s => new { s.Status, s.ExpiresAt });
     }
 }

@@ -70,6 +70,16 @@ dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web
 
 Opcional en la sección `Pey`: `BaseUrl` (por defecto `https://api.pey.mx`), `AttemptTimeout` (30 s), `TotalTimeout` (90 s), `MaxRetryAttempts` (3) y `RetryDelay` (1 s). Las pruebas de `PeyClient` usan un Pey simulado con WireMock y corren en CI.
 
+**Webhook de Pey** (`POST /api/webhooks/pey`): confirma los pagos y la activación de cuentas bancarias. Pey firma con Standard Webhooks. El secreto (`whsec_…`) sale de portal.mipey.mx al registrar la URL del webhook. Sin él, el endpoint responde 500 y Pey reintenta.
+
+```powershell
+dotnet user-secrets set "Pey:WebhookSecret" "whsec_<secreto>" --project src/Local133.Web
+```
+
+Para recibirlo en local hace falta un túnel HTTPS (ngrok o dev tunnels) hacia el sitio. Registra esa URL en portal.mipey.mx y revisa sus entregas en "Webhook Logs".
+
+**Jobs (Hangfire)**: el sitio programa el sondeo de cuentas bancarias en revisión (cada 30 min) y la expiración de ventas (cada minuto). Usan la misma base de datos, en el esquema `HangFire`, que Hangfire crea solo al arrancar. Para apagarlos: `Jobs:Enabled=false` (variable `Jobs__Enabled=false`).
+
 ## Comandos
 
 | Tarea | Comando |

@@ -33,7 +33,7 @@
 
         @if ((Model.ExternalLogins?.Count ?? 0) > 0)
         {
-            <div class="text-center text-secondary small my-3">o entra con</div>
+            <div class="text-center text-body-secondary small my-3">o entra con</div>
             <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="d-grid gap-2">
                 @foreach (var provider in Model.ExternalLogins!)
                 {

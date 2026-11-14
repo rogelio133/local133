@@ -21,6 +21,14 @@ public interface IBankAccountStatusSync
     /// sin llamar a Pey. Lo pasa el botón (<see cref="BankAccountStatusChecks.ManualMinInterval"/>); el job, <c>null</c>.
     /// </param>
     Task<BankAccountStatusSyncResult> SyncAsync(int bankAccountId, TimeSpan? minInterval = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Estatus avisado por el webhook <c>bank.account.updated</c> (Pey solo lo manda al pasar a <c>ACTIVE</c>). No es
+    /// una consulta: usa <c>BankAccount.UpdateStatus</c>, no toca <c>StatusCheckedAt</c> y no llama a Pey.
+    /// </summary>
+    /// <param name="peyBankAccountId">Id de la cuenta en Pey (<c>bankAccountId</c> del webhook).</param>
+    /// <returns><see cref="BankAccountStatusSyncResult.Synced"/> o <see cref="BankAccountStatusSyncResult.NotFound"/>.</returns>
+    Task<BankAccountStatusSyncResult> ApplyWebhookAsync(string peyBankAccountId, PeyCodiStatus codiStatus, CancellationToken cancellationToken = default);
 }
 
 public static class BankAccountStatusChecks

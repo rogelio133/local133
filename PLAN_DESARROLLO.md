@@ -119,9 +119,10 @@ tests/
 
 - **Auth**: ASP.NET Core Identity con la **UI scaffoldeada** (Razor Pages en `Areas/Identity`, personalizada en español y adaptada al layout), cookie segura, roles `Merchant` / `Admin`, login externo Google y Facebook.
 - **Frontend**: MVC con vistas Razor; `_Layout` Bootstrap 5 móvil primero (barra inferior en el área del vendedor, sidebar/Offcanvas en admin). Bootstrap, cliente JS de SignalR y demás librerías cliente vía **LibMan** en `wwwroot/lib` (sin npm ni build de JS). Validación con jQuery Validation Unobtrusive en cliente + FluentValidation en servidor; antiforgery en todos los formularios. JS ligero solo donde hace falta (campo de monto, carrito, QR CoDi con QRCode.js y su cuenta regresiva).
+- **Identidad visual**: Bootstrap 5.3.8 compilado desde SCSS con variables propias (rosa mexicano `#E4007C`, azul lona, cempasúchil, verde nopal, tinta ciruela; Bungee en títulos, Atkinson Hyperlegible en texto; botones y campos más altos; sombras duras) con `AspNetCore.SassCompiler` (dart-sass empacado, sin Node). Fuente en `src/Local133.Web/Styles` (`_custom.scss` variables, `site.scss` import + estilos propios); el SCSS de Bootstrap llega por LibMan (`twbs/bootstrap@v5.3.8` en `Styles/vendor`, versionado, no se edita). `wwwroot/css/site.css` es generado (build/publish, y watcher en Debug) y está en `.gitignore`. Personalizar solo con variables Sass antes del import; texto tenue con `text-body-secondary` (`secondary` es el azul). *(Cambio 2026-11-12: antes `bootstrap.min.css` precompilado + `site.css` a mano. Verificado en Edge a 375/768/1280: inicio, registro, `/app`, cobrar, QR, venta pagada, cuenta bancaria, admin con offcanvas, modal de cancelar; consola sin errores, sin 404 ni scroll horizontal; el watcher recompila al guardar `_custom.scss`.)*
 - **Multi-tenant**: toda entidad de negocio lleva `MerchantId`; filtro global de EF Core + política de autorización.
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
-- **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → responder 200 → procesar. Procesamiento idempotente por `transactionId`.
+- **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
 - **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · corte semanal (lunes 00:05 `America/Mexico_City`) · vencimiento y suspensión.
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con ImageSharp.
@@ -213,10 +214,31 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
      - *La lógica es el caso de uso `IBankAccountStatusSync.SyncAsync(bankAccountId, minInterval)` (Application/BankAccounts; implementación en Infrastructure/BankAccounts): sin sesión ni claims, con `IgnoreQueryFilters()`. Guarda en un solo `SaveChanges` `BankAccount.RecordStatusCheck` + `Merchant.ApplyBankAccountStatus`. Si Pey falla no guarda nada.*
      - *Pruebas: 13 unitarias (`BankAccountStatusCheckTests`) y 14 de integración en `BankAccountTests` (incluye la llamada sin sesión, como el job, y el aislamiento entre vendedores). 225/225 verdes en local (137 en CI).*
      - *Pendiente: revisión en navegador con Playwright a 375 px y ≥ 992 px (el MCP no conectó en esta sesión) y una consulta real contra Pey con la CLABE de prueba.*
-3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus.
-   - *Sondeo (Hangfire, cada 30 min): seleccionar las cuentas `Pending`/`Processing` (con `IgnoreQueryFilters()`) ordenadas por `StatusCheckedAt` y llamar `IBankAccountStatusSync.SyncAsync(id)` **sin `minInterval`**, cada una en su propio scope de DI. Un `GatewayFailed` se registra y el job sigue con la siguiente.*
-   - *Webhook: agregar a `BankAccountStatusSync` un método por `PeyBankAccountId` que reutilice la transición privada `Apply`, usando `UpdateStatus` porque no es una lectura.*
-4. **Venta por monto directo**: campo de monto → crea `Sale` → `POST /codi/qr` (`generateImage: false`) → vista con el QR (dibujado en el navegador con QRCode.js a partir de `qrString`) y cuenta regresiva en JS. ✅ *(hecho 2026-11-11; la 2.3 sigue pendiente y la 2.4 no depende de ella:*
+3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus. ✅ *(hecho 2026-11-12, junto con la 2.5:*
+   - *Formato real tomado de docs.pey.mx (el OpenAPI trae `"webhooks": {}`):*
+     - *`codi.qr.payment_received` = `{type, amount (number), apiKeyId, bankAccountId?, codiQrId, concept, datePaid (segundos Unix), numRef (texto), transactionId, metadata:{clabe, bankCode, accountType, description, trackingKey, externalMetadata}}`;*
+     - *`bank.account.updated` = `{type, bankAccountId, codiStatus:"ACTIVE", name, clabe, entity, ownerType, ownerId, taxId?}`, sin `errorMessage`.*
+   - *Firma: `Infrastructure/Webhooks/StandardWebhookVerifier`, propio y sin paquete. Calcula HMAC-SHA256 de `"{id}.{timestamp}.{body}"` con el secreto `whsec_<base64>` y acepta varias firmas `v1,…` en el header. Compara en tiempo constante y tolera ±5 min (la del estándar; Pey no documenta otra). 29 pruebas, incluido el vector oficial de Standard Webhooks; corren en CI.*
+   - *`POST /api/webhooks/pey` (`PeyWebhooksController`, anónimo, body crudo, máximo 64 KB). Respuestas:*
+     - *sin `Pey:WebhookSecret` ⇒ 500;*
+     - *firma inválida o sin headers ⇒ 401;*
+     - *si no, `IPeyWebhookProcessor` (Infrastructure/Webhooks/PeyWebhookProcessor), que guarda en `WebhookEvents` y **procesa en la misma petición** (ver §4).*
+   - *Bitácora `WebhookEvents` (`Domain/Webhooks/WebhookEvent`): `WebhookId` único, tipo, payload crudo, timestamp, estatus `Received`/`Processed`/`Ignored`/`Failed`, intentos y error. No tiene filtro multi-tenant (es del admin; su pantalla llega en la Fase 6).*
+     - *Un id `Processed`/`Ignored` repetido ⇒ `Duplicate`.*
+     - *Uno `Failed` o a medias se reprocesa cuando Pey lo reintenta.*
+     - *`codi.pn.payment_received` y `payment_link.*` ⇒ `Ignored`, con el payload guardado.*
+   - *`bank.account.updated` ⇒ `IBankAccountStatusSync.ApplyWebhookAsync(peyBankAccountId, status)`: comparte la transición con la consulta, pero usa `UpdateStatus` y no toca `StatusCheckedAt` ni llama a Pey. Una cuenta desconocida ⇒ `Failed`.*
+   - *Hangfire 1.8.25 (`Hangfire.AspNetCore` + `Hangfire.SqlServer` con `Microsoft.Data.SqlClient`):*
+     - *almacenamiento en la misma base, esquema `HangFire`, que crea Hangfire;*
+     - *`Web/Jobs/JobsSetup`, con `Jobs:Enabled` (`true` por defecto; las pruebas lo apagan) y sin reintentos automáticos;*
+     - *sin dashboard todavía (Fase 6/7).*
+   - *Job `sondeo-cuentas-bancarias` (`*/30 * * * *`, en hora de CDMX; `Infrastructure/Jobs/BankAccountPollingJob`): toma las cuentas `Pending`/`Processing`, las nunca consultadas y luego las de lectura más antigua. Llama `SyncAsync(id)` sin `minInterval`, un scope por cuenta; si una falla, sigue con la siguiente.*
+   - *Pruebas: `PeyWebhookTests` (firma, bitácora, idempotencia, `bank.account.updated`) y `BankAccountPollingJobTests`.*
+   - *Pendientes:*
+     - *registrar la URL pública y el secreto en portal.mipey.mx;*
+     - *recibir un `bank.account.updated` real con la CLABE de prueba;*
+     - *el correo de cuenta activada/rechazada (Notificaciones).)*
+4. **Venta por monto directo**: campo de monto → crea `Sale` → `POST /codi/qr` (`generateImage: false`) → vista con el QR (dibujado en el navegador con QRCode.js a partir de `qrString`) y cuenta regresiva en JS. ✅ *(hecho 2026-11-11, antes que la 2.3, porque no depende de ella:*
    - *Pey: `PeyCreateQrBody.GenerateImage` siempre `false` y explícito en el cuerpo (el OpenAPI dice que por defecto es `false` y que la imagen hace más lenta la respuesta).*
    - *`Domain/Sales`: enums `ChargeMethod`, `SaleSource`, `SaleStatus` y entidad `Sale`:*
      - *`StartDirect` valida el monto: de $0.01 a $999,999.99, con hasta 2 decimales;*
@@ -257,7 +279,39 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
      - *Pruebas: 142 unitarias (concepto: `BuildConcept`, caracteres permitidos/rechazados, máximo, obligatorio) y 187 de integración (formulario, concepto enviado con y sin negocio, conceptos inválidos sin llamar a Pey, más de 100, se conserva lo capturado). 329/329 verdes en local (206 en CI).*
      - *Revisión con el **MCP de Playwright** (Edge) a 375, 768 y 1280 px: formulario, errores en cliente (vacío, solo espacios, Enter, emoji, `@`; 0 POST), `maxlength` 100, sin scroll horizontal, nada tapado por la barra inferior, pestaña "Cobrar" activa, vista del QR con concepto corto y de 118 caracteres (QR dibujado, cuenta regresiva), consola sin errores y recursos sin 404. Se corrigió: solo espacios pasaba en cliente (⇒ `data-val-trim`) y el mensaje de caracteres partía la lista de signos en móvil (⇒ espacios de no separación). Ventas y cuenta bancaria insertadas a mano, sin llamar a Pey.*
      - *Pendiente: en el cobro real de $0.01, ver cómo muestra la app bancaria un concepto largo (Banxico podría truncarlo) y si los acentos del concepto llegan al `qrString` (QRCode.js antepondría un BOM).*
-5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta.
+5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta. ✅ *(hecho 2026-11-12:*
+   - *Dominio:*
+     - *`Domain/Payments/Commission`: `EffectiveRate(override, global)` y `Calculate`, que redondea a centavos con el punto medio hacia arriba. Ejemplos: $150.50 × 3 % = $4.52; $0.01 ⇒ $0.00.*
+     - *`Payment`: `PeyTransactionId` único, monto, `PaidAt`, clave de rastreo, banco del pagador, `CommissionRate`, `CommissionAmount` y `StatementId` (sin FK hasta la Fase 5).*
+     - *En `Sale`: `PaidAt`, `CancelledAt`, `MarkPaid`, `Cancel`, `ExpireIfDue` y `EffectiveStatus(now)`. **El pago manda**: una venta vencida o cancelada que recibe un pago queda `Paid`, porque el dinero ya llegó y CoDi no permite anular un QR. Un segundo pago se registra y la venta sigue pagada (con warning en el log).*
+   - *`IPaymentRecorder` (Infrastructure/Payments/PaymentRecorder), reutilizable por la 2.9:*
+     - *es idempotente por `transactionId`;*
+     - *busca la venta por `PeyQrId` y luego por `saleId` de la metadata; si `merchantId` o `saleId` contradicen a la venta ⇒ `Failed`; `kind` `statement`/`static` ⇒ `Ignored` (Fase 5 / 2.7);*
+     - *guarda el `Payment` y la venta pagada en un solo `SaveChanges` y, después, avisa con `ISaleNotifier`.*
+   - *Tiempo real:*
+     - *hub `/hubs/ventas` (`SalesHub`, rol Merchant, grupo `merchant-{id}` por el claim) con el evento `PaymentReceived {saleId}`; `/hubs` sin sesión responde 401;*
+     - *`GET /api/sales/{id}` devuelve el estatus efectivo y `paidAtText`, formateado por el servidor en hora de CDMX. Responde 404 con la venta de otro vendedor y 401 sin sesión;*
+     - *`sale-qr.js` escucha SignalR (`@microsoft/signalr@9.0.19` vía LibMan) y confirma con la API. Si SignalR no está conectado hace polling cada 3 s, hasta 2 min después de la expiración, y se detiene con 404/401/403. Al pagarse oculta el QR, la cuenta regresiva y los avisos, muestra «Pago recibido» y vibra.*
+   - *Expiración: job `expirar-ventas` cada minuto (`ISaleExpiration`, `ExecuteUpdateAsync` condicionado a `Pending`). El índice `(Status, ExpiresAt)` lo cubre.*
+   - *Cancelación: botón «Cancelar cobro» con confirmación (modal) que avisa que el QR podría seguir funcionando hasta que expire. `POST /app/cobrar/venta/{id}/cancelar` (antiforgery) ⇒ `ISaleCharging.CancelSaleAsync`, con un UPDATE condicionado que nunca pisa un pago que llega en paralelo. Una venta pagada, vencida o ya cancelada recibe un aviso; la de otro vendedor da 404.*
+   - *Vista de la venta: estados pendiente, pagada, vencida y cancelada. Las vencidas y canceladas siguen escuchando, por si llega un pago tardío.*
+   - *Migración `WebhooksAndPayments`: `Payments`, `WebhookEvents`, `Sales.PaidAt`/`CancelledAt` e índice `(Status, ExpiresAt)`.*
+   - *Pruebas:*
+     - *unitarias: `CommissionTests`, `SaleLifecycleTests`, `WebhookEventTests`;*
+     - *integración: `PeyWebhookTests`, `SaleLifecycleTests`, `BankAccountPollingJobTests` y `SalesHubTests` (cliente SignalR real por long polling: el dueño recibe el evento y otro vendedor no);*
+     - *456/456 verdes en local (282 en CI).*
+   - *Revisión con el MCP de Playwright (Edge) a 375, 768 y 1280 px, sin llamar a Pey: ventas insertadas por SQL y webhooks firmados a mano desde PowerShell.*
+     - *Con SignalR conectado, el pago cambia la pantalla a «Pago recibido» sin recargar y con una sola consulta de confirmación.*
+     - *Con `/hubs` bloqueado, el polling cada 3 s detecta el pago.*
+     - *Modal de cancelar y vista cancelada; un pago tardío sobre una venta cancelada también cambia a «Pago recibido».*
+     - *El job de expiración vence la venta y la cuenta regresiva expira en el cliente.*
+     - *En todos los tamaños: sin scroll horizontal, nada tapado por la barra y pestaña «Cobrar» activa. Consola sin errores y sin respuestas ≥ 400.*
+     - *Hangfire registró los dos jobs en `HangFire.Hash` con zona `America/Mexico_City`.*
+     - *Se corrigió: doble punto tras la hora del pago y formato distinto entre JS y servidor (⇒ `paidAtText`); aviso «Cancelaste el cobro» duplicado con el bloque de cancelado; polling que seguía tras un 404.*
+   - *Pendientes:*
+     - *pago real de $0.01 escaneando el QR con una app bancaria, con el webhook registrado en portal.mipey.mx (túnel HTTPS);*
+     - *confirmar con Pey la tolerancia del timestamp, la política de reintentos del webhook y si un QR con monto acepta varios pagos.*
+   - *Corrección (2026-11-13), primer pago real por el túnel: Pey cobró, pero el webhook no llegó. Hubo dos causas. Primero, el túnel no estaba hospedado (`devtunnel host`). Segundo, con el perfil `https` el sitio respondía 307 a `https://localhost:7180`. Se agregó `UseForwardedHeaders` (`Web/Hosting/ForwardedHeadersSetup`, solo loopback por defecto) y `ForwardedHeadersTests`. La venta 24 ($0.01) quedó pendiente de conciliar.)*
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`.
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
 8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp).
@@ -286,7 +340,7 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 4. Tablero, transacciones globales, bitácora de webhooks con reproceso.
 
 ### Fase 7 — Endurecimiento y salida (≈1 semana)
-Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx) · prueba piloto con 3–5 vendedores.
+Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx; declarar la IP o red del proxy en `ForwardedHeaders:KnownProxies`/`KnownNetworks`, o el sitio redirigirá con 307 lo que el proxy le entregue por HTTP) · prueba piloto con 3–5 vendedores.
 
 **Total estimado:** ≈10–11 semanas para una persona.
 
