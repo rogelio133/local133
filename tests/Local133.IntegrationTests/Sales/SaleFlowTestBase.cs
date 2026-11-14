@@ -63,6 +63,26 @@ public abstract class SaleFlowTestBase(Local133WebFactory factory) : WebTestBase
         return await LoadSaleAsync(id);
     }
 
+    /// <summary>Cobra al celular con el formulario real (Pey simulado); devuelve la respuesta del POST.</summary>
+    protected Task<HttpResponseMessage> PostPushChargeAsync(
+        HttpClient client, string phoneNumber = "55 1234 5678", string amount = "150.00", string concept = "2 tacos al pastor") =>
+        PostFormAsync(client, "/app/cobrar", new Dictionary<string, string>
+        {
+            ["Input.Method"] = nameof(ChargeMethod.PushNotification),
+            ["Input.Amount"] = amount,
+            ["Input.Concept"] = concept,
+            ["Input.PhoneNumber"] = phoneNumber,
+        });
+
+    /// <summary>Cobra al celular con el formulario real (Pey simulado) y devuelve la venta creada.</summary>
+    protected async Task<Sale> ChargeByPhoneAsync(HttpClient client, string phoneNumber = "55 1234 5678", string amount = "150.00")
+    {
+        var response = await PostPushChargeAsync(client, phoneNumber, amount);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var id = int.Parse(Location(response)!.Split('/').Last(), CultureInfo.InvariantCulture);
+        return await LoadSaleAsync(id);
+    }
+
     protected Task<Sale> LoadSaleAsync(int id) =>
         WithDbAsync(db => db.Sales.AsNoTracking().SingleAsync(s => s.Id == id));
 
@@ -159,6 +179,34 @@ public abstract class SaleFlowTestBase(Local133WebFactory factory) : WebTestBase
     /// <summary>Pago de una venta tal como lo mandaría Pey (IDC y metadata de la venta).</summary>
     protected static string QrPaymentBodyFor(Sale sale, string? transactionId = null, decimal? amount = null, DateTimeOffset? paidAt = null) =>
         QrPaymentBody(transactionId ?? NewTransactionId(), sale.PeyQrId, amount ?? sale.Amount, SaleMetadataFor(sale), paidAt);
+
+    /// <summary>Payload de <c>codi.pn.payment_received</c> como lo manda Pey (docs.pey.mx): sin <c>codiQrId</c>.</summary>
+    protected static string PushPaymentBody(
+        string transactionId, decimal amount, IReadOnlyDictionary<string, string>? external, DateTimeOffset? paidAt = null) =>
+        JsonSerializer.Serialize(new
+        {
+            amount,
+            apiKeyId = "01M3QMMR6X9CBVDY1SF3G8QWNW",
+            bankAccountId = "01PEY0000000001",
+            concept = "Tacos Don Ramón · 2 tacos al pastor",
+            datePaid = (paidAt ?? DateTimeOffset.UtcNow).ToUnixTimeSeconds(),
+            metadata = new
+            {
+                clabe = "000000000000000000",
+                bankCode = 40012,
+                accountType = 40,
+                description = "Tacos Don Ramón · 2 tacos al pastor",
+                trackingKey = "0192191043",
+                externalMetadata = external,
+            },
+            numRef = "1234567",
+            transactionId,
+            type = PeyWebhookEventTypes.CodiPnPaymentReceived,
+        });
+
+    /// <summary>Pago de un cobro por celular tal como lo mandaría Pey (su transacción y la metadata de la venta).</summary>
+    protected static string PushPaymentBodyFor(Sale sale, string? transactionId = null, decimal? amount = null, DateTimeOffset? paidAt = null) =>
+        PushPaymentBody(transactionId ?? sale.PeyTransactionId ?? NewTransactionId(), amount ?? sale.Amount, SaleMetadataFor(sale), paidAt);
 
     protected static Dictionary<string, string> SaleMetadataFor(Sale sale) => new()
     {

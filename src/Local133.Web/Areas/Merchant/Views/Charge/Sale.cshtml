@@ -43,6 +43,20 @@
                 </div>
                 <p class="text-danger small d-none" data-qr-error role="alert">No pudimos dibujar el código QR. Genera un cobro nuevo.</p>
                 <p class="mb-1">Pídele a tu cliente que lo escanee con la app de su banco.</p>
+            </div>
+        }
+        else if (Model.ShowPushRequest)
+        {
+            <div data-pending-only data-sale-push>
+                <i class="bi bi-phone-vibrate text-primary push-icon" aria-hidden="true"></i>
+                <p class="fw-semibold mt-2 mb-1">Enviamos el cobro al celular <span class="text-nowrap" data-sale-phone>@Model.MaskedPhone</span></p>
+                <p class="mb-1">Pídele a tu cliente que acepte la solicitud en la app de su banco.</p>
+            </div>
+        }
+
+        @if (Model.IsAwaitingPayment)
+        {
+            <div data-pending-only>
                 @if (Model.RemainingSeconds is not null)
                 {
                     <p class="text-body-secondary" aria-live="polite">
@@ -57,14 +71,30 @@
         }
 
         <div class="alert alert-warning @(Model.IsExpired ? null : "d-none")" role="status" data-expired-only>
-            <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Este QR expiró sin pago. Genera un cobro nuevo.
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+            @(Model.IsPushNotification ? "La solicitud expiró sin pago. Genera un cobro nuevo." : "Este QR expiró sin pago. Genera un cobro nuevo.")
         </div>
 
-        @if (Model.IsCancelled)
+        @if (Model.IsCancelled && Model.HasPaymentRequest)
         {
             <div class="alert alert-secondary text-start" role="status" data-cancelled-only>
-                <i class="bi bi-x-circle me-1" aria-hidden="true"></i> Cancelaste este cobro. Si tu cliente ya había escaneado el
-                QR, todavía podría pagarlo mientras no expire; si lo hace, aquí verás el pago.
+                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
+                @if (Model.IsPushNotification)
+                {
+                    @:Cancelaste este cobro. Tu cliente todavía podría aceptar la solicitud en su app mientras no expire; si lo hace, aquí verás el pago.
+                }
+                else
+                {
+                    @:Cancelaste este cobro. Si tu cliente ya había escaneado el QR, todavía podría pagarlo mientras no expire; si lo hace, aquí verás el pago.
+                }
+            </div>
+        }
+        else if (Model.IsCancelled)
+        {
+            @* Cobro por celular sin confirmar: Pey no respondió al enviarlo. *@
+            <div class="alert alert-secondary text-start" role="status" data-cancelled-only data-push-unconfirmed>
+                <i class="bi bi-x-circle me-1" aria-hidden="true"></i> Este cobro no se pudo confirmar y quedó cancelado. Si a tu
+                cliente sí le llegó la solicitud y la paga, aquí verás el pago.
             </div>
         }
 
@@ -93,7 +123,14 @@
                 <div class="modal-body">
                     <p class="mb-2">La venta @Model.Folio por @Model.AmountText quedará cancelada.</p>
                     <p class="small text-body-secondary mb-0">
-                        CoDi no permite anular un QR: si tu cliente ya lo escaneó, todavía podría pagarlo hasta que expire.
+                        @if (Model.IsPushNotification)
+                        {
+                            @:CoDi no permite anular la solicitud que llegó al celular: tu cliente todavía podría aceptarla hasta que expire.
+                        }
+                        else
+                        {
+                            @:CoDi no permite anular un QR: si tu cliente ya lo escaneó, todavía podría pagarlo hasta que expire.
+                        }
                         Si paga, la venta se marcará como pagada.
                     </p>
                 </div>

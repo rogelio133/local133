@@ -17,7 +17,11 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(s => s.Amount).HasPrecision(18, 2);
         builder.Property(s => s.Concept).HasMaxLength(Sale.ConceptMaxLength);
         builder.Property(s => s.PeyQrId).HasMaxLength(Sale.PeyIdMaxLength).IsUnicode(false);
+        builder.Property(s => s.PeyTransactionId).HasMaxLength(Sale.PeyIdMaxLength).IsUnicode(false);
+        builder.Property(s => s.PeyCodiId).HasMaxLength(Sale.PeyCodiIdMaxLength).IsUnicode(false);
+        builder.Property(s => s.PhoneNumber).HasMaxLength(PhoneNumber.Length).IsUnicode(false);
         builder.Ignore(s => s.NumRef);
+        builder.Ignore(s => s.HasPaymentRequest);
 
         // Restrict: el historial financiero del vendedor no se borra en cascada.
         builder.HasOne<Merchant>()
@@ -29,6 +33,8 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(s => new { s.MerchantId, s.Folio }).IsUnique();
         // El webhook codi.qr.payment_received y la conciliación buscan por el IDC del QR.
         builder.HasIndex(s => s.PeyQrId).IsUnique().HasFilter("[PeyQrId] IS NOT NULL");
+        // El webhook codi.pn.payment_received busca el cobro por celular por la transacción de Pey.
+        builder.HasIndex(s => s.PeyTransactionId).IsUnique().HasFilter("[PeyTransactionId] IS NOT NULL");
         // Job de expiración: pendientes con el QR vencido.
         builder.HasIndex(s => new { s.Status, s.ExpiresAt });
     }

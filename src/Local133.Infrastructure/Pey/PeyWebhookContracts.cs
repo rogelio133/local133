@@ -26,6 +26,21 @@ internal sealed record PeyCodiQrPaymentReceived(
     string? TransactionId,
     PeyTransactionMetadata? Metadata);
 
+/// <summary>
+/// <c>codi.pn.payment_received</c> (docs.pey.mx/docs/webhooks/codi/pn, revisado el 2026-11-13): como el de QR pero sin
+/// <c>codiQrId</c>; el <c>transactionId</c> es el que devolvió <c>POST /codi/pn</c>. <c>numRef</c> es el de Banxico.
+/// </summary>
+internal sealed record PeyCodiPnPaymentReceived(
+    string? Type,
+    decimal? Amount,
+    string? ApiKeyId,
+    string? BankAccountId,
+    string? Concept,
+    long? DatePaid,
+    string? NumRef,
+    string? TransactionId,
+    PeyTransactionMetadata? Metadata);
+
 /// <summary><c>bank.account.updated</c>: solo se envía al pasar a <c>ACTIVE</c>; no trae <c>errorMessage</c>.</summary>
 internal sealed record PeyBankAccountUpdated(
     string? Type,

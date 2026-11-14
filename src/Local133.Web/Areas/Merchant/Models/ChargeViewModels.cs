@@ -5,6 +5,7 @@ using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
 using Local133.Domain.Sales;
+using Local133.Web.Validation;
 
 namespace Local133.Web.Areas.Merchant.Models;
 
@@ -31,6 +32,22 @@ public sealed class ChargeInput
     [RegularExpression(Sale.ConceptTextPattern, ErrorMessage = SaleConceptMessages.Invalid)]
     [Display(Name = "Concepto")]
     public string? Concept { get; set; }
+
+    /// <summary>Cómo se cobra: QR (por defecto) o notificación push al celular del cliente.</summary>
+    public ChargeMethod Method { get; set; } = ChargeMethod.DynamicQr;
+
+    /// <summary>
+    /// Celular del cliente; obligatorio solo al cobrar al celular (lo revisa <see cref="Controllers.ChargeController"/>;
+    /// en cliente el campo oculto queda deshabilitado y jQuery Validation lo ignora).
+    /// </summary>
+    [MexicanPhone]
+    [Display(Name = "Celular de tu cliente")]
+    public string? PhoneNumber { get; set; }
+
+    public bool IsPushNotification => Method == ChargeMethod.PushNotification;
+
+    /// <summary>Largo máximo del campo de celular: 10 dígitos más espacios, guiones o la lada (<c>+52 (55) 1234-5678</c>).</summary>
+    public const int PhoneNumberInputMaxLength = 20;
 
     public bool TryGetAmount(out decimal amount) =>
         decimal.TryParse(Amount, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out amount);
@@ -84,8 +101,9 @@ public sealed class ChargeFormViewModel
 public sealed record ChargeBlockedNotice(string Title, string Message, string LinkHref, string LinkText);
 
 /// <summary>
-/// Pantalla del QR de una venta: pendiente (QR + cuenta regresiva + cancelar), pagada («Pago recibido»), vencida o
-/// cancelada. El servidor la dibuja en su estado actual y <c>sale-qr.js</c> pasa a «Pago recibido» o «expirado» sin recargar.
+/// Pantalla de una venta: pendiente (QR, o aviso del cobro enviado al celular, + cuenta regresiva + cancelar), pagada
+/// («Pago recibido»), vencida o cancelada. El servidor la dibuja en su estado actual y <c>sale-qr.js</c> pasa a
+/// «Pago recibido» o «expirado» sin recargar.
 /// </summary>
 public sealed record SaleQrViewModel(
     int Id,
@@ -93,18 +111,33 @@ public sealed record SaleQrViewModel(
     string AmountText,
     string? Concept,
     SaleStatus Status,
+    ChargeMethod Method,
     string? QrString,
+    string? MaskedPhone,
+    bool HasPaymentRequest,
     int? RemainingSeconds,
     string? PaidAtText)
 {
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
     private static readonly TimeZoneInfo MexicoCity = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
 
-    /// <summary>Se puede mostrar el QR para pagar: pendiente, con QR y sin vencer.</summary>
-    public bool ShowQr => Status == SaleStatus.Pending && QrString is not null && RemainingSeconds is not 0;
+    /// <summary>Cobro por notificación push al celular (sin QR).</summary>
+    public bool IsPushNotification => Method == ChargeMethod.PushNotification;
 
-    /// <summary>Venció por tiempo (o nunca tuvo QR) sin pagarse.</summary>
-    public bool IsExpired => Status == SaleStatus.Expired || (Status == SaleStatus.Pending && !ShowQr);
+    /// <summary>Sigue esperando el pago: pendiente, con su QR (o su push enviado) y sin vencer.</summary>
+    public bool IsAwaitingPayment => Status == SaleStatus.Pending && HasPaymentRequest && RemainingSeconds is not 0;
+
+    /// <summary>Se puede mostrar el QR para pagar.</summary>
+    public bool ShowQr => IsAwaitingPayment && !IsPushNotification && QrString is not null;
+
+    /// <summary>Se muestra el aviso del cobro enviado al celular.</summary>
+    public bool ShowPushRequest => IsAwaitingPayment && IsPushNotification;
+
+    /// <summary>Venció por tiempo (o nunca tuvo QR / push) sin pagarse.</summary>
+    public bool IsExpired => Status == SaleStatus.Expired || (Status == SaleStatus.Pending && !IsAwaitingPayment);
+
+    /// <summary>Cómo se llama lo que el cliente paga, para los textos: «QR» o «solicitud».</summary>
+    public string RequestNoun => IsPushNotification ? "solicitud" : "QR";
 
     public bool IsPaid => Status == SaleStatus.Paid;
 
@@ -113,8 +146,8 @@ public sealed record SaleQrViewModel(
     /// <summary>La vista escucha el pago (SignalR + polling): pendiente, o vencida/cancelada por si llega un pago tardío.</summary>
     public bool ListensForPayment => !IsPaid;
 
-    /// <summary>El vendedor puede cancelar: el QR sigue vigente.</summary>
-    public bool CanCancel => ShowQr;
+    /// <summary>El vendedor puede cancelar: el QR (o la solicitud al celular) sigue vigente.</summary>
+    public bool CanCancel => IsAwaitingPayment;
 
     public string? RemainingText => RemainingSeconds is { } s ? FormatCountdown(s) : null;
 
@@ -124,7 +157,10 @@ public sealed record SaleQrViewModel(
         FormatAmount(sale.Amount),
         sale.Concept,
         sale.Status,
+        sale.Method,
         sale.QrString,
+        sale.PhoneNumber is null ? null : Domain.Sales.PhoneNumber.Mask(sale.PhoneNumber),
+        sale.HasPaymentRequest,
         sale.RemainingSeconds(now),
         sale.PaidAt is { } paidAt ? FormatPaidAt(paidAt) : null);
 

@@ -13,8 +13,10 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Sales;
 
 /// <summary>
-/// Venta por monto directo: valida → guarda la venta (para tener su folio e id) → <c>POST /codi/qr</c> hacia la
-/// cuenta del vendedor con <c>concept = "{negocio} · {concepto}"</c> → adjunta el QR. Si Pey falla, la venta se borra.
+/// Venta por monto directo: valida → guarda la venta (para tener su folio e id) → <c>POST /codi/qr</c> (o
+/// <c>POST /codi/pn</c> al celular del pagador) hacia la cuenta del vendedor con
+/// <c>concept = "{negocio} · {concepto}"</c> → adjunta el QR (o la transacción del push). Si Pey falla, la venta se
+/// borra; un push sin respuesta de Pey se conserva cancelado (ver <see cref="SendPushAsync"/>).
 /// </summary>
 internal sealed class SaleCharging(
     AppDbContext db,
@@ -33,6 +35,15 @@ internal sealed class SaleCharging(
 
     private const string RejectedFailure =
         "El servicio de pagos no aceptó el cobro. Revisa el monto e intenta de nuevo.";
+
+    private const string PushRejectedFailure =
+        "El servicio de pagos no aceptó el cobro. Revisa el monto y el celular, o cobra con QR.";
+
+    private const string PushGenericFailure =
+        "No pudimos enviar el cobro al celular por un problema de nuestro lado. Intenta de nuevo más tarde o cobra con QR.";
+
+    private const string PushUnconfirmedFailure =
+        "No pudimos confirmar el envío del cobro al celular de tu cliente. Si le llegó la solicitud y la paga, verás el pago aquí. Si no le llegó, cobra de nuevo.";
 
     public async Task<CreateDirectSaleResult> CreateDirectSaleAsync(
         CreateDirectSaleCommand command, CancellationToken cancellationToken = default)
@@ -63,7 +74,24 @@ internal sealed class SaleCharging(
         DateTimeOffset? expiresAt = expirationSeconds == PeyLimits.NoExpiration ? null : now.AddSeconds(expirationSeconds);
 
         var concept = Sale.BuildConcept(merchant.BusinessName, command.Concept!);
-        var sale = await InsertWithNextFolioAsync(merchant.Id, concept, command.Amount, expiresAt, now, cancellationToken);
+        if (command.Method == ChargeMethod.PushNotification)
+        {
+            if (expiresAt is not { } pushExpiresAt)
+            {
+                // Pey exige ≥ 360 s en un push; el parámetro global "0 = no expira" solo aplica al QR.
+                throw new InvalidOperationException("La expiración de los cobros no puede ser 0 para un cobro por celular.");
+            }
+
+            var phone = PhoneNumber.Normalize(command.PhoneNumber);
+            var pushSale = await InsertWithNextFolioAsync(
+                merchant.Id, folio => Sale.StartPush(merchant.Id, folio, command.Amount, concept, phone, pushExpiresAt, now),
+                cancellationToken);
+            return await SendPushAsync(pushSale, merchant.Id, account!.PeyBankAccountId, expirationSeconds);
+        }
+
+        var sale = await InsertWithNextFolioAsync(
+            merchant.Id, folio => Sale.StartDirect(merchant.Id, folio, command.Amount, concept, expiresAt, now),
+            cancellationToken);
 
         CodiQr qr;
         try
@@ -74,12 +102,7 @@ internal sealed class SaleCharging(
                 sale.Concept,
                 sale.NumRef,
                 account!.PeyBankAccountId,
-                new Dictionary<string, string>
-                {
-                    [SaleMetadata.KindKey] = SaleMetadata.SaleKind,
-                    [SaleMetadata.MerchantIdKey] = merchant.Id.ToString(CultureInfo.InvariantCulture),
-                    [SaleMetadata.SaleIdKey] = sale.Id.ToString(CultureInfo.InvariantCulture),
-                }), cancellationToken);
+                MetadataFor(sale)), cancellationToken);
         }
         catch (PaymentGatewayValidationException ex)
         {
@@ -114,6 +137,69 @@ internal sealed class SaleCharging(
             merchant.Id, sale.Id, sale.Folio, sale.Amount, qr.Id);
         return new CreateDirectSaleResult.Created(sale.Id);
     }
+
+    /// <summary>
+    /// <c>POST /codi/pn</c> al celular de la venta, hacia la cuenta del vendedor. Si Pey no responde (resultado
+    /// incierto) la venta no se borra: la notificación pudo llegarle al cliente, así que queda cancelada y, si aun así
+    /// paga, el webhook la encuentra por la <c>saleId</c> de la metadata.
+    /// </summary>
+    private async Task<CreateDirectSaleResult> SendPushAsync(Sale sale, int merchantId, string bankAccountId, int expirationSeconds)
+    {
+        var maskedPhone = PhoneNumber.Mask(sale.PhoneNumber);
+        CodiPushNotification push;
+        try
+        {
+            // Sin el token de la petición: si el vendedor cierra la página a medio envío, no se deja la venta a medias.
+            push = await gateway.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(
+                sale.Amount,
+                sale.PhoneNumber!,
+                expirationSeconds,
+                sale.Concept,
+                sale.NumRef,
+                bankAccountId,
+                MetadataFor(sale)), CancellationToken.None);
+        }
+        catch (PaymentGatewayValidationException ex)
+        {
+            logger.LogWarning("Pey rechazó el cobro por celular {MaskedPhone} de la venta {SaleId} del vendedor {MerchantId} ({ErrorType}); requestId {RequestId}: {GatewayMessage}",
+                maskedPhone, sale.Id, merchantId, ex.ErrorType, ex.RequestId, ex.GatewayMessage);
+            return await DiscardAsync(sale, PushRejectedFailure);
+        }
+        catch (PaymentGatewayUnavailableException ex)
+        {
+            logger.LogWarning(ex, "Cobro por celular {MaskedPhone} de la venta {SaleId} del vendedor {MerchantId} sin confirmar (Pey no disponible); requestId {RequestId}. La venta queda cancelada por si llega el pago",
+                maskedPhone, sale.Id, merchantId, ex.RequestId);
+            sale.Cancel(clock.GetUtcNow());
+            await db.SaveChangesAsync(CancellationToken.None);
+            return new CreateDirectSaleResult.GatewayFailed(PushUnconfirmedFailure, sale.Id);
+        }
+        catch (PaymentGatewayException ex)
+        {
+            logger.LogError(ex, "Pey falló al enviar el cobro por celular de la venta {SaleId} del vendedor {MerchantId} ({ErrorType}); requestId {RequestId}",
+                sale.Id, merchantId, ex.ErrorType, ex.RequestId);
+            return await DiscardAsync(sale, PushGenericFailure);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Configuración (p. ej. falta Pey:ApiKey): no se llegó a enviar.
+            logger.LogError(ex, "No se pudo llamar a Pey para el cobro por celular de la venta {SaleId} del vendedor {MerchantId}", sale.Id, merchantId);
+            return await DiscardAsync(sale, PushGenericFailure);
+        }
+
+        sale.AttachPushNotification(push.TransactionId, push.CodiId);
+        await db.SaveChangesAsync(CancellationToken.None); // la notificación ya salió: no se abandona el guardado
+
+        logger.LogInformation("Vendedor {MerchantId} creó la venta {SaleId} (folio {Folio}) por {Amount} con cobro al celular {MaskedPhone}; transacción {PeyTransactionId}",
+            merchantId, sale.Id, sale.Folio, sale.Amount, maskedPhone, push.TransactionId);
+        return new CreateDirectSaleResult.Created(sale.Id);
+    }
+
+    private static Dictionary<string, string> MetadataFor(Sale sale) => new()
+    {
+        [SaleMetadata.KindKey] = SaleMetadata.SaleKind,
+        [SaleMetadata.MerchantIdKey] = sale.MerchantId.ToString(CultureInfo.InvariantCulture),
+        [SaleMetadata.SaleIdKey] = sale.Id.ToString(CultureInfo.InvariantCulture),
+    };
 
     public async Task<CancelSaleResult> CancelSaleAsync(CancelSaleCommand command, CancellationToken cancellationToken = default)
     {
@@ -166,8 +252,7 @@ internal sealed class SaleCharging(
 
     /// <summary>Inserta la venta con el siguiente folio del vendedor; si otra venta simultánea lo tomó, reintenta.</summary>
     private async Task<Sale> InsertWithNextFolioAsync(
-        int merchantId, string concept, decimal amount, DateTimeOffset? expiresAt, DateTimeOffset now,
-        CancellationToken cancellationToken)
+        int merchantId, Func<int, Sale> start, CancellationToken cancellationToken)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -175,7 +260,7 @@ internal sealed class SaleCharging(
                 .Where(s => s.MerchantId == merchantId)
                 .MaxAsync(s => (int?)s.Folio, cancellationToken) ?? 0;
             var folio = lastFolio + 1;
-            var sale = Sale.StartDirect(merchantId, folio, amount, concept, expiresAt, now);
+            var sale = start(folio);
             db.Sales.Add(sale);
             try
             {
