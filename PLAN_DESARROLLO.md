@@ -214,6 +214,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [1.4](log_plan/fase-1.4-merchant-y-terminos.md): la validación en cliente bloquea el registro con la casilla de términos sin marcar.
 - [1.5](log_plan/fase-1.5-inicio-y-admin.md): Inicio del vendedor (`/app`) a 375 px.
 - [2.2](log_plan/fase-2.2-cuenta-bancaria.md): formulario de cuenta bancaria (validación de CLABE en cliente) y «Verificar estatus», a 375, 768 y 1280 px con el MCP de Playwright.
+- [Ajustes UI 2026-11-17](actualizaciones/ajustes_2026_11_17_11_54.md#implementación): header del layout de admin (`/admin`) con el icono de usuario más grande. Usa el mismo `_LoginPartial` que ya se revisó en `_Layout` y `_MerchantLayout`, pero no se entró como admin.
 
 **Otros**:
 - [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`).

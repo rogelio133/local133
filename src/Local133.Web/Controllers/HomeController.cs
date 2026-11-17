@@ -1,13 +1,16 @@
+using Local133.Web.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Local133.Web.Controllers;
 
 /// <summary>Sitio público: portada y páginas de error.</summary>
 [ApiExplorerSettings(IgnoreApi = true)]
-public class HomeController : Controller
+public class HomeController(IOptions<HomeHeroOptions> heroOptions) : Controller
 {
+    /// <summary>Portada; el modelo son las palabras que rotan en el título (la primera la pinta el servidor).</summary>
     [HttpGet("")]
-    public IActionResult Index() => View();
+    public IActionResult Index() => View(heroOptions.Value.GetWords());
 
     /// <summary>Términos y condiciones (públicos; se aceptan al registrarse).</summary>
     [HttpGet("terminos")]

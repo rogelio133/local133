@@ -1,9 +1,22 @@
 @using Local133.Application.Auth
+@model IReadOnlyList<string>
 @{
     ViewData["Title"] = "Cobra con CoDi";
+    // Palabras de Home:RotatingWords (HomeHeroOptions.GetWords, nunca vacía). El servidor pinta la primera: el título
+    // queda completo sin JS y para los buscadores; rotating-word.js rota las demás.
+    var words = Model;
+    var rotatingWords = words.Count > 1 ? System.Text.Json.JsonSerializer.Serialize(words) : null;
 }
 <div class="py-4 text-center">
-    <h1 class="display-6 fw-semibold">Cobra con CoDi desde tu puesto</h1>
+    @* Razor no omite un data-* nulo (lo deja vacío): sin lista, la palabra va sin el atributo. *@
+    @if (rotatingWords is not null)
+    {
+        <h1 class="display-6 fw-semibold">Cobra con CoDi desde&nbsp;tu <span class="rotating-word" data-rotating-words="@rotatingWords">@words[0]</span></h1>
+    }
+    else
+    {
+        <h1 class="display-6 fw-semibold">Cobra con CoDi desde&nbsp;tu <span class="rotating-word">@words[0]</span></h1>
+    }
     <p class="lead text-body-secondary">Genera un QR, tu cliente paga desde su app bancaria y el dinero llega directo a tu cuenta.</p>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
         @if (User.IsInRole(Roles.Merchant))
@@ -21,3 +34,10 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    @if (rotatingWords is not null)
+    {
+        <script src="~/js/rotating-word.js"></script>
+    }
+}

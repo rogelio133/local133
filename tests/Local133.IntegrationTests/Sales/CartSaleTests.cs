@@ -28,7 +28,7 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
         var html = await GetHtmlAsync(client, Url);
 
         Assert.Contains("data-charge-mode-nav", html);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/app/cobrar/productos\" aria-current=\"page\""), html);
+        Assert.Matches(new Regex("class=\"charge-mode-tab is-active\" href=\"/app/cobrar/productos\" aria-current=\"page\""), html);
         Assert.Matches(new Regex("class=\"nav-link active\" href=\"/app/cobrar\""), html); // pestaña "Cobrar"
         Assert.Contains($"data-product-id=\"{tacoId}\"", html);
         Assert.Contains("data-price=\"25.00\"", html);
@@ -54,6 +54,7 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
 
         Assert.Contains("data-charge-mode-nav", html);
         Assert.Contains("href=\"/app/cobrar/productos\"", html);
+        Assert.Matches(new Regex("class=\"charge-mode-tab is-active\" href=\"/app/cobrar\" aria-current=\"page\""), html);
     }
 
     [Fact]
