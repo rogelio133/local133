@@ -1,0 +1,47 @@
+@model Local133.Web.Models.ReceiptShare
+@* Botones para compartir el recibo público. Sin JS quedan WhatsApp (wa.me) y «Ver recibo»; receipt-share.js agrega
+   «Copiar liga», «Compartir» (Web Share API) y, en escritorio, cambia WhatsApp a la app instalada (whatsapp://, vía
+   data-desktop-href) y muestra el respaldo de WhatsApp Web. En un cobro por celular el botón principal va al chat del
+   cliente por una redirección del sitio (?destino=app|web): el número completo no se escribe en la página. *@
+@{
+    var customerPath = Model.CustomerWhatsAppPath is null ? null : Url.Content("~" + Model.CustomerWhatsAppPath);
+}
+<div class="d-grid gap-2" data-receipt-share data-receipt-url="@Model.Url" data-receipt-message="@Model.Message">
+    @if (customerPath is not null)
+    {
+        <a class="btn btn-success" href="@customerPath" target="_blank" rel="noopener noreferrer"
+           data-desktop-href="@(customerPath)?destino=app" data-receipt-whatsapp-customer>
+            <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Enviar recibo al <span class="text-nowrap">@Model.CustomerMaskedPhone</span>
+        </a>
+    }
+    <a class="btn @(customerPath is null ? "btn-success" : "btn-outline-success")" href="@Model.WhatsAppUrl" target="_blank" rel="noopener noreferrer"
+       data-desktop-href="@Model.WhatsAppAppUrl" data-receipt-whatsapp>
+        <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>
+        @(customerPath is null ? "Enviar recibo por WhatsApp" : "Enviar a otro contacto")
+    </a>
+    <p class="small text-body-secondary text-center mb-0 d-none" data-receipt-whatsapp-web>
+        <span>¿No se abre la app de WhatsApp? Usa WhatsApp Web:</span>
+        @if (customerPath is not null)
+        {
+            <a class="text-nowrap" href="@(customerPath)?destino=web" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-customer>al @Model.CustomerMaskedPhone</a>
+            <span>·</span>
+            <a class="text-nowrap" href="@Model.WhatsAppWebUrl" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-link>a otro contacto</a>
+        }
+        else
+        {
+            <a class="text-nowrap" href="@Model.WhatsAppWebUrl" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-link>elegir contacto</a>
+        }
+    </p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-native-share>
+            <i class="bi bi-share me-1" aria-hidden="true"></i> Compartir
+        </button>
+        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-copy>
+            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i> Copiar liga
+        </button>
+        <a class="btn btn-outline-primary btn-sm" href="@Url.Content("~" + Model.Path)" target="_blank" rel="noopener" data-receipt-view>
+            <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i> Ver recibo
+        </a>
+    </div>
+    <p class="small text-success text-center mb-0 d-none" role="status" data-receipt-copied>Liga copiada.</p>
+</div>

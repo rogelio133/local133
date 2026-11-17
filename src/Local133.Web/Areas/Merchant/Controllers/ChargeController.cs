@@ -22,7 +22,7 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app/cobrar")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvider clock) : Controller
+public class ChargeController(AppDbContext db, ISaleCharging charging, ReceiptLinks receiptLinks, TimeProvider clock) : Controller
 {
     private const string PhoneKey = $"Input.{nameof(ChargeOptionsInput.PhoneNumber)}";
 
@@ -141,7 +141,11 @@ public class ChargeController(AppDbContext db, ISaleCharging charging, TimeProvi
             return NotFound();
         }
 
-        return View(SaleQrViewModel.From(sale, clock.GetUtcNow()));
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var receipt = receiptLinks.ShareFor(
+            Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount),
+            sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id));
+        return View(SaleQrViewModel.From(sale, clock.GetUtcNow(), receipt));
     }
 
     /// <summary>Cancela un cobro pendiente (solo local: el QR sigue vigente en CoDi hasta que expire).</summary>

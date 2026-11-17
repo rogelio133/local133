@@ -56,6 +56,10 @@ try
     // Esquema real detrás de dev tunnels o del proxy de producción (ver ForwardedHeadersSetup).
     builder.Services.AddAppForwardedHeaders(builder.Configuration);
 
+    // Ligas públicas (recibos): App:PublicBaseUrl fija el dominio; sin ella se usa el host de la petición.
+    builder.Services.Configure<PublicSiteOptions>(builder.Configuration.GetSection(PublicSiteOptions.SectionName));
+    builder.Services.AddSingleton<Local133.Web.Models.ReceiptLinks>();
+
 #if DEBUG
     // Estilos: Styles/*.scss → wwwroot/css/site.css. El build y el publish compilan con dart-sass
     // (AspNetCore.SassCompiler); en Debug además se recompila al guardar. Sass:Watch=false lo apaga (pruebas).
@@ -91,7 +95,7 @@ try
     {
         app.UseHsts();
     }
-
+    /*
     app.UseForwardedHeaders();//para dev tunnel
 
 
@@ -104,7 +108,7 @@ try
             context.Request.Scheme = "https";
         }
         return next();
-    });
+    });*/
 
     app.UseHttpsRedirection();
     app.UseRouting();

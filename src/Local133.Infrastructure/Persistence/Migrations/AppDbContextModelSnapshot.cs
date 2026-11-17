@@ -311,6 +311,13 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<string>("QrString")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ReceiptToken")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("char(32)")
+                        .IsFixedLength();
+
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -330,6 +337,11 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasIndex("PeyTransactionId")
                         .IsUnique()
                         .HasFilter("[PeyTransactionId] IS NOT NULL");
+
+                    b.HasIndex("ReceiptToken")
+                        .IsUnique();
+
+                    b.HasIndex("MerchantId", "CreatedAt");
 
                     b.HasIndex("MerchantId", "Folio")
                         .IsUnique();

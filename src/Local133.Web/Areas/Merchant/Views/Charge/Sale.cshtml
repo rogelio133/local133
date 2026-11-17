@@ -54,6 +54,11 @@
             <p class="small mb-0">Pagado el <span data-paid-at>@Model.PaidAtText</span></p>
         </div>
 
+        @* Recibo para el cliente: oculto hasta que llega el pago (sale-qr.js muestra los [data-paid-only]). *@
+        <div class="mx-auto mb-3 sale-receipt @(Model.IsPaid ? null : "d-none")" data-paid-only>
+            <partial name="_ReceiptShare" model="Model.Receipt" />
+        </div>
+
         @if (Model.ShowQr)
         {
             <div data-pending-only>
@@ -119,6 +124,10 @@
 
         <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + Model.NewChargeHref)" data-new-charge><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo cobro</a>
 
+        <div class="@(Model.IsPaid ? null : "d-none")" data-paid-only>
+            <a class="btn btn-link mt-2" href="@Url.Content("~" + Model.DetailHref)" data-sale-detail-link>Ver detalle de la venta</a>
+        </div>
+
         @if (Model.CanCancel)
         {
             <div data-pending-only>
@@ -175,4 +184,5 @@
         <script src="~/lib/microsoft-signalr/dist/browser/signalr.min.js"></script>
         <script src="~/js/sale-qr.js"></script>
     }
+    <script src="~/js/receipt-share.js"></script>
 }

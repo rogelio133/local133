@@ -1,0 +1,80 @@
+@using Local133.Web.Controllers
+@model ReceiptViewModel
+@{
+    ViewData["Title"] = Model.BusinessName is null ? "Recibo de pago" : $"Recibo de {Model.BusinessName}";
+    ViewData["NoIndex"] = true;
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <article class="card receipt" data-receipt>
+            <div class="card-body text-center">
+                <p class="text-body-secondary small mb-1">Recibo de pago</p>
+                <h1 class="h4 mb-3 text-break" data-receipt-business>@(Model.BusinessName ?? "Comprobante de pago")</h1>
+
+                <i class="bi bi-check-circle-fill text-success fs-1" aria-hidden="true"></i>
+                <p class="fw-semibold text-success mb-1">Pago recibido</p>
+                <p class="display-5 fw-semibold mb-1" data-receipt-amount>@Model.AmountText</p>
+                @if (Model.ConceptText is not null)
+                {
+                    <p class="text-body-secondary text-break mb-0" data-receipt-concept>@Model.ConceptText</p>
+                }
+            </div>
+
+            @if (Model.IsCart)
+            {
+                <ul class="list-group list-group-flush border-top" data-receipt-items>
+                    @foreach (var item in Model.Items)
+                    {
+                        <li class="list-group-item d-flex justify-content-between gap-3" data-receipt-item>
+                            <span class="product-info">
+                                <span class="d-block text-break">@item.Name</span>
+                                <span class="d-block small text-body-secondary">@item.Quantity × @item.UnitPriceText</span>
+                            </span>
+                            <span class="fw-semibold text-nowrap">@item.AmountText</span>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <div class="card-body border-top">
+                <dl class="row small mb-0">
+                    <dt class="col-5 fw-normal text-body-secondary">Venta</dt>
+                    <dd class="col-7 mb-1" data-receipt-folio>@Model.Folio</dd>
+                    @if (Model.PaidAtText is not null)
+                    {
+                        <dt class="col-5 fw-normal text-body-secondary">Fecha</dt>
+                        <dd class="col-7 mb-1" data-receipt-paid-at>@Model.PaidAtText</dd>
+                    }
+                    <dt class="col-5 fw-normal text-body-secondary">Forma de pago</dt>
+                    <dd class="col-7 mb-1">CoDi (transferencia)</dd>
+                    @foreach (var payment in Model.Payments)
+                    {
+                        @if (Model.Payments.Count > 1)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Pago</dt>
+                            <dd class="col-7 mb-1">@payment.AmountText · @payment.PaidAtText</dd>
+                        }
+                        @if (payment.TrackingKey is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Clave de rastreo</dt>
+                            <dd class="col-7 mb-1 text-break font-monospace" data-receipt-tracking>@payment.TrackingKey</dd>
+                        }
+                    }
+                </dl>
+            </div>
+        </article>
+
+        <p class="small text-body-secondary text-center mt-3 mb-2">
+            Con la clave de rastreo puedes consultar la transferencia en el portal de Banxico.
+        </p>
+        <div class="text-center d-print-none">
+            <button type="button" class="btn btn-outline-primary" data-receipt-print>
+                <i class="bi bi-printer me-1" aria-hidden="true"></i> Imprimir o guardar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/receipt-share.js"></script>
+}

@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using Local133.Application.Sales;
 using Local133.Domain.BankAccounts;
+using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
 using Local133.Domain.Sales;
@@ -198,8 +199,12 @@ public sealed record SaleQrViewModel(
     bool HasPaymentRequest,
     int? RemainingSeconds,
     string? PaidAtText,
-    IReadOnlyList<SaleItemView> Items)
+    IReadOnlyList<SaleItemView> Items,
+    Web.Models.ReceiptShare Receipt)
 {
+    /// <summary>Detalle de la venta en el historial.</summary>
+    public string DetailHref => SalesUrls.Detail(Id);
+
     /// <summary>Venta con carrito: muestra sus productos y «Nuevo cobro» vuelve al catálogo.</summary>
     public bool IsCart => Items.Count > 0;
 
@@ -216,7 +221,6 @@ public sealed record SaleQrViewModel(
     }
 
     private static readonly CultureInfo Spanish = CultureInfo.GetCultureInfo("es-MX");
-    private static readonly TimeZoneInfo MexicoCity = TimeZoneInfo.FindSystemTimeZoneById("America/Mexico_City");
 
     /// <summary>Cobro por notificación push al celular (sin QR).</summary>
     public bool IsPushNotification => Method == ChargeMethod.PushNotification;
@@ -248,7 +252,11 @@ public sealed record SaleQrViewModel(
 
     public string? RemainingText => RemainingSeconds is { } s ? FormatCountdown(s) : null;
 
-    public static SaleQrViewModel From(Sale sale, DateTimeOffset now) => new(
+    /// <param name="receipt">
+    /// Recibo para compartir. Se dibuja oculto aunque la venta siga pendiente: <c>sale-qr.js</c> lo muestra al llegar
+    /// el pago (la liga solo responde cuando la venta ya está pagada).
+    /// </param>
+    public static SaleQrViewModel From(Sale sale, DateTimeOffset now, Web.Models.ReceiptShare receipt) => new(
         sale.Id,
         sale.Folio,
         FormatAmount(sale.Amount),
@@ -263,13 +271,14 @@ public sealed record SaleQrViewModel(
         sale.Items
             .OrderBy(i => i.Id)
             .Select(i => new SaleItemView(i.Name, i.Quantity, FormatAmount(i.UnitPrice), FormatAmount(i.Amount)))
-            .ToList());
+            .ToList(),
+        receipt);
 
     public static string FormatAmount(decimal amount) => amount.ToString("C2", Spanish);
 
     /// <summary>Hora del pago en la hora del centro de México, p. ej. «12 de noviembre, 3:45 p. m.».</summary>
     public static string FormatPaidAt(DateTimeOffset paidAt) =>
-        TimeZoneInfo.ConvertTime(paidAt, MexicoCity).ToString("d 'de' MMMM, h:mm tt", Spanish);
+        MexicoTime.ToLocal(paidAt).ToString("d 'de' MMMM, h:mm tt", Spanish);
 
     /// <summary><c>mm:ss</c>, igual que la cuenta regresiva de <c>sale-qr.js</c>.</summary>
     public static string FormatCountdown(int seconds) =>

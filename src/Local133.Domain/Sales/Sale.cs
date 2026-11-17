@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Local133.Domain.Common;
 using Local133.Domain.Pey;
@@ -37,6 +38,9 @@ public partial class Sale : Entity
 
     /// <summary>Folio CoDi de Banxico de una notificación push (20 dígitos).</summary>
     public const int PeyCodiIdMaxLength = 20;
+
+    /// <summary>Largo del token del recibo público: 16 bytes aleatorios en hexadecimal (minúsculas).</summary>
+    public const int ReceiptTokenLength = 32;
 
     public int MerchantId { get; set; }
 
@@ -83,6 +87,12 @@ public partial class Sale : Entity
 
     /// <summary>Cuándo la canceló el vendedor.</summary>
     public DateTimeOffset? CancelledAt { get; set; }
+
+    /// <summary>
+    /// Token secreto de la liga pública del recibo (<c>/recibo/{token}</c>). Se genera al crear la venta; el recibo solo
+    /// se muestra si la venta está pagada (<see cref="HasReceipt"/>).
+    /// </summary>
+    public string ReceiptToken { get; set; } = null!;
 
     /// <summary>Productos de una venta con carrito (<see cref="SaleSource.Cart"/>); vacío en las demás.</summary>
     public List<SaleItem> Items { get; private set; } = [];
@@ -159,6 +169,7 @@ public partial class Sale : Entity
             Concept = concept,
             ExpiresAt = expiresAt,
             CreatedAt = now,
+            ReceiptToken = NewReceiptToken(),
             Items = isCart ? [.. items!] : [],
         };
     }
@@ -208,8 +219,35 @@ public partial class Sale : Entity
         return string.IsNullOrWhiteSpace(businessName) ? text : $"{businessName.Trim()}{ConceptSeparator}{text}";
     }
 
+    /// <summary>
+    /// Lo que escribió el vendedor, sin el nombre del negocio que <see cref="BuildConcept"/> antepone (si el concepto
+    /// empieza con ese negocio y el separador). Si el negocio cambió de nombre, se devuelve el concepto completo.
+    /// </summary>
+    public static string? ConceptTextOf(string? concept, string? businessName)
+    {
+        if (string.IsNullOrWhiteSpace(concept) || string.IsNullOrWhiteSpace(businessName))
+        {
+            return concept;
+        }
+
+        var prefix = businessName.Trim() + ConceptSeparator;
+        return concept.StartsWith(prefix, StringComparison.Ordinal) && concept.Length > prefix.Length
+            ? concept[prefix.Length..]
+            : concept;
+    }
+
     [GeneratedRegex(ConceptTextPattern)]
     private static partial Regex ConceptTextRegex();
+
+    /// <summary>Token nuevo para el recibo público (aleatorio criptográfico, no adivinable).</summary>
+    public static string NewReceiptToken() => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(ReceiptTokenLength / 2));
+
+    /// <summary>Tiene la forma de un token de recibo (32 caracteres hexadecimales en minúsculas).</summary>
+    public static bool IsValidReceiptToken(string? token) =>
+        token is { Length: ReceiptTokenLength } && token.All(c => char.IsAsciiDigit(c) || c is >= 'a' and <= 'f');
+
+    /// <summary>Hay recibo para compartir: solo de ventas pagadas.</summary>
+    public bool HasReceipt => Status == SaleStatus.Paid;
 
     /// <summary>QR creado en Pey para esta venta.</summary>
     public void AttachQr(string peyQrId, string qrString)

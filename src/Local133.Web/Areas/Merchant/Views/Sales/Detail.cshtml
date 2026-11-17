@@ -1,0 +1,132 @@
+@using Local133.Web.Areas.Merchant.Models
+@model SaleDetailViewModel
+@{
+    ViewData["Title"] = $"Venta {Model.Folio}";
+}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-sale-detail="@Model.Id" data-status="@Model.Status">
+        <a class="d-inline-block mb-3" href="@Url.Content("~" + SalesUrls.List)" data-back-to-sales>
+            <i class="bi bi-chevron-left" aria-hidden="true"></i> Ventas
+        </a>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <h1 class="h5 mb-0">Venta @Model.Folio</h1>
+                    <span class="badge @Model.StatusBadgeClass" data-sale-status>@Model.StatusLabel</span>
+                </div>
+                <p class="display-6 fw-semibold mt-2 mb-1" data-sale-amount>@Model.AmountText</p>
+                @if (Model.ConceptText is not null)
+                {
+                    <p class="text-body-secondary text-break mb-3" data-sale-concept>@Model.ConceptText</p>
+                }
+
+                <dl class="row small mb-0">
+                    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Creada</dt>
+                    <dd class="col-7 col-sm-8 mb-1" data-sale-created>@Model.CreatedAtText</dd>
+                    @if (Model.PaidAtText is not null)
+                    {
+                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Pagada</dt>
+                        <dd class="col-7 col-sm-8 mb-1" data-sale-paid-at>@Model.PaidAtText</dd>
+                    }
+                    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Cómo se cobró</dt>
+                    <dd class="col-7 col-sm-8 mb-1" data-sale-method>
+                        <i class="bi @Model.MethodIcon me-1" aria-hidden="true"></i>@Model.MethodLabel
+                        @if (Model.MaskedPhone is not null)
+                        {
+                            <span class="text-nowrap" data-sale-phone>(@Model.MaskedPhone)</span>
+                        }
+                    </dd>
+                </dl>
+
+                @if (Model.IsAwaitingPayment)
+                {
+                    <a class="btn btn-primary w-100 mt-3" href="@Url.Content("~" + SalesUrls.Charge(Model.Id))" data-sale-charge-link>
+                        @if (Model.Method == Local133.Domain.Sales.ChargeMethod.PushNotification)
+                        {
+                            <i class="bi bi-phone-vibrate me-1" aria-hidden="true"></i> @:Ver cobro
+                        }
+                        else
+                        {
+                            <i class="bi bi-qr-code me-1" aria-hidden="true"></i> @:Ver QR
+                        }
+                    </a>
+                }
+            </div>
+        </div>
+
+        @if (Model.Receipt is { } receipt)
+        {
+            <section class="card mb-3" aria-labelledby="receipt-title" data-sale-receipt>
+                <div class="card-body">
+                    <h2 class="h6" id="receipt-title">Recibo para tu cliente</h2>
+                    <p class="small text-body-secondary">Una liga que tu cliente puede abrir sin cuenta. No muestra tu comisión ni tus datos bancarios.</p>
+                    <partial name="_ReceiptShare" model="receipt" />
+                </div>
+            </section>
+        }
+
+        @if (Model.IsCart)
+        {
+            <section class="card mb-3" aria-labelledby="items-title" data-sale-items>
+                <div class="card-header d-flex justify-content-between">
+                    <h2 class="h6 mb-0" id="items-title">Productos</h2>
+                    <span class="small text-body-secondary">@Model.ItemsSummary</span>
+                </div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var item in Model.Items)
+                    {
+                        <li class="list-group-item d-flex justify-content-between gap-3" data-sale-item>
+                            <span class="product-info">
+                                <span class="d-block text-truncate">@item.Name</span>
+                                <span class="d-block small text-body-secondary">@item.Quantity × @item.UnitPriceText</span>
+                            </span>
+                            <span class="fw-semibold text-nowrap">@item.AmountText</span>
+                        </li>
+                    }
+                    <li class="list-group-item d-flex justify-content-between fw-bold">
+                        <span>Total</span><span class="text-nowrap">@Model.AmountText</span>
+                    </li>
+                </ul>
+            </section>
+        }
+
+        <section class="card mb-3" aria-labelledby="payments-title" data-sale-payments>
+            <div class="card-header">
+                <h2 class="h6 mb-0" id="payments-title">Pagos recibidos</h2>
+            </div>
+            @if (Model.Payments.Count == 0)
+            {
+                <div class="card-body small text-body-secondary" data-sale-no-payments>Aún no se recibe ningún pago.</div>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var payment in Model.Payments)
+                    {
+                        <li class="list-group-item" data-sale-payment>
+                            <div class="d-flex justify-content-between gap-3">
+                                <span>@payment.PaidAtText</span>
+                                <span class="fw-semibold text-nowrap">@payment.AmountText</span>
+                            </div>
+                            <div class="small text-body-secondary d-flex justify-content-between flex-wrap column-gap-3">
+                                <span class="text-break">Clave de rastreo: <span data-payment-tracking>@(payment.TrackingKey ?? "—")</span></span>
+                                <span class="text-nowrap" data-payment-commission>Comisión @payment.CommissionRateText: @payment.CommissionAmountText</span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+                <div class="card-footer small text-body-secondary">
+                    El dinero llegó completo a tu cuenta. La comisión (más IVA) se cobra en tu estado de cuenta semanal.
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    @if (Model.Receipt is not null)
+    {
+        <script src="~/js/receipt-share.js"></script>
+    }
+}
