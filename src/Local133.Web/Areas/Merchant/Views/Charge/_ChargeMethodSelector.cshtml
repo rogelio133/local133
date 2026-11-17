@@ -6,12 +6,12 @@
     <div class="btn-group w-100" role="group" data-charge-method>
         <input type="radio" class="btn-check" name="Input.Method" id="charge-method-qr" autocomplete="off"
                value="@ChargeMethod.DynamicQr" checked="@(!Model)" />
-        <label class="btn btn-outline-primary btn-lg" for="charge-method-qr">
+        <label class="btn btn-outline-primary" for="charge-method-qr">
             <i class="bi bi-qr-code me-1" aria-hidden="true"></i> QR
         </label>
         <input type="radio" class="btn-check" name="Input.Method" id="charge-method-phone" autocomplete="off"
                value="@ChargeMethod.PushNotification" checked="@Model" />
-        <label class="btn btn-outline-primary btn-lg" for="charge-method-phone">
+        <label class="btn btn-outline-primary" for="charge-method-phone">
             <i class="bi bi-phone me-1" aria-hidden="true"></i> Celular
         </label>
     </div>

@@ -4,7 +4,8 @@
 <head>
     <partial name="_Head" />
 </head>
-<body>
+@* Footer siempre al fondo: body en columna con el alto de la ventana (.site-layout) y main que crece. *@
+<body class="d-flex flex-column site-layout">
     <nav class="navbar navbar-expand bg-primary sticky-top d-print-none" data-bs-theme="dark">
         <div class="container">
             <a class="navbar-brand" href="~/">Local133</a>
@@ -22,7 +23,7 @@
         </div>
     </nav>
 
-    <main class="container py-4">
+    <main class="container py-4 flex-grow-1">
         @RenderBody()
     </main>
 

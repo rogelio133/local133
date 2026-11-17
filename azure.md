@@ -27,7 +27,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `Pey__ApiKey` | Referencia a Key Vault. Sin ella el sitio arranca, pero fallan las llamadas a Pey | Fase 2.1 |
 | `Pey__WebhookSecret` | `whsec_…`. Sin él el webhook responde 500 | Fase 2.3 |
 | `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas cada minuto) | Fase 2.3 / 2.5 |
-| `ForwardedHeaders__KnownNetworks__0` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse y el webhook recibe 307 | Fase 2.5 (corrección 2026-11-13) |
+| `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
 | `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8 | Fase 2.8 |
 
@@ -69,3 +69,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - El perfil de publicación (`ZipDeploy`, `linux-x64`, dependiente del framework) no cambia. El publish local `dotnet publish src/Local133.Web -c Release -r linux-x64` incluye `libSkiaSharp.so` y `site.css`, y su `runtimeconfig` pide `Microsoft.AspNetCore.App` 10.0.
 - No hay migraciones nuevas (EF Core 10 no detecta cambios de modelo), ni llaves de configuración o secretos nuevos. `ForwardedHeaders__KnownNetworks__*` sigue igual (en código ahora se carga en `KnownIPNetworks`).
 - Si el pipeline usa `dotnet ef` o un *migration bundle*, usar las herramientas 10.0.x (`.config/dotnet-tools.json`) y el SDK de `global.json` (10.0.401).
+
+### Ajustes de UI 2026-11-17 — Portada, header y pestañas de cobro
+- **`Home__RotatingWords__0`, `Home__RotatingWords__1`, …** (opcional): las palabras que rotan en el título de la portada. Por defecto vienen en `appsettings.json` (`local, puesto, tienda, kiosko, negocio, consultorio`). No son secretos: van en App Settings, sin Key Vault. Se sobrescriben **por índice**; para acortar la lista, poner en vacío los índices sobrantes (las vacías se ignoran). Máximo 10 palabras de 15 caracteres.
+- El resto (footer, header, placeholder, pestañas de `/app/cobrar`) es solo vista y estilos: sin recursos, migraciones ni secretos nuevos.

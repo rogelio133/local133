@@ -60,6 +60,9 @@ try
     builder.Services.Configure<PublicSiteOptions>(builder.Configuration.GetSection(PublicSiteOptions.SectionName));
     builder.Services.AddSingleton<Local133.Web.Models.ReceiptLinks>();
 
+    // Portada: palabras que rotan en el título (Home:RotatingWords; por defecto en appsettings.json).
+    builder.Services.Configure<HomeHeroOptions>(builder.Configuration.GetSection(HomeHeroOptions.SectionName));
+
 #if DEBUG
     // Estilos: Styles/*.scss → wwwroot/css/site.css. El build y el publish compilan con dart-sass
     // (AspNetCore.SassCompiler); en Debug además se recompila al guardar. Sass:Watch=false lo apaga (pruebas).
@@ -95,7 +98,7 @@ try
     {
         app.UseHsts();
     }
-    /*
+    
     app.UseForwardedHeaders();//para dev tunnel
 
 
@@ -108,7 +111,7 @@ try
             context.Request.Scheme = "https";
         }
         return next();
-    });*/
+    });
 
     app.UseHttpsRedirection();
     app.UseRouting();

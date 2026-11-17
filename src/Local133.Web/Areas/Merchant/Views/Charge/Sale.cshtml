@@ -23,7 +23,7 @@
             <h1 class="h3 fw-semibold text-success mt-2 mb-1" role="status" aria-live="assertive">Pago recibido</h1>
         </div>
 
-        <p class="text-body-secondary mb-1">Venta @Model.Folio</p>
+        <p class="text-body-secondary mb-1 d-none">Venta @Model.Folio</p>
         <p class="display-5 fw-semibold @(Model.Concept is null ? "mb-3" : "mb-1")" data-sale-amount>@Model.AmountText</p>
         @if (Model.Concept is not null)
         {

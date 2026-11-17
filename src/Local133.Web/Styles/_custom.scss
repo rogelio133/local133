@@ -54,6 +54,8 @@ $btn-font-weight:  700;
 $btn-padding-y-lg: 1rem;
 $btn-padding-x-lg: 2rem;
 $input-padding-y:  .75rem;
+// Placeholder claro (~3.2:1 sobre blanco): el de Bootstrap (texto al 75 %) parecía texto ya escrito.
+$input-placeholder-color: rgba($tinta, .5);
 
 // --- Sin degradados decorativos -------------------------------
 $enable-gradients: false;
