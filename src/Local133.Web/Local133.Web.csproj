@@ -24,6 +24,13 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Suben las transitivas vulnerables del scaffolder (versiones en Directory.Packages.props). -->
+    <PackageReference Include="NuGet.Packaging">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NuGet.Protocol">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>

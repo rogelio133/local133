@@ -2,14 +2,14 @@
 
 Portal para que vendedores informales cobren con CoDi vía la API de Pey. El plan completo está en [PLAN_DESARROLLO.md](PLAN_DESARROLLO.md) y las reglas de trabajo en [CLAUDE.md](CLAUDE.md).
 
-- **Web**: ASP.NET Core 9 MVC (vistas Razor + Bootstrap 5, móvil primero) + EF Core 9 sobre SQL Server (`src/Local133.Web`, `Domain`, `Application`, `Infrastructure`). Un solo proyecto sirve el portal del vendedor (`/app`), el admin (`/admin`) y la API interna (`/api`).
+- **Web**: ASP.NET Core 10 MVC (vistas Razor + Bootstrap 5, móvil primero) + EF Core 10 sobre SQL Server (`src/Local133.Web`, `Domain`, `Application`, `Infrastructure`). Un solo proyecto sirve el portal del vendedor (`/app`), el admin (`/admin`) y la API interna (`/api`).
 - **Librerías cliente**: Bootstrap, Bootstrap Icons y jQuery Validation vía LibMan ([libman.json](src/Local133.Web/libman.json)), versionadas en `src/Local133.Web/wwwroot/lib`. Sin Node.js ni build de JS.
 
 ## Requisitos
 
 | Herramienta | Versión |
 |---|---|
-| .NET SDK | 9.0.306 o superior de la banda 9.0.3xx (ver [global.json](global.json)) |
+| .NET SDK | 10.0.401 o superior de la línea 10.0 (ver [global.json](global.json)) |
 | SQL Server | Instancia local, p. ej. SQL Server Express `localhost\SQLEXPRESS`, con autenticación de Windows. **Sin Docker.** |
 
 ## Primer arranque
@@ -93,7 +93,7 @@ Para recibirlo en local hace falta un túnel HTTPS (ngrok o dev tunnels) hacia e
 
 ## Smart App Control (Windows)
 
-En equipos con Smart App Control activo, Windows puede bloquear DLL recién compiladas (`0x800711C7`). Por eso `UseAppHost=false`: todo corre vía `dotnet.exe` (`dotnet run` o `dotnet src/Local133.Web/bin/Debug/net9.0/Local133.Web.dll`). Detalles y qué hacer si una DLL queda bloqueada en [CLAUDE.md](CLAUDE.md#smart-app-control-este-equipo). No desactivar Smart App Control.
+En equipos con Smart App Control activo, Windows puede bloquear DLL recién compiladas (`0x800711C7`). Por eso `UseAppHost=false`: todo corre vía `dotnet.exe` (`dotnet run` o `dotnet src/Local133.Web/bin/Debug/net10.0/Local133.Web.dll`). Detalles y qué hacer si una DLL queda bloqueada en [CLAUDE.md](CLAUDE.md#smart-app-control-este-equipo). No desactivar Smart App Control.
 
 ## Integración continua
 

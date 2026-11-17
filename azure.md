@@ -10,7 +10,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 
 | Recurso | Para qué | Desde |
 |---|---|---|
-| App Service (.NET 9) | Sitio MVC, API `/api`, webhook de Pey, hub SignalR y jobs de Hangfire (en el mismo proceso) | Fase 0.1 / 1.1 |
+| App Service (.NET 10) | Sitio MVC, API `/api`, webhook de Pey, hub SignalR y jobs de Hangfire (en el mismo proceso) | Fase 0.1 / 1.1 |
 | Azure SQL Database | Base `Local133` (EF Core) y el esquema `HangFire` (lo crea Hangfire, no EF) | Fase 0.2 / 2.3 |
 | Key Vault (recomendado) | API key y secreto del webhook de Pey, secretos OAuth, contraseña del admin sembrado | Fase 1.3 / 1.5 / 2.1 |
 | Blob Storage | Fotos de productos. Hoy es `LocalDiskFileStorage`; falta la implementación para blob (Fase 7) | Fase 3.1 |
@@ -63,3 +63,9 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **`App__PublicBaseUrl`**: las ligas de recibo se comparten por WhatsApp y deben apuntar al dominio público y estable (dominio propio con certificado). Sin esta llave se arma la URL con el host de la petición, que en App Service puede ser `*.azurewebsites.net` (o un host interno detrás de un proxy, porque `X-Forwarded-Host` no se procesa). Una liga ya enviada deja de servir si cambia el dominio.
 - Recibo `/recibo/{token}`: es anónimo. Responde con `X-Robots-Tag: noindex` y `Cache-Control: private, no-store`; si hay CDN o Front Door delante, no cachear `/recibo/*`.
 - Sin recursos nuevos ni secretos nuevos.
+
+### Mantenimiento 2026-11-16 — Migración a .NET 10
+- **Antes del próximo despliegue**, cambiar la pila del App Service (Linux) a **.NET 10**: Portal → *Configuración* → *Pila* `.NET 10 (LTS)`, o `az webapp config set -g local133 -n local133 --linux-fx-version "DOTNETCORE|10.0"`. Un paquete `net10.0` sobre la pila .NET 9 no arranca.
+- El perfil de publicación (`ZipDeploy`, `linux-x64`, dependiente del framework) no cambia. El publish local `dotnet publish src/Local133.Web -c Release -r linux-x64` incluye `libSkiaSharp.so` y `site.css`, y su `runtimeconfig` pide `Microsoft.AspNetCore.App` 10.0.
+- No hay migraciones nuevas (EF Core 10 no detecta cambios de modelo), ni llaves de configuración o secretos nuevos. `ForwardedHeaders__KnownNetworks__*` sigue igual (en código ahora se carga en `KnownIPNetworks`).
+- Si el pipeline usa `dotnet ef` o un *migration bundle*, usar las herramientas 10.0.x (`.config/dotnet-tools.json`) y el SDK de `global.json` (10.0.401).
