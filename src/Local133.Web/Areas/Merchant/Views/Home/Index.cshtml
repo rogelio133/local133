@@ -95,4 +95,22 @@
             </div>
             break;
     }
+
+    @if (Model.Today is { } today)
+    {
+        <a class="card card-body mt-3 text-decoration-none text-body d-flex flex-row align-items-center gap-3" href="~/app/ventas" data-day-summary>
+            <i class="bi bi-receipt fs-3 text-primary" aria-hidden="true"></i>
+            <span class="flex-grow-1">
+                <span class="d-block small text-body-secondary">Hoy</span>
+                <span class="d-block fs-5 fw-bold" data-day-collected>@today.CollectedText</span>
+                <span class="d-block small text-body-secondary">
+                    <span class="text-nowrap">@today.PaidSalesText</span>@if (today.PendingCount > 0)
+                    {
+                        @: · <span class="text-nowrap">@today.PendingText</span>
+                    }
+                </span>
+            </span>
+            <span class="text-primary text-nowrap small fw-semibold">Ver ventas <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+        </a>
+    }
 </div>

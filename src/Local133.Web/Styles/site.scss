@@ -219,3 +219,24 @@ body {
     padding-bottom: 2rem;
   }
 }
+
+/* Historial de ventas: el concepto se recorta con text-truncate dentro de la fila flexible. */
+.sale-row-info {
+  min-width: 0;
+}
+
+/* Botones del recibo en la pantalla de «Pago recibido». */
+.sale-receipt {
+  max-width: 24rem;
+}
+
+/* Recibo público: al imprimir (o guardar PDF) solo queda el recibo, sobre blanco. */
+@media print {
+  body {
+    background-color: #fff;
+  }
+
+  .receipt {
+    box-shadow: none;
+  }
+}

@@ -20,8 +20,10 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.Property(s => s.PeyTransactionId).HasMaxLength(Sale.PeyIdMaxLength).IsUnicode(false);
         builder.Property(s => s.PeyCodiId).HasMaxLength(Sale.PeyCodiIdMaxLength).IsUnicode(false);
         builder.Property(s => s.PhoneNumber).HasMaxLength(PhoneNumber.Length).IsUnicode(false);
+        builder.Property(s => s.ReceiptToken).HasMaxLength(Sale.ReceiptTokenLength).IsUnicode(false).IsFixedLength();
         builder.Ignore(s => s.NumRef);
         builder.Ignore(s => s.HasPaymentRequest);
+        builder.Ignore(s => s.HasReceipt);
 
         // Restrict: el historial financiero del vendedor no se borra en cascada.
         builder.HasOne<Merchant>()
@@ -35,6 +37,10 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(s => s.PeyQrId).IsUnique().HasFilter("[PeyQrId] IS NOT NULL");
         // El webhook codi.pn.payment_received busca el cobro por celular por la transacción de Pey.
         builder.HasIndex(s => s.PeyTransactionId).IsUnique().HasFilter("[PeyTransactionId] IS NOT NULL");
+        // Recibo público: se busca por su token (secreto, único).
+        builder.HasIndex(s => s.ReceiptToken).IsUnique();
+        // Historial del vendedor: sus ventas de la más reciente a la más antigua, filtradas por fecha.
+        builder.HasIndex(s => new { s.MerchantId, s.CreatedAt });
         // Job de expiración: pendientes con el QR vencido.
         builder.HasIndex(s => new { s.Status, s.ExpiresAt });
     }

@@ -138,309 +138,37 @@ tests/
 
 Cada fase termina con algo demostrable. Ventas va inmediatamente después del registro; lo mínimo de cuenta bancaria se construye dentro de la fase de ventas porque es prerrequisito para generar un QR.
 
-### Fase 0 — Cimientos (≈3 días)
-1. ✅ Solución .NET 9 con los 4 proyectos, EF Core + migración inicial, Serilog, ProblemDetails, Swagger. *(hecho 2026-11-09: migración `Initial` = `SystemSettings` + semilla; API con controladores; build sin advertencias. Prueba de arranque verificada el mismo día: Swagger, `/api/health` y 404 ProblemDetails.)*
-2. ✅ Base de datos en el **SQL Server local del equipo** (sin Docker): crear la base `Local133`, cadena de conexión en user-secrets (`ConnectionStrings:Default`, p. ej. `Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True`) y aplicar migraciones con `dotnet ef database update`; `README` con arranque local y requisitos (instancia de SQL Server instalada); CI (build + tests). *(hecho 2026-11-09: base `Local133` en `localhost\SQLEXPRESS` con `Initial` y semilla; `README.md`; GitHub Actions `.github/workflows/ci.yml` con job .NET (build Release, `dotnet ef migrations has-pending-model-changes`, `dotnet test`). Los proyectos de prueba se crean en Fase 1 (CI no usa SQL Server todavía).)*
+La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en navegador, pendientes) está en [log_plan/](log_plan/). Al terminar una subfase: crear `log_plan/fase-<F>.<N>-<slug>.md`, dejar aquí solo ✅, fecha y link, y pasar sus pendientes a [Verificaciones pendientes](#verificaciones-pendientes).
 
-> Nota (2026-11-09): el antiguo punto 0.2 (SPA React en `src/Local133.CustomerPortal`) se construyó y quedó **descartado** al cambiar el frontend a MVC Razor. Su código, el target `BuildSpaForPublish` y el job `spa` de CI se eliminaron en el paso 1.1.
+### Fase 0 — Cimientos (≈3 días)
+1. ✅ Solución .NET 9 con los 4 proyectos, EF Core + migración inicial, Serilog, ProblemDetails, Swagger. *(hecho 2026-11-09)* — [bitácora](log_plan/fase-0.1-solucion-base.md)
+2. ✅ Base de datos en el **SQL Server local del equipo** (sin Docker): crear la base `Local133`, cadena de conexión en user-secrets (`ConnectionStrings:Default`, p. ej. `Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True`) y aplicar migraciones con `dotnet ef database update`; `README` con arranque local y requisitos (instancia de SQL Server instalada); CI (build + tests). *(hecho 2026-11-09)* — [bitácora](log_plan/fase-0.2-base-de-datos-y-ci.md)
+
+> Nota (2026-11-09): el antiguo punto 0.2 (SPA React) se construyó y quedó **descartado** al cambiar el frontend a MVC Razor; detalle en la [bitácora de la 0.2](log_plan/fase-0.2-base-de-datos-y-ci.md#nota-spa-descartada-2026-11-09).
 
 ### Fase 1 — Registro y autenticación (≈1 semana)
-1. **Limpieza y paso a MVC**: eliminar `src/Local133.CustomerPortal` (y su `.esproj` de la solución), el target `BuildSpaForPublish` / `SkipSpaBuild` del `.csproj`, el job `spa` de `.github/workflows/ci.yml` y el `MapFallbackToFile("index.html")`. Renombrar `Local133.Api` → `Local133.Web` (carpeta, `.csproj`, namespaces, `.sln`, CI, README). `AddControllersWithViews` + `MapRazorPages`; `_Layout` Bootstrap 5 (LibMan) móvil primero; áreas `Merchant` y `Admin`; rutas `/api/*` desconocidas siguen respondiendo 404 ProblemDetails. ✅ *(hecho 2026-11-09: rutas por atributo en español — `/`, `/app` (+`cobrar`, `ventas`, `mas`) y `/admin` (+`clientes`, `transacciones`, `parametros`) con las mismas pantallas placeholder de la SPA (parcial `_ComingSoon`); errores separados: `/api/*` ⇒ ProblemDetails, resto ⇒ vistas `/error` y `/error/{code}`; LibMan como herramienta local con Bootstrap 5.3.8, Bootstrap Icons, jQuery y jQuery Validation Unobtrusive, `wwwroot/lib` versionado; `MapStaticAssets` con fingerprint. Verificado arrancando el sitio: todas las rutas 200, `/api/nada` 404 problem+json, `/nada` 404 HTML, Swagger solo con `/api/health`. Sin guards por rol hasta 1.2.)*
-2. **Scaffold de Identity** (`dotnet aspnet-codegenerator identity`) sobre `AppDbContext` + roles, solo con las páginas necesarias (Register, Login, Logout, ConfirmEmail, ForgotPassword, ResetPassword, ExternalLogin, Manage); traducir al español y adaptarlas al layout. Registro con correo/contraseña, verificación de correo, login, logout, recuperación. ✅ *(hecho 2026-11-09:*
-   - *Generador `dotnet-aspnet-codegenerator` 9.0.0 (corrió bien). Se deshicieron su `AppDbContext`/`IdentityUser` propios y sus cambios en `Program.cs`/`appsettings`.*
-   - *`ApplicationUser` y un `AppDbContext : IdentityDbContext<ApplicationUser>` en Infrastructure. Migración `Identity` con los roles `Merchant`/`Admin` sembrados con Id fijo.*
-   - *Se usa `AddIdentity` sin `AddDefaultUI`: solo existen las páginas scaffoldeadas; 2FA y datos personales dan 404. Rutas por defecto `/Identity/Account/*`.*
-   - *Páginas, validación y correos en español, más `SpanishIdentityErrorDescriber` y mensajes de model binding. Contraseña de 8+ caracteres con número; bloqueo tras 5 intentos.*
-   - *El registro asigna el rol `Merchant`. Tras el login, sin `returnUrl`, Admin va a `/admin` y Merchant a `/app`.*
-   - *Áreas con `[Authorize(Roles=…)]`. `/api/*` sin sesión responde 401/403 en vez de redirigir.*
-   - *`FileEmailSender` en dev (`App_Data/emails` + log).*
-   - *`tests/Local133.IntegrationTests` con 26 pruebas (`Category=SqlServer`, base `Local133_Tests`, Respawn), todas verdes en local. CI las excluye con `--filter "Category!=SqlServer"`.*
-   - *Prueba de arranque del sitio real: redirección a login, registro y `.html` del correo generado, Swagger solo con `/api/health`.*
-   - *El admin sembrado quedó en 1.5.)*
-3. Login externo Google y Facebook. ✅ *(hecho 2026-11-10:*
-   - *Las páginas `ExternalLogin` y `Manage/ExternalLogins` ya venían del scaffold de 1.2. Se agregaron los paquetes `Microsoft.AspNetCore.Authentication.Google`/`.Facebook` 9.0.22.*
-   - *Los proveedores se registran solo si hay credenciales (`Authentication:Google:ClientId/ClientSecret`, `Authentication:Facebook:AppId/AppSecret` en user-secrets). Sin ellas no hay botones y CI/pruebas no dependen de ellos.*
-   - *Reglas: si se conserva el correo del proveedor ⇒ cuenta confirmada y entra directo como `Merchant`. Si se escribe otro ⇒ correo de confirmación. Si el correo ya tiene cuenta ⇒ no se liga solo: mensaje para entrar con contraseña y ligar desde Mi cuenta → Cuentas externas.*
-   - *Google se pide con `prompt=select_account`: después de cerrar sesión muestra "Elige una cuenta" en lugar de volver a entrar solo con la misma cuenta (teléfonos compartidos). No pide la contraseña.*
-   - *Cancelar o fallar en el proveedor regresa a Login (o a Cuentas externas) con mensaje en español. Botones con icono (parcial `_ExternalProviderButton`).*
-   - *12 pruebas nuevas: 9 de flujo con un proveedor falso (`FakeExternalAuthHandler`, `Category=SqlServer`) y 3 de registro condicional que corren en CI. 38/38 verdes en local.*
-   - *Pendiente: prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar `https://localhost:7180/signin-google` y `/signin-facebook`).)*
-4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada. ✅ *(hecho 2026-11-10:*
-   - *Entidad `Merchant` (`Domain/Merchants`: `UserId` 1:1 con `AspNetUsers`, FK `Restrict`, índice único; `Status` como texto; `BusinessName` y `CommissionRateOverride` vacíos hasta Fases 4/6) y enum `MerchantStatus`.*
-   - *Toda alta de vendedor pasa por `AccountRegistration` (Web/Identity): usuario + rol `Merchant` + cuenta externa + `Merchant` en **una transacción**; si algo falla no queda usuario sin Merchant.*
-   - ***Una sola casilla** "Acepto los Términos y condiciones y el Aviso de privacidad" (base `LegalAcceptanceInput`, parcial `_AcceptLegalCheckbox`) en Register y en `/Identity/Account/ExternalLogin` (alta con Google/Facebook; quien ya tiene la cuenta ligada entra sin volver a aceptar). Validación `[MustBeTrue]` en servidor + adaptador en `wwwroot/js/validation.js`.*
-   - *`AspNetUsers` guarda `TermsAcceptedAt`/`TermsVersion` y `PrivacyNoticeAcceptedAt`/`PrivacyNoticeVersion`; la versión vigente está en `Domain/Legal/LegalDocuments` (subirla al cambiar el texto).*
-   - *Páginas públicas `/terminos` y `/aviso-de-privacidad` con texto **borrador pendiente de revisión legal**; ligas en el pie del layout.*
-   - *Migración `Merchants` con backfill: los usuarios con rol `Merchant` que ya existían reciben su `Merchant` pendiente (sin términos aceptados).*
-   - *7 pruebas nuevas (`MerchantRegistrationTests`); los helpers de prueba crean vendedores con `AccountRegistration`. 46/46 verdes en local (4 corren en CI).*
-   - *Pendiente: probar en navegador que la validación en cliente bloquea el envío con la casilla sin marcar (el HTML ya emite `data-val-mustbetrue` y carga `validation.js`).)*
-5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin. ✅ *(hecho 2026-11-11:*
-   - *Regla pura `Domain/Merchants/OnboardingChecklist.For(MerchantStatus)`: 4 pasos (crear cuenta → cuenta bancaria → revisión de Banxico → listo para cobrar) con estado Done/Current/Pending. Para `Suspended`/`Disabled` la lista viene vacía. **Sin paso de perfil**: se agrega en la Fase 4 junto con la pantalla.*
-   - *`/app` carga el `Merchant` del usuario. Muestra "Hola, {nombre del negocio o correo}" y:*
-     - *en onboarding: tarjeta "Activa tu cuenta" con "Paso X de 4", barra de avance y el paso en curso con su descripción. El botón de cuenta bancaria dice "Disponible pronto" hasta 2.2;*
-     - *`Active`: "Ya puedes cobrar" con botón a `/app/cobrar`;*
-     - *`Suspended`/`Disabled`: aviso.*
-   - *Los textos están en `Areas/Merchant/Models/MerchantHomeViewModel`. Atributos `data-merchant-status`, `data-step` y `data-state` para las pruebas.*
-   - *Seed del admin al arrancar (`Web/Identity/AdminSeeder`) si existen `Seed:Admin:Email` y `Seed:Admin:Password` (user-secrets o variables de entorno). Crea el usuario con correo confirmado y rol `Admin` en una transacción. Es idempotente: si ya es Admin no cambia la contraseña. No promueve a un `Merchant` (log de error). A un usuario sin roles le agrega `Admin`. Si la contraseña no cumple la política no crea nada. Una falla se registra en el log y el sitio sigue arrancando.*
-   - *Nuevo `tests/Local133.UnitTests` (Domain, corre en CI) con 12 pruebas del checklist. 11 de integración: Inicio por estatus + aislamiento entre dos vendedores (`MerchantHomeTests`) y casos del seeder + siembra real al arrancar (`AdminSeederTests`). La fábrica de pruebas vacía `Seed:Admin` para que los user-secrets no siembren nada. 129/129 verdes en local (76 en CI).*
-   - *Prueba de arranque del sitio real con `Seed__Admin__*`: se creó el admin y su login va a `/admin`; un vendedor registrado y confirmado ve el paso 2 en curso; con `UPDATE Merchants SET Status=…` se vieron los otros cuatro estatus.*
-   - *Pendiente: revisión visual en navegador a 375 px.)*
+1. **Limpieza y paso a MVC**: eliminar `src/Local133.CustomerPortal` (y su `.esproj` de la solución), el target `BuildSpaForPublish` / `SkipSpaBuild` del `.csproj`, el job `spa` de `.github/workflows/ci.yml` y el `MapFallbackToFile("index.html")`. Renombrar `Local133.Api` → `Local133.Web` (carpeta, `.csproj`, namespaces, `.sln`, CI, README). `AddControllersWithViews` + `MapRazorPages`; `_Layout` Bootstrap 5 (LibMan) móvil primero; áreas `Merchant` y `Admin`; rutas `/api/*` desconocidas siguen respondiendo 404 ProblemDetails. ✅ *(hecho 2026-11-09)* — [bitácora](log_plan/fase-1.1-paso-a-mvc.md)
+2. **Scaffold de Identity** (`dotnet aspnet-codegenerator identity`) sobre `AppDbContext` + roles, solo con las páginas necesarias (Register, Login, Logout, ConfirmEmail, ForgotPassword, ResetPassword, ExternalLogin, Manage); traducir al español y adaptarlas al layout. Registro con correo/contraseña, verificación de correo, login, logout, recuperación. ✅ *(hecho 2026-11-09)* — [bitácora](log_plan/fase-1.2-identity.md)
+3. Login externo Google y Facebook. ✅ *(hecho 2026-11-10)* — [bitácora](log_plan/fase-1.3-login-externo.md)
+4. Al registrarse se crea `Merchant` en `PendingBankAccount`; casillas de aceptación de términos y aviso de privacidad en la página Register scaffoldeada. ✅ *(hecho 2026-11-10)* — [bitácora](log_plan/fase-1.4-merchant-y-terminos.md)
+5. Inicio del portal cliente (área `Merchant`) con checklist de onboarding; seed del usuario admin. ✅ *(hecho 2026-11-11)* — [bitácora](log_plan/fase-1.5-inicio-y-admin.md)
 
 ### Fase 2 — Ventas (núcleo) (≈2.5 semanas)
-1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores. ✅ *(hecho 2026-11-10:*
-   - *Contratos tomados del OpenAPI oficial (`https://docs.pey.mx/openapi.json`, versión 2026-10-20). Apareció un `error.type` nuevo: `INVALID_PARAMETERS` (plural, en los listados). `POST /codi/qr` responde 201; `codi/pn` y `bank-account`, 200.*
-   - *`Domain/Pey`: enums en PascalCase (en el cable, `UPPER_SNAKE`), `PeyErrorType` (con `Unknown`), `PeyWebhookEventTypes` y `PeyLimits`.*
-   - *`Application/Payments`: `IPaymentGateway` (8 operaciones), DTOs y excepciones `PaymentGatewayException` → `Validation` (+ `InvalidClabe`), `NotFound`, `Authentication`, `State` (`CONCURRENT_UPDATE` es transitorio) y `Unavailable`. Sin `error.type` reconocible se clasifica por código HTTP.*
-   - *`Infrastructure/Pey`: `PeyClient` + `AddPeyGateway` (sección `Pey`; `Pey:ApiKey` en user-secrets, opcional al arrancar). `Microsoft.Extensions.Http.Resilience` 9.10.0 (pipeline estándar). **Reintentos por método**: GET en cualquier falla transitoria; POST solo en 503/429, porque Pey no tiene llave de idempotencia y un reintento tras un 500 o un timeout podría duplicar un QR o un push. Un timeout de POST se reporta como `Unavailable` con resultado incierto.*
-   - *Las reglas de Pey se validan antes de llamar (`ArgumentException`): expiración 0/≥360, centavos, `numRef` ≤ 7 dígitos, celular de 10, CLABE de 18 dígitos (el dígito verificador llega en 2.2), metadata 50/40/500. Sin `bankAccountId` el campo se omite (cobro a la cuenta de la plataforma). Logs con `requestId`, sin bodies ni API key.*
-   - *60 pruebas nuevas contra WireMock (`WireMock.Net.Minimal` 2.20.0) en `tests/Local133.IntegrationTests/Pey`: cuerpos y respuestas de cada operación, los 18 `error.type`, clasificación por código, reintentos GET/POST, timeout, cancelación, validación previa y falta de API key. No usan SQL Server, así que corren en CI. 106/106 verdes en local (64 en CI).*
-   - *Sin llamadas reales a Pey todavía: la primera prueba en producción ($0.01, CLABE de prueba) llega con 2.2/2.4.)*
-2. **Cuenta bancaria mínima**: formulario (titular, CLABE con validación, alias, tipo de titular) → `POST /bank-account`; pantalla de estatus. ✅ *(hecho 2026-11-11:*
-   - *`Domain/BankAccounts`: `Clabe` (`Normalize` quita espacios/guiones, `IsValid` con dígito verificador de pesos 3-7-1, `Mask` ⇒ `•••• 5713`) y entidad `BankAccount` (`Submit`, `Resubmit` para reintento tras `Error`, `UpdateStatus` listo para 2.3). Tabla `BankAccounts` (migración `BankAccounts`): enums como texto, CLABE `char(18)`, FK `Restrict`, **índice único en `MerchantId`** (una cuenta por vendedor hasta la Fase 4; también frena el doble envío) e índice único en `PeyBankAccountId`.*
-   - *Reglas puras en `Merchant`: `CanSubmitBankAccount` (solo `PendingBankAccount` y sin cuenta o con la cuenta en `Error`) y `ApplyBankAccountStatus(PeyCodiStatus)`: durante el onboarding `Pending/Processing` ⇒ `BankAccountInReview`, `Active` ⇒ `Active`, `Error` ⇒ `PendingBankAccount`; fuera del onboarding no cambia nada (el `Error` de una cuenta activa queda para 2.3/Fase 4). 2.3 reutiliza la misma regla.*
-   - *Caso de uso `IBankAccountRegistration` (comando + validador FluentValidation en `Application/BankAccounts`, implementación en `Infrastructure/BankAccounts`): valida → `RegisterBankAccountAsync` → guarda cuenta + estatus + `BusinessName` (si estaba vacío, toma el alias) en un solo `SaveChanges`. Si Pey falla no se guarda nada: `INVALID_CLABE` ⇒ error en el campo CLABE; otra validación ⇒ error general; no disponible ⇒ "intenta en unos minutos" (log: resultado incierto); auth/estado/falta de API key ⇒ mensaje genérico + log de error. Los logs llevan la CLABE enmascarada.*
-   - ***Multi-tenant** (primera entidad con `MerchantId`): `ITenantContext` (Application) + filtro global en `AppDbContext` (`!IsMerchantScoped || MerchantId == CurrentMerchantId`). En el sitio, `HttpTenantContext` usa el claim `local133:merchant_id` que agrega `AppClaimsPrincipalFactory` al iniciar sesión; un `Merchant` sin claim no ve nada; admin, anónimo (webhook) y jobs no tienen alcance (`SystemTenantContext`). El alta busca la cuenta existente con `IgnoreQueryFilters()` y `MerchantId` explícito para no depender del claim.*
-   - *`/app/cuenta-bancaria` (`BankAccountController`): formulario (tipo de titular en radios, titular, CLABE `inputmode=numeric`, nombre del negocio precargado) o pantalla de estatus (badge, CLABE enmascarada, fecha en hora de CDMX). PRG con mensaje. Reintento tras rechazo: aviso con el motivo y datos precargados (menos la CLABE). `[Clabe]` en cliente y servidor (adaptador en `validation.js`) y `form[data-disable-on-submit]` en `site.js` para evitar doble envío.*
-   - *Inicio: "Registrar mi CLABE" / "Corregir mi cuenta" (con el motivo del rechazo) / "Ver estatus". Pestaña activa del layout del vendedor por controlador (la cuenta bancaria marca "Más"); "Más" tiene el link a Cuenta bancaria.*
-   - *Pruebas: 48 unitarias (`ClabeTests`, `MerchantBankAccountStatusTests`) y 21 de integración (`BankAccountTests`: alta, activación inmediata, CLABE inválida sin llamar a Pey, errores de la pasarela, segundo envío, reintento sobre la misma fila, antiforgery, suspendido, admin, aislamiento por página y por filtro de EF). `FakePaymentGateway` reemplaza a Pey en `Local133WebFactory`: ninguna prueba del sitio llama a la API real. 198/198 verdes en local (124 en CI).*
-   - *Prueba de arranque del sitio real: registro → Inicio con "Registrar mi CLABE" → formulario → CLABE con dígito incorrecto rechazada en servidor sin llamar a Pey.*
-   - *Pendiente: alta real contra Pey (producción) con la CLABE de prueba, y revisión en navegador de la validación en cliente a 375 px.)*
-   - ***Verificar estatus** (agregado 2026-11-11):*
-     - *Con la cuenta en revisión, `/app/cuenta-bancaria` muestra el botón "Verificar estatus" (`POST /app/cuenta-bancaria/verificar`, antiforgery). Consulta `GET /bank-account/{id}` y aplica el resultado:*
-       - *`Active` ⇒ vendedor `Active` + "Comenzar a vender" (`/app/cobrar`);*
-       - *`Error` ⇒ formulario de reintento con el motivo;*
-       - *`Pending`/`Processing` ⇒ aviso.*
-     - *Freno de 1 min entre consultas manuales (`BankAccountStatusChecks.ManualMinInterval`), sobre la nueva columna `BankAccounts.StatusCheckedAt` (migración `BankAccountStatusCheckedAt`). El alta y el reintento cuentan como lectura.*
-     - *La lógica es el caso de uso `IBankAccountStatusSync.SyncAsync(bankAccountId, minInterval)` (Application/BankAccounts; implementación en Infrastructure/BankAccounts): sin sesión ni claims, con `IgnoreQueryFilters()`. Guarda en un solo `SaveChanges` `BankAccount.RecordStatusCheck` + `Merchant.ApplyBankAccountStatus`. Si Pey falla no guarda nada.*
-     - *Pruebas: 13 unitarias (`BankAccountStatusCheckTests`) y 14 de integración en `BankAccountTests` (incluye la llamada sin sesión, como el job, y el aislamiento entre vendedores). 225/225 verdes en local (137 en CI).*
-     - *Pendiente: revisión en navegador con Playwright a 375 px y ≥ 992 px (el MCP no conectó en esta sesión) y una consulta real contra Pey con la CLABE de prueba.*
-3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus. ✅ *(hecho 2026-11-12, junto con la 2.5:*
-   - *Formato real tomado de docs.pey.mx (el OpenAPI trae `"webhooks": {}`):*
-     - *`codi.qr.payment_received` = `{type, amount (number), apiKeyId, bankAccountId?, codiQrId, concept, datePaid (segundos Unix), numRef (texto), transactionId, metadata:{clabe, bankCode, accountType, description, trackingKey, externalMetadata}}`;*
-     - *`bank.account.updated` = `{type, bankAccountId, codiStatus:"ACTIVE", name, clabe, entity, ownerType, ownerId, taxId?}`, sin `errorMessage`.*
-   - *Firma: `Infrastructure/Webhooks/StandardWebhookVerifier`, propio y sin paquete. Calcula HMAC-SHA256 de `"{id}.{timestamp}.{body}"` con el secreto `whsec_<base64>` y acepta varias firmas `v1,…` en el header. Compara en tiempo constante y tolera ±5 min (la del estándar; Pey no documenta otra). 29 pruebas, incluido el vector oficial de Standard Webhooks; corren en CI.*
-   - *`POST /api/webhooks/pey` (`PeyWebhooksController`, anónimo, body crudo, máximo 64 KB). Respuestas:*
-     - *sin `Pey:WebhookSecret` ⇒ 500;*
-     - *firma inválida o sin headers ⇒ 401;*
-     - *si no, `IPeyWebhookProcessor` (Infrastructure/Webhooks/PeyWebhookProcessor), que guarda en `WebhookEvents` y **procesa en la misma petición** (ver §4).*
-   - *Bitácora `WebhookEvents` (`Domain/Webhooks/WebhookEvent`): `WebhookId` único, tipo, payload crudo, timestamp, estatus `Received`/`Processed`/`Ignored`/`Failed`, intentos y error. No tiene filtro multi-tenant (es del admin; su pantalla llega en la Fase 6).*
-     - *Un id `Processed`/`Ignored` repetido ⇒ `Duplicate`.*
-     - *Uno `Failed` o a medias se reprocesa cuando Pey lo reintenta.*
-     - *`codi.pn.payment_received` y `payment_link.*` ⇒ `Ignored`, con el payload guardado.*
-   - *`bank.account.updated` ⇒ `IBankAccountStatusSync.ApplyWebhookAsync(peyBankAccountId, status)`: comparte la transición con la consulta, pero usa `UpdateStatus` y no toca `StatusCheckedAt` ni llama a Pey. Una cuenta desconocida ⇒ `Failed`.*
-   - *Hangfire 1.8.25 (`Hangfire.AspNetCore` + `Hangfire.SqlServer` con `Microsoft.Data.SqlClient`):*
-     - *almacenamiento en la misma base, esquema `HangFire`, que crea Hangfire;*
-     - *`Web/Jobs/JobsSetup`, con `Jobs:Enabled` (`true` por defecto; las pruebas lo apagan) y sin reintentos automáticos;*
-     - *sin dashboard todavía (Fase 6/7).*
-   - *Job `sondeo-cuentas-bancarias` (`*/30 * * * *`, en hora de CDMX; `Infrastructure/Jobs/BankAccountPollingJob`): toma las cuentas `Pending`/`Processing`, las nunca consultadas y luego las de lectura más antigua. Llama `SyncAsync(id)` sin `minInterval`, un scope por cuenta; si una falla, sigue con la siguiente.*
-   - *Pruebas: `PeyWebhookTests` (firma, bitácora, idempotencia, `bank.account.updated`) y `BankAccountPollingJobTests`.*
-   - *Pendientes:*
-     - *registrar la URL pública y el secreto en portal.mipey.mx;*
-     - *recibir un `bank.account.updated` real con la CLABE de prueba;*
-     - *el correo de cuenta activada/rechazada (Notificaciones).)*
-4. **Venta por monto directo**: campo de monto → crea `Sale` → `POST /codi/qr` (`generateImage: false`) → vista con el QR (dibujado en el navegador con QRCode.js a partir de `qrString`) y cuenta regresiva en JS. ✅ *(hecho 2026-11-11, antes que la 2.3, porque no depende de ella:*
-   - *Pey: `PeyCreateQrBody.GenerateImage` siempre `false` y explícito en el cuerpo (el OpenAPI dice que por defecto es `false` y que la imagen hace más lenta la respuesta).*
-   - *`Domain/Sales`: enums `ChargeMethod`, `SaleSource`, `SaleStatus` y entidad `Sale`:*
-     - *`StartDirect` valida el monto: de $0.01 a $999,999.99, con hasta 2 decimales;*
-     - *`AttachQr`, `IsExpiredAt` / `RemainingSeconds` (no cambian el estatus: eso lo hará el job de la 2.5);*
-     - *`NumRef = Folio % 10⁷`. ~~Concepto recortado a 40 caracteres~~ (reemplazado el 2026-11-12 por el campo Concepto obligatorio, ver abajo).*
-   - *`Merchant.CanCharge(BankAccount?)`: vendedor `Active` y cuenta en `PeyCodiStatus.Active`. Ya lo exige el caso de uso; la 2.10 lo reutiliza.*
-   - *Tabla `Sales` (migración `Sales`): enums como texto, `Amount decimal(18,2)` con check `>= 0`, FK `Restrict`, **índice único `(MerchantId, Folio)`** e índice único filtrado en `PeyQrId`. Filtro multi-tenant en `AppDbContext`.*
-   - *Caso de uso `ISaleCharging.CreateDirectSaleAsync` (Application/Sales + Infrastructure/Sales/SaleCharging):*
-     1. *valida y revisa `CanCharge`;*
-     2. *inserta la venta con `Folio = max + 1` (si choca con el índice único reintenta hasta 3 veces), así ya existe `saleId`;*
-     3. *`POST /codi/qr` a la cuenta del vendedor con `expiration = SystemSettings.SaleQrExpirationSeconds` (600), `numRef` = folio, concepto `"{negocio} · {concepto capturado}"` y metadata `{kind:"sale", merchantId, saleId}` (llaves en `SaleMetadata`);*
-     4. *adjunta el QR.*
-     *Si Pey falla se borra la venta (el folio no se salta) y se muestra un mensaje según el tipo de error. La hora de vencimiento se toma antes de llamar a Pey, así la cuenta regresiva nunca es más larga que la real.*
-   - *Web: `ChargeController` en `/app/cobrar` (marca la pestaña "Cobrar"):*
-     - *`GET` muestra el formulario, o un aviso según el estatus con liga a cuenta bancaria o Inicio;*
-     - *`POST` recibe el monto como texto y lo convierte con cultura invariante (sin signo ni separador de miles), luego PRG;*
-     - *`GET venta/{id}` muestra el QR; la venta de otro vendedor da 404 por el filtro.*
-   - *Campo de monto (`ChargeInput`): `type=text inputmode=decimal`, **0.01 por defecto**, regex `^\d{1,6}(\.\d{1,2})?$` en cliente y servidor. `wwwroot/js/amount-input.js` bloquea `-`, `+`, `e`, el tercer decimal, el segundo punto y el 7.º entero; convierte la coma en punto; limpia lo pegado o autocompletado; quita ceros a la izquierda al salir; selecciona todo al enfocar.*
-   - *Vista del QR: `wwwroot/js/sale-qr.js` usa QRCode.js (`qrcodejs@1.0.0` vía LibMan/cdnjs en `wwwroot/lib/qrcodejs`) con nivel de corrección M y fondo blanco. La cuenta regresiva `mm:ss` parte de los segundos que calcula el servidor; al llegar a 0 oculta el QR y muestra "Este QR expiró". Una venta ya vencida se dibuja sin QR.*
-   - *Pruebas: 46 casos unitarios nuevos (`SaleTests`, `MerchantCanChargeTests`) y 27 de integración (`DirectSaleTests`: formulario, bloqueo por estatus, cuerpo enviado a Pey, montos inválidos, fallas de Pey, folios, aislamiento, vencida, antiforgery, admin). `PeyClientTests` verifica `generateImage: false`. `FakePaymentGateway` simula `CreateCodiQrAsync`. 298/298 verdes en local (183 en CI).*
-   - *Revisión en navegador: el MCP de Playwright no conectó en esta sesión. Se hizo una revisión equivalente con `playwright-core` sobre Edge instalado, a 375 px y 1280 px, con 49/49 revisiones OK:*
-     - *0.01 por defecto y el filtrado al teclear y al pegar;*
-     - *error en cliente sin POST y error del servidor;*
-     - *pestaña activa; sin scroll horizontal; nada tapado por la barra;*
-     - *el QR dibujado se decodificó con jsQR y contiene exactamente `qrString` (sin BOM);*
-     - *cuenta regresiva y paso a expirado; aviso de bloqueo;*
-     - *consola sin errores y recursos sin 404.*
-     *La venta para la vista del QR se insertó a mano en la base, sin llamar a Pey.*
-   - *Pendiente:*
-     - *revisión con el MCP de Playwright cuando conecte;*
-     - *cobro real contra Pey ($0.01, CLABE de prueba), escaneando el QR con una app bancaria;*
-     - *confirmar con Pey el límite del `concept` y que `qrString` sea solo ASCII. Si trae acentos, QRCode.js le antepone un BOM UTF-8.)*
-   - ***Campo Concepto obligatorio** (agregado 2026-11-12):*
-     - *`/app/cobrar` pide, debajo del monto, un **Concepto** obligatorio (placeholder "Ej. 2 tacos al pastor", ayuda "Tu cliente lo verá en su app junto con el nombre de tu negocio"). Su valor es el `concept` de `POST /codi/qr`: `Sale.BuildConcept(negocio, concepto)` = `"{negocio} · {concepto}"`, o solo el concepto si el negocio no tiene nombre. Se quitó el folio del concepto (sigue en `numRef`).*
-     - *Por qué ya no se recorta a 40: el 40 era una suposición (concepto de SPEI/CoDi). El OpenAPI de Pey (revisado el 2026-11-12) define `concept` como `string` opcional **sin `maxLength` ni `pattern`**. El concepto capturado admite hasta 100 caracteres (`Sale.ConceptTextMaxLength`); lo enviado, hasta 250 (`Sale.ConceptMaxLength` = negocio 120 + `" · "` + 100). Migración `SaleConceptLength`: `Sales.Concept` de `nvarchar(40)` a `nvarchar(250)` (sigue nullable para QR fijo/push). `StartDirect` exige concepto y ya no corta en silencio (`TrimConcept` eliminado).*
-     - *Caracteres: letras (con acentos, ü y ñ), números, espacios y `. , - # / ( )` (`Sale.ConceptTextPattern`, mismo patrón en .NET y JS). Validación en tres capas: atributos de `ChargeInput.Concept` (cliente + model binding), `CreateDirectSaleCommandValidator` (mensajes en `SaleConceptMessages`) y `Sale.StartDirect`. Nuevo hook `data-val-trim` en `wwwroot/js/validation.js` (normalizer de jQuery Validation): solo espacios cuenta como vacío también en cliente.*
-     - *La vista del QR muestra el concepto bajo el monto (`data-sale-concept`, con salto de línea).*
-     - *Pruebas: 142 unitarias (concepto: `BuildConcept`, caracteres permitidos/rechazados, máximo, obligatorio) y 187 de integración (formulario, concepto enviado con y sin negocio, conceptos inválidos sin llamar a Pey, más de 100, se conserva lo capturado). 329/329 verdes en local (206 en CI).*
-     - *Revisión con el **MCP de Playwright** (Edge) a 375, 768 y 1280 px: formulario, errores en cliente (vacío, solo espacios, Enter, emoji, `@`; 0 POST), `maxlength` 100, sin scroll horizontal, nada tapado por la barra inferior, pestaña "Cobrar" activa, vista del QR con concepto corto y de 118 caracteres (QR dibujado, cuenta regresiva), consola sin errores y recursos sin 404. Se corrigió: solo espacios pasaba en cliente (⇒ `data-val-trim`) y el mensaje de caracteres partía la lista de signos en móvil (⇒ espacios de no separación). Ventas y cuenta bancaria insertadas a mano, sin llamar a Pey.*
-     - *Pendiente: en el cobro real de $0.01, ver cómo muestra la app bancaria un concepto largo (Banxico podría truncarlo) y si los acentos del concepto llegan al `qrString` (QRCode.js antepondría un BOM).*
-5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta. ✅ *(hecho 2026-11-12:*
-   - *Dominio:*
-     - *`Domain/Payments/Commission`: `EffectiveRate(override, global)` y `Calculate`, que redondea a centavos con el punto medio hacia arriba. Ejemplos: $150.50 × 3 % = $4.52; $0.01 ⇒ $0.00.*
-     - *`Payment`: `PeyTransactionId` único, monto, `PaidAt`, clave de rastreo, banco del pagador, `CommissionRate`, `CommissionAmount` y `StatementId` (sin FK hasta la Fase 5).*
-     - *En `Sale`: `PaidAt`, `CancelledAt`, `MarkPaid`, `Cancel`, `ExpireIfDue` y `EffectiveStatus(now)`. **El pago manda**: una venta vencida o cancelada que recibe un pago queda `Paid`, porque el dinero ya llegó y CoDi no permite anular un QR. Un segundo pago se registra y la venta sigue pagada (con warning en el log).*
-   - *`IPaymentRecorder` (Infrastructure/Payments/PaymentRecorder), reutilizable por la 2.9:*
-     - *es idempotente por `transactionId`;*
-     - *busca la venta por `PeyQrId` y luego por `saleId` de la metadata; si `merchantId` o `saleId` contradicen a la venta ⇒ `Failed`; `kind` `statement`/`static` ⇒ `Ignored` (Fase 5 / 2.7);*
-     - *guarda el `Payment` y la venta pagada en un solo `SaveChanges` y, después, avisa con `ISaleNotifier`.*
-   - *Tiempo real:*
-     - *hub `/hubs/ventas` (`SalesHub`, rol Merchant, grupo `merchant-{id}` por el claim) con el evento `PaymentReceived {saleId}`; `/hubs` sin sesión responde 401;*
-     - *`GET /api/sales/{id}` devuelve el estatus efectivo y `paidAtText`, formateado por el servidor en hora de CDMX. Responde 404 con la venta de otro vendedor y 401 sin sesión;*
-     - *`sale-qr.js` escucha SignalR (`@microsoft/signalr@9.0.19` vía LibMan) y confirma con la API. Si SignalR no está conectado hace polling cada 3 s, hasta 2 min después de la expiración, y se detiene con 404/401/403. Al pagarse oculta el QR, la cuenta regresiva y los avisos, muestra «Pago recibido» y vibra.*
-   - *Expiración: job `expirar-ventas` cada minuto (`ISaleExpiration`, `ExecuteUpdateAsync` condicionado a `Pending`). El índice `(Status, ExpiresAt)` lo cubre.*
-   - *Cancelación: botón «Cancelar cobro» con confirmación (modal) que avisa que el QR podría seguir funcionando hasta que expire. `POST /app/cobrar/venta/{id}/cancelar` (antiforgery) ⇒ `ISaleCharging.CancelSaleAsync`, con un UPDATE condicionado que nunca pisa un pago que llega en paralelo. Una venta pagada, vencida o ya cancelada recibe un aviso; la de otro vendedor da 404.*
-   - *Vista de la venta: estados pendiente, pagada, vencida y cancelada. Las vencidas y canceladas siguen escuchando, por si llega un pago tardío.*
-   - *Migración `WebhooksAndPayments`: `Payments`, `WebhookEvents`, `Sales.PaidAt`/`CancelledAt` e índice `(Status, ExpiresAt)`.*
-   - *Pruebas:*
-     - *unitarias: `CommissionTests`, `SaleLifecycleTests`, `WebhookEventTests`;*
-     - *integración: `PeyWebhookTests`, `SaleLifecycleTests`, `BankAccountPollingJobTests` y `SalesHubTests` (cliente SignalR real por long polling: el dueño recibe el evento y otro vendedor no);*
-     - *456/456 verdes en local (282 en CI).*
-   - *Revisión con el MCP de Playwright (Edge) a 375, 768 y 1280 px, sin llamar a Pey: ventas insertadas por SQL y webhooks firmados a mano desde PowerShell.*
-     - *Con SignalR conectado, el pago cambia la pantalla a «Pago recibido» sin recargar y con una sola consulta de confirmación.*
-     - *Con `/hubs` bloqueado, el polling cada 3 s detecta el pago.*
-     - *Modal de cancelar y vista cancelada; un pago tardío sobre una venta cancelada también cambia a «Pago recibido».*
-     - *El job de expiración vence la venta y la cuenta regresiva expira en el cliente.*
-     - *En todos los tamaños: sin scroll horizontal, nada tapado por la barra y pestaña «Cobrar» activa. Consola sin errores y sin respuestas ≥ 400.*
-     - *Hangfire registró los dos jobs en `HangFire.Hash` con zona `America/Mexico_City`.*
-     - *Se corrigió: doble punto tras la hora del pago y formato distinto entre JS y servidor (⇒ `paidAtText`); aviso «Cancelaste el cobro» duplicado con el bloque de cancelado; polling que seguía tras un 404.*
-   - *Pendientes:*
-     - *pago real de $0.01 escaneando el QR con una app bancaria, con el webhook registrado en portal.mipey.mx (túnel HTTPS);*
-     - *confirmar con Pey la tolerancia del timestamp, la política de reintentos del webhook y si un QR con monto acepta varios pagos.*
-   - *Corrección (2026-11-13), primer pago real por el túnel: Pey cobró, pero el webhook no llegó. Hubo dos causas. Primero, el túnel no estaba hospedado (`devtunnel host`). Segundo, con el perfil `https` el sitio respondía 307 a `https://localhost:7180`. Se agregó `UseForwardedHeaders` (`Web/Hosting/ForwardedHeadersSetup`, solo loopback por defecto) y `ForwardedHeadersTests`. La venta 24 ($0.01) quedó pendiente de conciliar.)*
-6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`. ✅ *(hecho 2026-11-13:*
-   - *Formato real (docs.pey.mx, revisado el 2026-11-13):*
-     - *`POST /codi/pn` recibe `{amount (>0, ≤1,000,000), phoneNumber ^[0-9]{10}$, concept, expiration ≥360, numRef, bankAccountId, metadata}` y devuelve `{transactionId, codiId (20 dígitos)}`;*
-     - *el webhook `codi.pn.payment_received` es como el de QR pero **sin `codiQrId`**: `{type, amount, apiKeyId, bankAccountId?, concept, datePaid, metadata{…, trackingKey, externalMetadata}, numRef (de Banxico), transactionId}`. La venta se encuentra por el `transactionId` que devolvió el POST.*
-     - *No hay webhook de rechazo ni de expiración: la venta expira por tiempo, igual que el QR.*
-   - *Dominio:*
-     - *`Domain/Sales/PhoneNumber`: `Normalize` quita espacios, `-`, `( )`, `.` y la lada `+52`; `IsValid` exige 10 dígitos ASCII; `Mask` ⇒ `•••• 5678`.*
-     - *`Sale.StartPush` (`Method = PushNotification`, `Source = DirectAmount`; comparte con `StartDirect` la validación de monto, concepto y folio) y `AttachPushNotification(transactionId, codiId)`.*
-     - *Columnas `Sales.PeyTransactionId` (índice único filtrado), `PeyCodiId` y `PhoneNumber` (migración `SalePushNotification`). `HasPaymentRequest`: la venta ya tiene QR o push enviado.*
-   - *Caso de uso: el mismo `ISaleCharging.CreateDirectSaleAsync`. `CreateDirectSaleCommand` suma `Method` (QR/push) y `PhoneNumber`; el validador exige el celular solo con push (`SalePhoneMessages`). La expiración es la misma de `SystemSettings.SaleQrExpirationSeconds` (600): Pey exige ≥ 360 en push, y con "0 = no expira" el push lanza una excepción.*
-   - *Fallas de Pey en el push:*
-     - *una validación ⇒ se borra la venta («Revisa el monto y el celular, o cobra con QR»);*
-     - *configuración u otra falla ⇒ se borra la venta y se muestra el mensaje genérico;*
-     - ***`Unavailable` (timeout/5xx, resultado incierto) ⇒ la venta no se borra: queda `Cancelled`**, porque la notificación pudo llegarle al cliente. El controlador redirige a la venta, que lo explica («no se pudo confirmar…»). Si el cliente paga, el webhook la encuentra por la `saleId` de la metadata, le asigna el `transactionId` y `MarkPaid` gana. `GatewayFailed` lleva un `SaleId?` para este caso.*
-     - *El celular solo se loguea con `PhoneNumber.Mask`.*
-   - *Pagos: `IPaymentRecorder.RecordCodiQrPaymentAsync` se renombró a `RecordCodiPaymentAsync`, y `ReceivedCodiPayment.Channel` vale `Qr`/`PushNotification`.*
-     - *Con push se busca por `Sales.PeyTransactionId` y luego por la `saleId` de la metadata; la venta debe ser un cobro por celular sin transacción o con la misma.*
-     - *Con QR, una venta push encontrada por metadata ⇒ `Unmatched`.*
-     - *La idempotencia, la comisión y el aviso por SignalR no cambian.*
-   - *Webhook: `PeyCodiPnPaymentReceived` + `CodiPnPaymentAsync`, que comparte con el de QR la conversión y el mapeo de resultados.*
-   - *Web:*
-     - *`/app/cobrar` lleva el selector **QR | Celular** (radios `btn-check`). Con Celular aparece «Celular de tu cliente» (`type=tel inputmode=numeric`, ayuda «Tu cliente debe tener CoDi activo…») y el botón dice «Enviar cobro».*
-     - *`[MexicanPhone]` con adaptador `data-val-phone` en `validation.js`; obligatorio con `data-val-required` en el input y revisión en el controlador solo con push.*
-     - *`wwwroot/js/charge-form.js` muestra/oculta y habilita/deshabilita el campo (con QR no se envía ni se valida), cambia el botón, filtra a 10 dígitos (al pegar `+52 (55) 1234-5678` ⇒ `5512345678`) y revalida al pegar si el campo ya tenía error. Sin JS el campo del celular no aparece; el QR ya requería JS.*
-     - *Vista de la venta: con push, en lugar del QR muestra un teléfono, «Enviamos el cobro al celular •••• 5678» y «Pídele a tu cliente que acepte la solicitud…», con la misma cuenta regresiva, la espera y la cancelación. Los textos de vencida, cancelada y el modal dicen «solicitud». `sale-qr.js` funciona igual sin QR.*
-   - *Pruebas: 229 unitarias (`PhoneNumberTests`; push en `SaleTests`) y 299 de integración (`PushSaleTests`: formulario, cuerpo enviado, celular inválido sin llamar a Pey, QR sin celular, método inválido, bloqueo, fallas de Pey, resultado incierto + pago posterior, webhook, idempotencia, transacción desconocida, cruces QR↔push, metadata de otro vendedor, aislamiento, cancelar y vencida). 528/528 verdes en local (322 en CI).*
-   - *Revisión con el MCP de Playwright (Edge) a 375, 768 y 1280 px, sin llamar a Pey: el sitio se arrancó sin `Pey:ApiKey` y con un secreto de webhook de prueba.*
-     - *Selector QR ↔ Celular y errores en cliente sin POST (vacío, 9 dígitos, 3 dígitos); letras filtradas al teclear y pegado con lada; al volver a QR se limpian los errores.*
-     - *Envío con push ⇒ mensaje genérico, conservando el método y el celular.*
-     - *Ventas push insertadas por SQL: pendiente (celular enmascarado, cuenta regresiva, modal), vencida y sin confirmar.*
-     - *Webhooks `codi.pn.payment_received` firmados desde PowerShell ⇒ «Pago recibido» sin recargar, por SignalR. La venta sin confirmar también se pagó, por metadata.*
-     - *Sin scroll horizontal, nada tapado por la barra, pestaña «Cobrar» activa, consola sin errores y sin respuestas ≥ 400.*
-     - *Se corrigió: el error del celular se quedaba al pegar con el mouse (⇒ revalidar en `input`).*
-   - *Pendientes:*
-     - *cobro real de $0.01 por push a un celular con CoDi activo y su webhook por el túnel (requiere confirmación);*
-     - *confirmar con Pey qué responde si el celular no tiene CoDi (¿400 o 200 sin que llegue nada?) y si hay aviso de rechazo del pagador.)*
+1. **PeyClient** completo (`bank-account`, `codi/qr`, `codi/pn`, `transaction/*`) con enums y manejo de errores. ✅ *(hecho 2026-11-10)* — [bitácora](log_plan/fase-2.1-peyclient.md)
+2. **Cuenta bancaria mínima**: formulario (titular, CLABE con validación, alias, tipo de titular) → `POST /bank-account`; pantalla de estatus. ✅ *(hecho 2026-11-11; «Verificar estatus» agregado el mismo día)* — [bitácora](log_plan/fase-2.2-cuenta-bancaria.md)
+3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus. ✅ *(hecho 2026-11-12, junto con la 2.5)* — [bitácora](log_plan/fase-2.3-webhook-y-sondeo.md)
+4. **Venta por monto directo**: campo de monto → crea `Sale` → `POST /codi/qr` (`generateImage: false`) → vista con el QR (dibujado en el navegador con QRCode.js a partir de `qrString`) y cuenta regresiva en JS. ✅ *(hecho 2026-11-11; campo Concepto obligatorio el 2026-11-12)* — [bitácora](log_plan/fase-2.4-venta-monto-directo.md)
+5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta. ✅ *(hecho 2026-11-12; corrección de forwarded headers el 2026-11-13)* — [bitácora](log_plan/fase-2.5-tiempo-real.md)
+6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`. ✅ *(hecho 2026-11-13)* — [bitácora](log_plan/fase-2.6-cobro-por-celular.md)
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
-8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp).
+8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp). ✅ *(hecho 2026-11-14, junto con la 3.3)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 9. Job de conciliación (`GET /transaction/codi/qr/{idc}`) para ventas pendientes.
 10. Bloqueo: solo vendedores `Active` pueden generar cobros.
 
 ### Fase 3 — Productos y carrito (≈1.5 semanas)
-1. CRUD de productos con baja lógica, foto. ✅ *(hecho 2026-11-14:*
-   - *Dominio: `Domain/Products/Product`.*
-     - *Nombre de hasta 80 caracteres con el mismo juego de caracteres del concepto (`Sale.ConceptTextPattern`), porque en la 3.2 los nombres formarán el concepto que va a Pey. Descripción opcional de hasta 500. Precio con los límites de una venta ($0.01–$999,999.99, centavos).*
-     - *`ReplacePhoto`/`RemovePhoto` devuelven la llave anterior. `Delete` es baja lógica e idempotente; un producto dado de baja ya no se modifica.*
-     - *`Merchant.CanManageProducts`: todos salvo `Disabled`. Desde que se registra (cuenta bancaria pendiente o en revisión) el vendedor ya arma su catálogo; un suspendido también, porque la suspensión solo frena los cobros. `Disabled` ve la lista en solo lectura.*
-   - *Tabla `Products` (migración `Products`): `Price decimal(18,2)` con check `> 0`, FK `Restrict`, índice `(MerchantId, IsDeleted, Name)` y filtro multi-tenant. La baja lógica **no** va en el filtro global (EF admite uno por entidad y `IgnoreQueryFilters` quitaría también el del tenant): las consultas usan `!IsDeleted`.*
-   - *Archivos: `IFileStorage` (Application/Storage) con `LocalDiskFileStorage` (Infrastructure/Storage; `Storage:LocalDirectory`, por defecto `App_Data/uploads`, fuera de git). Valida la llave con un patrón estricto (nunca sale de la carpeta) y escribe a un temporal + renombrar.*
-   - *Fotos: **SkiaSharp 4.156** (`Infrastructure/Products/SkiaProductPhotoProcessor`) en lugar de ImageSharp. La 3.1.12 de ImageSharp tiene vulnerabilidades conocidas (una alta) y la 3.2.0 exige una llave de licencia de Six Labors para compilar en Release (CI y publish fallaban). SkiaSharp es MIT y su DLL nativa está firmada por Microsoft (Smart App Control no la bloquea). Para CI en Ubuntu se agregó `SkiaSharp.NativeAssets.Linux.NoDependencies`.*
-     - *Detecta el formato por el contenido: solo JPEG, PNG y WebP (HEIC, GIF, texto ⇒ «Usa una foto JPG, PNG o WebP»). Rechaza > 50 MP sin decodificar. Los JPEG grandes se decodifican ya reducidos (2048 px).*
-     - *Endereza según la orientación EXIF, reduce a 1024 px y hace una miniatura cuadrada de 240 px, sobre fondo blanco. Guarda JPEG calidad 80. El codificador de Skia no escribe EXIF: no se guarda la ubicación (GPS) del celular.*
-     - *Llaves `products/{merchantId}/{guid}.jpg` y `…-thumb.jpg`; `Product.PhotoKey` guarda la base.*
-   - *Caso de uso `IProductCatalog` (Application/Products; Infrastructure/Products/ProductCatalog). Valida (FluentValidation, mensajes en `ProductMessages`), procesa y guarda la foto, guarda el producto y, si la base falla, borra los archivos nuevos. Después borra los de la foto reemplazada o quitada. La baja conserva la fila y la foto.*
-   - *Web: `ProductsController` en `/app/productos` (pestaña «Más», con liga desde `/app/mas`):*
-     - *lista **paginada de 20 en 20** (`?pagina=`; fuera de rango se ajusta a la primera o la última), ordenada por nombre, con búsqueda por nombre (`?q=`, se conserva al paginar), estado vacío y «sin resultados». La paginación es reutilizable: `Web/Models/PageInfo` + parcial `Views/Shared/_Pager` («Anterior · Página X de Y · Siguiente», para que quepa en 375 px);*
-     - *`nuevo` y `{id}/editar` (multipart, límite de 12 MB por petición, PRG con aviso) y `{id}/eliminar` con modal de confirmación;*
-     - *`{id}/foto` y `{id}/foto/miniatura` sirven el JPEG desde `IFileStorage` con `Cache-Control: private, max-age=31536000, immutable` (la URL cambia con cada foto: `?v={guid}`). El producto de otro vendedor da 404.*
-   - *Foto en el formulario: **«Tomar foto»** (`<input type=file accept="image/*" capture="environment">`, abre la cámara trasera del celular) y **«Elegir imagen»** (`accept="image/jpeg,image/png,image/webp"`: galería o archivos). Los dos campos se llaman `Input.Photo`. «Tomar foto» se oculta en equipos con mouse (`@media (hover: hover) and (pointer: fine)`), donde `capture` no aplica. `wwwroot/js/product-form.js`:*
-     - *vacía el otro campo al elegir y muestra la vista previa; «Quitar foto» (en edición marca `Input.RemovePhoto`);*
-     - *revisa tipo y tamaño (10 MB) antes de enviar;*
-     - *reduce en el navegador las fotos de más de 1.5 MB o de más de 2048 px (JPEG 0.85, `createImageBitmap` + `canvas` + `DataTransfer`): menos datos móviles. Si el navegador no puede, sube el original y decide el servidor.*
-     *Si el formulario vuelve con otro error, se pide volver a elegir la foto (el navegador no puede rellenar un campo de archivo).*
-   - *Corrección de paso: `/error/{code}` leía el código por model binding. Al re-ejecutar un POST con un formulario ilegible (petición de más del límite), MVC intentaba leer el formulario, `code` quedaba en 0 y la página de error respondía 500. Ahora lo lee de la ruta y responde 400.*
-   - *Pruebas: 267 unitarias (`ProductTests`, `MerchantCanManageProductsTests`) y 350 de integración. Nuevas: `ProductPhotoProcessorTests` y `LocalDiskFileStorageTests` (sin SQL Server, corren en CI: formatos, orientación EXIF, sin EXIF, transparencia, truncado, > 50 MP, llaves inválidas) y `ProductCrudTests` (alta con y sin foto, datos y fotos inválidos, > 10 MB, > límite sin 500, edición, reemplazar y quitar foto, baja lógica, paginación 20/20/5, página fuera de rango, búsqueda + página, aislamiento, `Disabled`, antiforgery, admin, sin sesión). La fábrica guarda las fotos en una carpeta temporal propia. 617/617 verdes en local (384 en CI).*
-   - *Revisión con el MCP de Playwright (Edge) a 375, 768 y 1280 px, sin llamar a Pey: estado vacío; errores en cliente sin POST (vacíos, solo espacios, emoji y `@`, tercer decimal filtrado, descripción tope 500); alta con «Elegir imagen» (JPEG de 4000×3000 reducido en el navegador de 1.96 MB a 625 KB); PNG transparente ⇒ fondo blanco; archivo de texto con `.jpg` ⇒ error del servidor; editar, quitar foto y modal de eliminar; 45 productos insertados por SQL ⇒ paginación y búsqueda con paginación; nombres largos recortados con «…». Con pantalla táctil emulada (CDP) aparece «Tomar foto» con `capture="environment"`; con mouse se oculta. Sin scroll horizontal, la paginación no queda bajo la barra, pestaña «Más» activa, consola sin errores y sin respuestas ≥ 400. Se corrigió: el aviso «Corrige los datos y vuelve a elegir la foto» salía también cuando el error era la foto misma.*
-   - *Ajuste 2026-11-14, **búsqueda asíncrona**: antes el buscador era un GET de página completa (parecía un "post"). Ahora `wwwroot/js/product-search.js` busca al escribir (300 ms) y de inmediato con Enter o el botón, sin recargar.*
-     - *Pide `GET /app/productos/resultados` (`ProductsController.Results`, `Cache-Control: no-store`): devuelve la parcial `_ProductResults` (conteo, lista y `_Pager`), la misma que pinta la lista completa. Cada búsqueda cancela la anterior (AbortController).*
-     - *La paginación y «Ver todos» también se cargan así. La barra queda en `/app/productos?q=…&pagina=…` (`replaceState` al escribir, `pushState` al paginar, `popstate` para atrás/adelante).*
-     - *Si la respuesta falla o redirige (sesión vencida), navega a la página completa: el login conserva la búsqueda en `ReturnUrl`. Sin JS el formulario sigue siendo un GET normal.*
-     - *Causa del error al dar Enter: en el log, `GET /app/productos` respondió 500 con `SqlException: Operation cancelled by user`. Pasa cuando el navegador abandona la petición (otro Enter u otra navegación) mientras la consulta corre. Con la página real no se reprodujo: Enter siempre respondió 200. Nuevo `Web/Hosting/ClientDisconnectedExceptionFilter` (filtro global de MVC): si la petición fue abandonada y la excepción es `OperationCanceledException` o `DbException` (también envuelta), responde 499, sin página de error y con log `Debug`. Antes quedaba `ERR` + re-ejecución de `/error`.*
-     - *Pruebas: `ProductCrudTests` (fragmento con búsqueda y página, sin resultados, sin búsqueda, aislamiento, admin y sin sesión) y `ClientDisconnectedExceptionFilterTests` (sin base, corre en CI). 631/631 verdes en local.*
-     - *Revisión con Playwright (Edge) a 375, 768 y 1280 px. Al escribir y con Enter, solo `GET …/resultados` (sin recarga). Probado: paginar (sube al inicio), atrás/adelante, «Ver todos», sin resultados y sesión vencida ⇒ login con `ReturnUrl`. 5 búsquedas seguidas ⇒ 4 canceladas (499 `INF` en el log, sin `ERR`) y gana la última. Sin scroll horizontal, paginador sobre la barra, «Más» activa, consola sin errores.*
-   - *Pendientes:*
-     - *probar «Tomar foto» en un celular real (Android e iPhone): Playwright no puede abrir la cámara;*
-     - *confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp (`NoDependencies`) en el próximo push;*
-     - *en producción, cambiar `LocalDiskFileStorage` por blob (Fase 7).)*
-2. Pantalla de venta con catálogo: búsqueda, agregar/quitar, cantidades, total → mismo flujo de QR. `SaleItems` guarda snapshot de precio. ✅ *(hecho 2026-11-14:*
-   - *Decisiones:*
-     - *página propia `/app/cobrar/productos` con el selector «Monto | Productos» arriba de las dos páginas de cobro;*
-     - *concepto **automático y editable**;*
-     - *cobro con **QR o Celular** (mismo selector y mismas reglas que el cobro por monto).*
-   - *Dominio:*
-     - *`Domain/Sales/SaleItem` copia nombre, precio unitario, cantidad (1–999, `SaleItem.MaxQuantity`) e importe del producto (`FromProduct`; un producto dado de baja ⇒ excepción). Lleva `MerchantId` y `ProductId` (referencia).*
-     - *`SaleCart`: `MaxLines = 50` productos distintos y `Total`.*
-     - *`Sale.Items`; `StartDirect` y `StartPush` aceptan `items` opcionales: con productos, `Source = Cart`, el monto debe ser la suma, como máximo 50 productos y todos del mismo vendedor.*
-   - *Tabla `SaleItems` (migración `SaleItems`): checks de cantidad y precio, FK a `Sales` en cascada (si Pey rechaza, la venta se borra con sus productos), FK `Restrict` a `Products` y filtro multi-tenant. Sin FK a `Merchants`, para evitar dos rutas de cascada.*
-   - *Aplicación:*
-     - *`CreateDirectSaleResult` se renombró a `CreateSaleResult`.*
-     - *`CreateCartSaleCommand(UserId, Lines, ExpectedTotal, Concept, Method, PhoneNumber)` con su validador. Las reglas de concepto, método y celular se comparten (`SaleChargeRules`). Mensajes en `SaleCartMessages`.*
-     - *`ISaleCharging.CreateCartSaleAsync`.*
-   - *Infraestructura (`SaleCharging`):*
-     - *el tramo común (vendedor + `CanCharge` → expiración → folio → QR o push) se extrajo y lo usan los dos casos de uso;*
-     - *el carrito toma nombres y precios del catálogo vigente del vendedor (`IgnoreQueryFilters` + `MerchantId` explícito). Producto ajeno o dado de baja ⇒ `ProductUnavailable`; total > $999,999.99 ⇒ `TotalTooHigh`; total distinto del que vio el vendedor (`ExpectedTotal`) ⇒ `PricesChanged`. En los tres casos no se llama a Pey;*
-     - *al reintentar por folio repetido también se desconectan los productos del intento fallido.*
-   - *Web:*
-     - *`ChargeController`: `GET/POST app/cobrar/productos` y `GET app/cobrar/productos/catalogo` (fragmento `_CartCatalogResults`, `no-store`). La pestaña «Cobrar» queda activa sin tocar el layout.*
-     - *La consulta de la lista paginada salió de `ProductsController` a `Areas/Merchant/Services/ProductListQuery` (la usan productos y carrito; `ProductListViewModel.ListPath` arma la paginación de cada página). `_ProductRowContent` se movió a `Areas/Merchant/Views/Shared`.*
-     - *Parciales `_ChargeModeNav`, `_ChargeMethodSelector` y `_PhoneField` (este con `<partial for="Input">`), compartidos por las dos pantallas de cobro. Base `ChargeOptionsInput` (concepto, método, celular) para `ChargeInput` y `CartChargeInput`.*
-     - *Pantalla del carrito: buscador con `product-search.js` (sin cambios); cada producto es un botón que lo agrega, y su «+» muestra la cantidad que ya lleva. La venta va en un `offcanvas-lg offcanvas-bottom`: en móvil y tablet es un panel inferior que se abre con la barra fija «N productos · $total · Ver venta» (sobre la barra de pestañas); en escritorio es una columna fija con su propio scroll.*
-     - *`wwwroot/js/cart.js`:*
-       - *agregar, −/+, cantidad tecleada (solo dígitos, 1–999), quitar; máximo 50 productos y aviso si el total pasa del máximo;*
-       - *campos ocultos `Input.Lines[i].ProductId/Quantity` + `Input.ExpectedTotal`;*
-       - *concepto «2 Taco al pastor, Refresco» (con « y N más» si pasa de 100 caracteres) mientras el vendedor no lo edite, y «Usar texto automático»;*
-       - *`sessionStorage` por vendedor (sobrevive a recargar; se limpia al enviar). Si el POST vuelve con errores, el servidor manda los productos vigentes con precio actual (`InitialLines`) y se abre el panel.*
-     - *Vista de la venta: `<details>` cerrado «Ver N productos» (para que el QR se vea sin desplazarse). En ventas con carrito, «Nuevo cobro» vuelve al catálogo.*
-   - *Pruebas: 285 unitarias (`SaleCartTests`) y 397 de integración. `CartSaleTests`:*
-     - *página, catálogo vacío, bloqueos, fragmento con búsqueda y paginación, sin bajas ni productos ajenos;*
-     - *QR y push con copia de productos y concepto editado;*
-     - *errores sin llamar a Pey: producto ajeno o dado de baja, precio cambiado, cantidades 0/1000/texto, sin productos, repetido, > 50, total > máximo, total ilegible, concepto inválido;*
-     - *Pey rechaza ⇒ venta y productos borrados; push sin respuesta ⇒ cancelada con productos;*
-     - *la copia no cambia al editar o borrar el producto; webhook ⇒ pagada; antiforgery; aislamiento; sin sesión.*
-     - *682/682 verdes en local (411 en CI).*
-   - *Revisión con el MCP de Playwright (Edge) a 375, 768 y 1280 px, sin llamar a Pey. El sitio se arrancó con `Pey:ApiKey` en blanco, sin jobs y con un secreto de webhook de prueba, con un vendedor y 25 productos insertados por SQL.*
-     - *Agregar, contador en el catálogo, −/+, cantidad tecleada (`12a` ⇒ `12`), total y campos ocultos correctos; concepto automático, editado y «Usar texto automático»; concepto con `@` y celular vacío ⇒ errores en cliente sin POST.*
-     - *Búsqueda y paginación sin recargar. Recargar conserva el carrito.*
-     - *Envío ⇒ «No pudimos generar el QR…» (el log confirma que no salió la llamada) con el carrito rearmado y el panel abierto.*
-     - *Venta con carrito insertada por SQL: QR visible sin desplazarse, lista de productos; webhook firmado ⇒ «Pago recibido» sin recargar.*
-     - *El cobro por monto sigue igual con los parciales.*
-     - *Sin scroll horizontal, «Cobrar» activa, consola sin errores y sin respuestas ≥ 400.*
-     - *Se corrigió:*
-       - *la barra «Ver venta» se partía en varias líneas a 375 px;*
-       - *el campo de cantidad quedaba aplastado entre los botones (27 px);*
-       - *la barra tapaba la paginación al final de la página (alto real de 84 px);*
-       - *en escritorio el botón de cobrar quedaba fuera de la pantalla con varios productos (la columna ahora tiene su propio scroll).*
-   - *Pendientes:*
-     - *cobro real de $0.01 con carrito (QR y celular) y su webhook por el túnel (requiere confirmación);*
-     - *historial y recibo con productos (3.3).)*
-3. Detalle de venta con productos en historial y recibo.
+1. CRUD de productos con baja lógica, foto. ✅ *(hecho 2026-11-14; búsqueda asíncrona el mismo día)* — [bitácora](log_plan/fase-3.1-productos.md)
+2. Pantalla de venta con catálogo: búsqueda, agregar/quitar, cantidades, total → mismo flujo de QR. `SaleItems` guarda snapshot de precio. ✅ *(hecho 2026-11-14)* — [bitácora](log_plan/fase-3.2-carrito.md)
+3. Detalle de venta con productos en historial y recibo. ✅ *(hecho 2026-11-14, dentro de la 2.8)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 
 ### Fase 4 — Mi información (≈4 días)
 1. Datos generales: nombre, dirección, teléfono, email, logo y foto del local.
@@ -462,6 +190,36 @@ Cada fase termina con algo demostrable. Ventas va inmediatamente después del re
 Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx; declarar la IP o red del proxy en `ForwardedHeaders:KnownProxies`/`KnownNetworks`, o el sitio redirigirá con 307 lo que el proxy le entregue por HTTP) · prueba piloto con 3–5 vendedores.
 
 **Total estimado:** ≈10–11 semanas para una persona.
+
+---
+
+## Verificaciones pendientes
+
+Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitácora). Al cerrar uno: quitarlo de aquí y anotar el resultado en su bitácora.
+
+**Pruebas reales contra Pey** (producción, $0.01 y CLABE de prueba `012180015826225713`; requieren confirmación):
+- [2.2](log_plan/fase-2.2-cuenta-bancaria.md): alta real de la cuenta bancaria y una consulta real de «Verificar estatus».
+- [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): registrar la URL pública y el secreto en portal.mipey.mx; recibir un `bank.account.updated` real.
+- [2.4](log_plan/fase-2.4-venta-monto-directo.md): cobro real por QR escaneado con app bancaria; ver cómo muestra la app un concepto largo y si los acentos llegan al `qrString` (BOM de QRCode.js).
+- [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS; la venta 24 ($0.01) quedó pendiente de conciliar.
+- [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
+- [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
+
+**Confirmar con soporte de Pey** (ver también §6):
+- [2.4](log_plan/fase-2.4-venta-monto-directo.md): límite del `concept` y que `qrString` sea solo ASCII.
+- [2.5](log_plan/fase-2.5-tiempo-real.md): tolerancia del timestamp del webhook, política de reintentos y si un QR con monto acepta varios pagos.
+- [2.6](log_plan/fase-2.6-cobro-por-celular.md): qué responde si el celular no tiene CoDi (¿400 o 200 sin que llegue nada?) y si hay aviso de rechazo del pagador.
+
+**Revisión en navegador sin hacer** (no hay evidencia de una revisión posterior que la cubra):
+- [1.4](log_plan/fase-1.4-merchant-y-terminos.md): la validación en cliente bloquea el registro con la casilla de términos sin marcar.
+- [1.5](log_plan/fase-1.5-inicio-y-admin.md): Inicio del vendedor (`/app`) a 375 px.
+- [2.2](log_plan/fase-2.2-cuenta-bancaria.md): formulario de cuenta bancaria (validación de CLABE en cliente) y «Verificar estatus», a 375, 768 y 1280 px con el MCP de Playwright.
+
+**Otros**:
+- [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`).
+- [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta activada/rechazada (Notificaciones).
+- [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).
+- [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
 
 ---
 
