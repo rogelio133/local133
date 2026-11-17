@@ -33,7 +33,7 @@ public static class ForwardedHeadersSetup
 
             foreach (var network in networks)
             {
-                options.KnownNetworks.Add(Microsoft.AspNetCore.HttpOverrides.IPNetwork.Parse(network));
+                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
             }
         });
         return services;

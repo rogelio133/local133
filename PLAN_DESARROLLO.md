@@ -7,8 +7,8 @@ Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos)
 Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 
 **Decisiones confirmadas**
-- **ASP.NET Core 9 MVC** (vistas Razor + Bootstrap 5, móvil primero) en un solo proyecto web que también expone la API REST interna, el webhook y el hub SignalR; portal cliente y admin como áreas MVC. *(Cambio 2026-11-09: reemplaza la SPA React original.)*
-- **SQL Server** con EF Core 9.
+- **ASP.NET Core 10 MVC** (vistas Razor + Bootstrap 5, móvil primero) en un solo proyecto web que también expone la API REST interna, el webhook y el hub SignalR; portal cliente y admin como áreas MVC. *(Cambio 2026-11-09: reemplaza la SPA React original. Cambio 2026-11-16: de .NET 9 a .NET 10 LTS, [bitácora](log_plan/mantenimiento-net10.md).)*
+- **SQL Server** con EF Core 10.
 - Estado de cuenta semanal se paga con **QR CoDi hacia la cuenta de la plataforma**, conciliado por webhook; falta de pago ⇒ suspensión.
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
 
@@ -220,6 +220,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta activada/rechazada (Notificaciones).
 - [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).
 - [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
+- [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---
 
