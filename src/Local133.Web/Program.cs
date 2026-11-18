@@ -127,6 +127,10 @@ try
     // Rutas /api inexistentes: 404 ProblemDetails. Las demás rutas sin coincidencia caen en /error/404.
     app.MapFallback("api/{**slug}", () => Results.Problem(statusCode: StatusCodes.Status404NotFound));
 
+    // Migraciones pendientes de EF Core (Database:MigrateOnStartup=false lo apaga). Antes del admin (usa los roles
+    // sembrados por migración) y de Hangfire (la base debe existir).
+    await app.MigrateDatabaseAsync();
+
     // Admin desde Seed:Admin:Email/Password (si están configurados); idempotente.
     await app.SeedAdminAsync();
 

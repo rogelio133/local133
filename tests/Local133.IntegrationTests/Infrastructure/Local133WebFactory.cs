@@ -1,6 +1,7 @@
 using Local133.Application.Payments;
 using Local133.Application.Sales;
 using Local133.Infrastructure.Persistence;
+using Local133.Web.Hosting;
 using Local133.Web.Hubs;
 using Local133.Web.Identity;
 using Local133.Web.Jobs;
@@ -64,6 +65,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting(JobsSetup.EnabledKey, "false");
         // Sin watcher de Sass: cada factory levantaría su propio `sass --watch` sobre wwwroot/css.
         builder.UseSetting(Program.SassWatchKey, "false");
+        // Sin migraciones al arrancar el host: la fábrica migra su propia base en InitializeAsync.
+        builder.UseSetting(DatabaseMigrationSetup.MigrateOnStartupKey, "false");
         // Sin Resend aunque user-secrets traiga la llave: los correos se capturan en memoria (Emails).
         builder.UseSetting("Resend:ApiKey", "");
         // Los user-secrets de desarrollo también se cargan aquí: el admin solo se siembra si la prueba lo pide

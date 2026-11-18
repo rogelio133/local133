@@ -36,7 +36,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ## Por subfase
 
 ### Fase 0.1 / 0.2 — Solución y base de datos
-- Crear la base en Azure SQL y aplicar las migraciones en el pipeline (`dotnet ef database update` o un *migration bundle*), no al arrancar.
+- Crear la base en Azure SQL. Las migraciones las aplica el sitio al arrancar: ver «Mantenimiento 2026-11-18 — Migraciones al arrancar».
 - Serilog escribe en consola y en `logs/`: en App Service conviene la consola (Log Stream / Application Insights).
 
 ### Fase 1.1 – 1.5 — MVC, Identity, login externo, admin
@@ -104,3 +104,12 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Alerta recomendada en la base: «DTU percentage, promedio > 70 % durante 15 min».
 - Un `Execution Timeout Expired` aislado en el heartbeat de Hangfire durante un reinicio del contenedor (con la DTU < 5 %) no es saturación: Hangfire lo reintenta solo. Solo hay que revisarlo si se repite.
 - Sin cambios de código, migraciones ni secretos.
+
+### Mantenimiento 2026-11-18 — Migraciones al arrancar
+- El sitio aplica las migraciones pendientes de EF Core **al arrancar** (`Web/Hosting/DatabaseMigrationSetup`), antes de sembrar el admin y de programar los jobs. El pipeline ya no necesita `dotnet ef database update` ni un *migration bundle*.
+- **`Database__MigrateOnStartup`**: `true` por defecto. Ponerlo en `false` solo si las migraciones se vuelven a aplicar desde el pipeline.
+- **Permisos**: el usuario de `ConnectionStrings__Default` necesita DDL (`db_ddladmin`, además de `db_datareader`/`db_datawriter`). Hangfire ya lo exige.
+- **Varias instancias**: EF Core toma un candado de migración en SQL Server, así que solo una aplica los cambios y las demás esperan.
+- **Migraciones largas**: cada comando espera hasta 5 min. Si una migración rellena una tabla grande, revisar el tiempo máximo de arranque del contenedor (`WEBSITES_CONTAINER_START_TIME_LIMIT`, 230 s por defecto en Linux).
+- **Si una migración falla**, el sitio no arranca. El error aparece como `Fatal` («La aplicación terminó de forma inesperada») en el Log Stream. Al arrancar se registra «Aplicando N migraciones pendientes: …» o «Base de datos al día».
+- Sin recursos ni secretos nuevos.
