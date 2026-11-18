@@ -41,7 +41,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(s => s.ReceiptToken).IsUnique();
         // Historial del vendedor: sus ventas de la más reciente a la más antigua, filtradas por fecha.
         builder.HasIndex(s => new { s.MerchantId, s.CreatedAt });
-        // Job de expiración (pendientes con el QR vencido) y conciliación (sin pagar, por vencimiento).
+        // Job de expiración: pendientes con el QR vencido.
         builder.HasIndex(s => new { s.Status, s.ExpiresAt });
     }
 }

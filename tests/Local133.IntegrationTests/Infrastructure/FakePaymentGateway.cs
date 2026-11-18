@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Globalization;
 
 using Local133.Application.Payments;
 using Local133.Domain.Pey;
@@ -51,42 +50,8 @@ public sealed class FakePaymentGateway : IPaymentGateway
     /// <summary>Si no es <c>null</c>, el envío del push lanza esta excepción.</summary>
     public Exception? PushException { get; set; }
 
-    /// <summary>Pagos por IDC para <c>GET /transaction/codi/qr/{idc}</c>; un IDC sin entrada responde una lista vacía.</summary>
-    public ConcurrentDictionary<string, IReadOnlyList<GatewayTransaction>> CodiQrTransactions { get; } = new();
-
-    /// <summary>Pagos por página en <c>GET /transaction/codi/qr/{idc}</c> (Pey: 20).</summary>
-    public int CodiQrPageSize { get; set; } = 20;
-
-    /// <summary>Consultas de pagos de un QR: IDC y <c>nextToken</c>, en orden.</summary>
-    public ConcurrentQueue<(string CodiQrId, string? NextToken)> CodiQrTransactionLookups { get; } = new();
-
-    /// <summary>Transacciones para <c>GET /transaction/{id}</c>; un id sin entrada responde <c>NOT_FOUND</c>.</summary>
-    public ConcurrentDictionary<string, GatewayTransaction> Transactions { get; } = new();
-
-    /// <summary>Ids consultados con <c>GET /transaction/{id}</c>, en orden.</summary>
-    public ConcurrentQueue<string> TransactionLookups { get; } = new();
-
-    /// <summary>Excepción por IDC o id de transacción: la consulta de ese recurso la lanza.</summary>
-    public ConcurrentDictionary<string, Exception> TransactionLookupExceptions { get; } = new();
-
-    /// <summary>Transacción como la devuelve Pey (con la metadata que enviamos al cobrar).</summary>
-    public static GatewayTransaction Transaction(
-        string id, decimal amount, IReadOnlyDictionary<string, string?> external,
-        PeyTransactionStatus status = PeyTransactionStatus.Paid, DateTimeOffset? paidAt = null,
-        PeyPayableType payableType = PeyPayableType.ApiCodiQr) =>
-        new(id, status, amount, AmountBreakdown: null, "MXN", PeyPaymentMethod.Codi, payableType, PayableId: null,
-            "Tacos Don Ramón · 2 tacos al pastor", ApplicationFee: null, CreatedAt: paidAt ?? DateTimeOffset.UtcNow,
-            status == PeyTransactionStatus.Paid ? paidAt ?? DateTimeOffset.UtcNow : null,
-            new GatewayTransactionMetadata("000000000000000000", 40012, 40, null, "0192191044", external));
-
     public void Reset()
     {
-        CodiQrTransactions.Clear();
-        CodiQrPageSize = 20;
-        CodiQrTransactionLookups.Clear();
-        Transactions.Clear();
-        TransactionLookups.Clear();
-        TransactionLookupExceptions.Clear();
         CodiQrRequests.Clear();
         CodiQrException = null;
         PushRequests.Clear();
@@ -149,19 +114,8 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.FromResult(new CodiPushNotification($"01FAKEPN{sequence:D18}", $"{sequence:D20}"));
     }
 
-    public Task<GatewayTransaction> GetTransactionAsync(string transactionId, CancellationToken cancellationToken = default)
-    {
-        TransactionLookups.Enqueue(transactionId);
-        if (TransactionLookupExceptions.TryGetValue(transactionId, out var exception))
-        {
-            throw exception;
-        }
-
-        return Transactions.TryGetValue(transactionId, out var transaction)
-            ? Task.FromResult(transaction)
-            : throw new PaymentGatewayNotFoundException(
-                "Pey: transacción no encontrada.", PeyErrorType.NotFound, 404, "req_fake", "Transaction not found");
-    }
+    public Task<GatewayTransaction> GetTransactionAsync(string transactionId, CancellationToken cancellationToken = default) =>
+        throw NotConfigured();
 
     public Task<GatewayTransactionPage> GetApiKeyTransactionsAsync(string? nextToken = null, CancellationToken cancellationToken = default) =>
         throw NotConfigured();
@@ -169,22 +123,8 @@ public sealed class FakePaymentGateway : IPaymentGateway
     public Task<GatewayTransactionPage> GetBankAccountTransactionsAsync(string bankAccountId, string? nextToken = null, CancellationToken cancellationToken = default) =>
         throw NotConfigured();
 
-    public Task<GatewayTransactionPage> GetCodiQrTransactionsAsync(string codiQrId, string? nextToken = null, CancellationToken cancellationToken = default)
-    {
-        CodiQrTransactionLookups.Enqueue((codiQrId, nextToken));
-        if (TransactionLookupExceptions.TryGetValue(codiQrId, out var exception))
-        {
-            throw exception;
-        }
-
-        var all = CodiQrTransactions.TryGetValue(codiQrId, out var items) ? items : [];
-        var offset = nextToken is null ? 0 : int.Parse(nextToken, CultureInfo.InvariantCulture);
-        var page = all.Skip(offset).Take(CodiQrPageSize).ToList();
-        var next = offset + CodiQrPageSize < all.Count
-            ? (offset + CodiQrPageSize).ToString(CultureInfo.InvariantCulture)
-            : null;
-        return Task.FromResult(new GatewayTransactionPage(page, next));
-    }
+    public Task<GatewayTransactionPage> GetCodiQrTransactionsAsync(string codiQrId, string? nextToken = null, CancellationToken cancellationToken = default) =>
+        throw NotConfigured();
 
     private static NotSupportedException NotConfigured() => new("FakePaymentGateway: operación aún no simulada.");
 }

@@ -89,12 +89,6 @@ public partial class Sale : Entity
     public DateTimeOffset? CancelledAt { get; set; }
 
     /// <summary>
-    /// Última consulta a Pey de la conciliación (respaldo del webhook); <c>null</c> si nunca se consultó. Ver
-    /// <see cref="PaymentReconciliationSchedule"/>.
-    /// </summary>
-    public DateTimeOffset? PaymentCheckedAt { get; set; }
-
-    /// <summary>
     /// Token secreto de la liga pública del recibo (<c>/recibo/{token}</c>). Se genera al crear la venta; el recibo solo
     /// se muestra si la venta está pagada (<see cref="HasReceipt"/>).
     /// </summary>

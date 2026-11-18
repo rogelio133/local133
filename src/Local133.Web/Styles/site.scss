@@ -374,11 +374,3 @@ body {
     box-shadow: none;
   }
 }
-
-// --- Logo de las barras ----------------------------------------
-// img/local133-invertido.svg mide 973×740: se fija a ~32 px de alto para no hacer crecer la barra.
-.navbar-logo {
-  height: 2rem;
-  width: auto;
-  border-radius: .375rem;
-}

@@ -63,8 +63,6 @@ public static class DependencyInjection
         services.AddScoped<ISaleCharging, SaleCharging>();
         services.AddScoped<ISaleExpiration, SaleExpiration>();
         services.AddScoped<IPaymentRecorder, PaymentRecorder>();
-        // Respaldo del webhook: el job de conciliación pregunta a Pey por las ventas sin pagar.
-        services.AddScoped<IPaymentReconciliation, PaymentReconciliation>();
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
         services.AddScoped<IProductCatalog, ProductCatalog>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
@@ -73,7 +71,6 @@ public static class DependencyInjection
         // Jobs (Hangfire los activa desde DI; el sitio los programa si Jobs:Enabled).
         services.AddScoped<BankAccountPollingJob>();
         services.AddScoped<SaleExpirationJob>();
-        services.AddScoped<PaymentReconciliationJob>();
 
         return services;
     }
