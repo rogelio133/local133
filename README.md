@@ -49,7 +49,15 @@ dotnet run --project src/Local133.Web --launch-profile http
 | `/swagger` | Swagger (solo en Development) |
 | `/Identity/Account/Register`, `/Login`, `/ForgotPassword`, `/Manage` | Cuenta (ASP.NET Core Identity scaffoldeado, en español). Registro ⇒ rol `Merchant`; `/app` exige `Merchant` y `/admin` exige `Admin` |
 
-**Correos en desarrollo**: no se envían; `FileEmailSender` guarda cada uno como `.html` en `src/Local133.Web/App_Data/emails` (ignorada en git) y escribe la liga en el log. Ábrelo para confirmar la cuenta o restablecer la contraseña. Carpeta configurable con `EmailPickup:Directory`.
+**Correos**: sin `Resend:ApiKey` no se envían; `FileEmailSender` guarda cada uno como `.html` en `src/Local133.Web/App_Data/emails` (ignorada en git) y escribe la liga en el log. Ábrelo para confirmar la cuenta o restablecer la contraseña. Carpeta configurable con `EmailPickup:Directory`.
+
+Con una llave de **solo envío** de Resend se envían de verdad:
+
+```powershell
+dotnet user-secrets set "Resend:ApiKey" "<re_...>" --project src/Local133.Web
+```
+
+El remitente es `Email:From` (`appsettings.json`): `Local133 <hola@notificaciones.local133.com.mx>`, dominio verificado en Resend. Con la llave configurada los correos llegan de verdad: para probar sin escribirle a nadie, usa las direcciones de prueba de Resend (`delivered+<etiqueta>@resend.dev`). Para volver a guardarlos en disco: `dotnet user-secrets remove "Resend:ApiKey" --project src/Local133.Web`.
 
 **Login con Google / Facebook (opcional)**: los botones solo aparecen si hay credenciales en user-secrets (sin ellas el sitio funciona igual).
 

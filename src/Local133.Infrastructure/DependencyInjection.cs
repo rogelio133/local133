@@ -41,9 +41,8 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString, sql =>
                 sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
-        // Correo: en desarrollo se guarda en disco; el SMTP real llega con Notificaciones.
-        services.Configure<EmailPickupOptions>(configuration.GetSection(EmailPickupOptions.SectionName));
-        services.AddTransient<IEmailSender, FileEmailSender>();
+        // Correo: Resend si existe Resend:ApiKey (user-secrets / Key Vault); si no, se guarda en disco.
+        services.AddEmail(configuration);
 
         // Archivos (fotos de productos): disco local (Storage:LocalDirectory); en producción se cambia por blob.
         services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));

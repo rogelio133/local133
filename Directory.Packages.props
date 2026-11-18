@@ -16,6 +16,8 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.3" />
+    <!-- SDK oficial de Resend (correo). -->
+    <PackageVersion Include="Resend" Version="0.26.0" />
     <!-- Transitivas de CodeGeneration.Design (trae 6.12.1, vulnerable: GHSA-g4vj-cjjj-v7hg). Quitar cuando el scaffolder las suba. -->
     <PackageVersion Include="NuGet.Packaging" Version="6.12.5" />
     <PackageVersion Include="NuGet.Protocol" Version="6.12.5" />

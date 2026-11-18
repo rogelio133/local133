@@ -30,6 +30,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
 | `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8 | Fase 2.8 |
+| `Resend__ApiKey` | Referencia a Key Vault. Llave de **solo envío** restringida al dominio de envío. Sin ella los correos se guardan en disco y **no salen** | Mantenimiento 2026-11-17 |
+| `Email__From` | Opcional: `appsettings.json` ya trae `Local133 <hola@notificaciones.local133.com.mx>`. Si se cambia, debe ser de un dominio verificado en Resend | Mantenimiento 2026-11-17 |
 
 ## Por subfase
 
@@ -40,7 +42,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Fase 1.1 – 1.5 — MVC, Identity, login externo, admin
 - HTTPS obligatorio (cookie segura).
 - Registrar los callbacks de producción en Google y Facebook: `https://<dominio>/signin-google` y `https://<dominio>/signin-facebook`.
-- Correo: en desarrollo se usa `FileEmailSender`. Producción necesita SMTP o un servicio de correo (Notificaciones, pendiente).
+- Correo: ver «Mantenimiento 2026-11-17 — Correo con Resend».
 
 ### Fase 2.1 / 2.2 — PeyClient y cuenta bancaria
 - `Pey__ApiKey` va en Key Vault. La API key es una sola para todos los vendedores.
@@ -73,3 +75,11 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Ajustes de UI 2026-11-17 — Portada, header y pestañas de cobro
 - **`Home__RotatingWords__0`, `Home__RotatingWords__1`, …** (opcional): las palabras que rotan en el título de la portada. Por defecto vienen en `appsettings.json` (`local, puesto, tienda, kiosko, negocio, consultorio`). No son secretos: van en App Settings, sin Key Vault. Se sobrescriben **por índice**; para acortar la lista, poner en vacío los índices sobrantes (las vacías se ignoran). Máximo 10 palabras de 15 caracteres.
 - El resto (footer, header, placeholder, pestañas de `/app/cobrar`) es solo vista y estilos: sin recursos, migraciones ni secretos nuevos.
+
+### Mantenimiento 2026-11-17 — Correo con Resend
+- **Sin recursos de Azure nuevos**: el correo sale por la API de Resend (`https://api.resend.com`, HTTPS saliente desde el App Service; no usa SMTP).
+- **Dominio de envío**: `notificaciones.local133.com.mx`, ya verificado en Resend. Su DNS está en Akky (`ns*.akkyservicios.mx`): DKIM `resend._domainkey.notificaciones`, return path `send.notificaciones` (CNAME con MX y SPF) y DMARC `p=none` en `local133.com.mx`. No borrar esos registros. Después del piloto, considerar endurecer DMARC (`p=quarantine`) con un `rua` para recibir los reportes.
+- **Llave**: una de producción, de **solo envío** y restringida a `notificaciones.local133.com.mx`, en Key Vault (`Resend__ApiKey`). No reutilizar la de desarrollo ni una de acceso total.
+- **`Email__From`**: no hace falta, el valor de `appsettings.json` ya usa el dominio.
+- Las ligas de los correos de Identity se arman con el host de la petición: con dominio propio y `ForwardedHeaders__…` correctos salen con `https://<dominio>`.
+- Sin migraciones ni jobs nuevos.
