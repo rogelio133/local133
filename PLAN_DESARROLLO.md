@@ -163,7 +163,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`. ✅ *(hecho 2026-11-13)* — [bitácora](log_plan/fase-2.6-cobro-por-celular.md)
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
 8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp). ✅ *(hecho 2026-11-14, junto con la 3.3)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
-9. Job de conciliación (`GET /transaction/codi/qr/{idc}`) para ventas pendientes. ✅ *(hecho 2026-11-18; también cobros por celular con `GET /transaction/{id}`)* — [bitácora](log_plan/fase-2.9-conciliacion.md)
+9. Job de conciliación (`GET /transaction/codi/qr/{idc}`) para ventas pendientes.
 10. Bloqueo: solo vendedores `Active` pueden generar cobros.
 
 ### Fase 3 — Productos y carrito (≈1.5 semanas)
@@ -202,7 +202,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.2](log_plan/fase-2.2-cuenta-bancaria.md): alta real de la cuenta bancaria y una consulta real de «Verificar estatus».
 - [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): registrar la URL pública y el secreto en portal.mipey.mx; recibir un `bank.account.updated` real.
 - [2.4](log_plan/fase-2.4-venta-monto-directo.md): cobro real por QR escaneado con app bancaria; ver cómo muestra la app un concepto largo y si los acentos llegan al `qrString` (BOM de QRCode.js).
-- [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS. La venta 24 ya se concilió en la [2.9](log_plan/fase-2.9-conciliacion.md#conciliación-real-contra-pey-2026-11-18-confirmada-por-el-usuario).
+- [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS; la venta 24 ($0.01) quedó pendiente de conciliar.
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 
@@ -210,7 +210,6 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.4](log_plan/fase-2.4-venta-monto-directo.md): límite del `concept` y que `qrString` sea solo ASCII.
 - [2.5](log_plan/fase-2.5-tiempo-real.md): tolerancia del timestamp del webhook, política de reintentos y si un QR con monto acepta varios pagos.
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): qué responde si el celular no tiene CoDi (¿400 o 200 sin que llegue nada?) y si hay aviso de rechazo del pagador.
-- [2.9](log_plan/fase-2.9-conciliacion.md): límites de peticiones (la conciliación hace unas 4 consultas por venta no pagada).
 
 **Revisión en navegador sin hacer** (no hay evidencia de una revisión posterior que la cubra):
 - [1.4](log_plan/fase-1.4-merchant-y-terminos.md): la validación en cliente bloquea el registro con la casilla de términos sin marcar.
@@ -224,7 +223,6 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).
 - [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
 - [Correo con Resend](log_plan/mantenimiento-resend.md): restringir la llave a `notificaciones.local133.com.mx` en el panel de Resend (la API no cambia permisos), crear la de producción para Key Vault (ver `azure.md`) y repetir el correo real en un buzón propio con remitente `hola@` y liga que no sea `localhost` (túnel o producción); el primero llegó a spam. Decidir el buzón de las respuestas a `hola@` (el dominio no tiene MX).
-- [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

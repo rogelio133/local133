@@ -58,6 +58,5 @@ public static class JobsSetup
         var options = new RecurringJobOptions { TimeZone = MexicoCity };
         jobs.AddOrUpdate<BankAccountPollingJob>(BankAccountPollingJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), BankAccountPollingJob.Cron, options);
         jobs.AddOrUpdate<SaleExpirationJob>(SaleExpirationJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), SaleExpirationJob.Cron, options);
-        jobs.AddOrUpdate<PaymentReconciliationJob>(PaymentReconciliationJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), PaymentReconciliationJob.Cron, options);
     }
 }

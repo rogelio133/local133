@@ -8,7 +8,7 @@ Proyecto desde cero. La fuente de verdad es [PLAN_DESARROLLO.md](PLAN_DESARROLLO
 ## Stack
 - Backend: ASP.NET Core 10 **MVC** (vistas Razor + endpoints `/api`), EF Core 10 sobre **SQL Server local** (sin Docker), ASP.NET Core Identity con **UI scaffoldeada** (Razor Pages en `Areas/Identity`; cookie, roles `Merchant`/`Admin`, Google y Facebook), FluentValidation, Serilog, ProblemDetails, Swagger, SignalR, Hangfire (storage SQL Server), Polly, SkiaSharp (fotos; no ImageSharp: la 3.1 tiene vulnerabilidades y la 3.2 exige llave de licencia para compilar en Release).
 - Frontend: **MVC Razor + Bootstrap 5** en `src/Local133.Web` (áreas `Merchant` y `Admin`), móvil primero. Librerías cliente (Bootstrap, cliente JS de SignalR, jQuery Validation Unobtrusive) vía **LibMan** en `wwwroot/lib`: sin npm ni build de JS. QR CoDi dibujado **en el navegador con QRCode.js** (`wwwroot/lib/qrcodejs`, `wwwroot/js/sale-qr.js`) a partir de `qrString`; a Pey siempre se manda `generateImage: false`. Antiforgery en todos los formularios.
-- Estilos: Bootstrap compilado desde SCSS con **`AspNetCore.SassCompiler`** (dart-sass empacado, sin Node; `sasscompiler.json`: `Styles/site.scss` → `wwwroot/css/site.css`). Variables de marca en `Styles/_custom.scss`; estilos propios al final de `Styles/site.scss`. `wwwroot/css/site.css` es **generado** (build/publish; en Debug el watcher recompila al guardar, `Sass:Watch=false` lo apaga y las pruebas lo apagan): no editarlo ni versionarlo. El SCSS de Bootstrap (`twbs/bootstrap@v5.3.8` en LibMan, `Styles/vendor/bootstrap`) es de terceros: no se modifica, y su versión debe coincidir con `bootstrap.bundle.min.js`. Personalizar solo con variables Sass antes del import (sin CSS que pise clases de Bootstrap ni `!important`). `secondary` es el azul lona: para texto gris tenue usar `text-body-secondary`. Fuentes Bungee + Atkinson Hyperlegible desde Google Fonts (`Views/Shared/_Head.cshtml`). Íconos en `_Head`: `wwwroot/favicon.ico` (varios tamaños), `wwwroot/local133.svg` (vectorial) y `apple-touch-icon.png`; logo de las tres barras `wwwroot/img/local133-invertido.svg` (`.navbar-logo`, 2rem de alto), sin el texto «Local133» (va en el `alt`); en admin, logo + «Admin».
+- Estilos: Bootstrap compilado desde SCSS con **`AspNetCore.SassCompiler`** (dart-sass empacado, sin Node; `sasscompiler.json`: `Styles/site.scss` → `wwwroot/css/site.css`). Variables de marca en `Styles/_custom.scss`; estilos propios al final de `Styles/site.scss`. `wwwroot/css/site.css` es **generado** (build/publish; en Debug el watcher recompila al guardar, `Sass:Watch=false` lo apaga y las pruebas lo apagan): no editarlo ni versionarlo. El SCSS de Bootstrap (`twbs/bootstrap@v5.3.8` en LibMan, `Styles/vendor/bootstrap`) es de terceros: no se modifica, y su versión debe coincidir con `bootstrap.bundle.min.js`. Personalizar solo con variables Sass antes del import (sin CSS que pise clases de Bootstrap ni `!important`). `secondary` es el azul lona: para texto gris tenue usar `text-body-secondary`. Fuentes Bungee + Atkinson Hyperlegible desde Google Fonts (`Views/Shared/_Head.cshtml`).
 - Pruebas: xUnit, WebApplicationFactory, Respawn, WireMock.
 
 ## Estructura
@@ -90,7 +90,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
     - `bank.account.updated` ⇒ `ApplyWebhookAsync`;
     - links de pago ⇒ `Ignored` (fuera del MVP).
   - Payloads en `Infrastructure/Pey/PeyWebhookContracts.cs` (`datePaid` en segundos Unix). Nunca loguear el body (trae la CLABE del pagador).
-- Pagos: `IPaymentRecorder.RecordCodiPaymentAsync(ReceivedCodiPayment)` (Application/Payments; Infrastructure/Payments/PaymentRecorder) lo usan el webhook y la conciliación. `ReceivedCodiPayment.Channel` vale `Qr` o `PushNotification`.
+- Pagos: `IPaymentRecorder.RecordCodiPaymentAsync(ReceivedCodiPayment)` (Application/Payments; Infrastructure/Payments/PaymentRecorder) es reutilizable por la conciliación de 2.9. `ReceivedCodiPayment.Channel` vale `Qr` o `PushNotification`.
   - Es idempotente por `Payments.PeyTransactionId` (índice único).
   - Con `Qr` busca la venta por `Sales.PeyQrId` y luego por `saleId` de la metadata. Con `PushNotification` la busca por `Sales.PeyTransactionId` y luego por `saleId`; en el respaldo la venta debe ser un push sin transacción o con la misma, y si no tenía se le asigna.
   - Si el canal no coincide con `Sale.Method` o la metadata contradice a la venta ⇒ `Unmatched`. `kind` `statement`/`static` ⇒ `Ignored`.
@@ -108,23 +108,8 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - `/hubs` sin sesión responde 401 (no redirige), como `/api`.
 - Jobs (Hangfire 1.8, `Web/Jobs/JobsSetup`):
   - almacenamiento en la misma base, esquema `HangFire` (lo crea Hangfire, no EF), sin reintentos automáticos;
-  - jobs recurrentes en `America/Mexico_City`: `sondeo-cuentas-bancarias` (`*/30 * * * *`), `expirar-ventas` (cada minuto) y `conciliar-pagos` (cada minuto). Las clases van en `Infrastructure/Jobs` y se registran en DI;
-  - `Jobs:Enabled` vale `true` por defecto. Las pruebas lo apagan con `UseSetting` y llaman a los jobs directo. **Ojo**: con el sitio arriba, el sondeo llama a Pey real (`GET /bank-account/{id}`) para las cuentas en revisión de la base de desarrollo, y la conciliación también lo hace (`GET /transaction/…`) para las ventas sin pagar de las últimas 24 h.
-- **Conciliación de pagos** (respaldo del webhook, `Infrastructure/Jobs/PaymentReconciliationJob`):
-  - Calendario en `Domain/Sales/PaymentReconciliationSchedule.DueAt(now)`, una expresión que EF traduce (`IsDue` es para las pruebas). Se consulta una venta no pagada (también vencida o cancelada) con QR dinámico + `PeyQrId` o con push + `PeyTransactionId`:
-    - la primera vez 2 min después de crearse;
-    - cada 3 min mientras está vigente;
-    - una consulta final 10 min después de vencer;
-    - nunca si venció hace más de 24 h.
-
-    `Sales.PaymentCheckedAt` guarda la última consulta. Toma hasta 50 ventas por corrida, con un scope por venta.
-  - `IPaymentReconciliation.ReconcileSaleAsync(saleId)` (Application/Payments; Infrastructure/Payments/PaymentReconciliation):
-    - QR: `GET /transaction/codi/qr/{idc}`, con hasta 10 páginas. Push: `GET /transaction/{id}`;
-    - cada transacción `PAID` pasa por `IPaymentRecorder`, así que es idempotente frente al webhook;
-    - si Pey respondió, sella la consulta; un `NOT_FOUND` también sella;
-    - si falla (no disponible, otro error o falta la API key), no sella y reintenta en la siguiente corrida.
-  - El push sin transacción confirmada no se puede conciliar (falta el barrido por cuenta bancaria, pendiente).
-  - En pruebas, `FakePaymentGateway.CodiQrTransactions`/`Transactions` (+ `Transaction(...)`, `CodiQrPageSize`, `TransactionLookupExceptions`).
+  - jobs recurrentes en `America/Mexico_City`: `sondeo-cuentas-bancarias` (`*/30 * * * *`) y `expirar-ventas` (cada minuto). Las clases van en `Infrastructure/Jobs` y se registran en DI;
+  - `Jobs:Enabled` vale `true` por defecto. Las pruebas lo apagan con `UseSetting` y llaman a los jobs directo. **Ojo**: con el sitio arriba, el sondeo llama a Pey real (`GET /bank-account/{id}`) para las cuentas en revisión de la base de desarrollo.
 - Pruebas del sitio: `Local133WebFactory`:
   - reemplaza `IPaymentGateway` por `FakePaymentGateway` (`Factory.Gateway`: respuesta o excepción configurable, se restablece entre pruebas). Nunca se llama a Pey desde estas pruebas;
   - fija `Pey:WebhookSecret` (`Local133WebFactory.WebhookSecret`);
@@ -157,7 +142,7 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - `bank.account.updated` solo llega al pasar a `ACTIVE`; `ERROR` se detecta con **polling** (job cada 30 min a `GET /bank-account/{id}`).
 - **PeyClient** (`Infrastructure/Pey`, registrado con `AddPeyGateway`; contratos del OpenAPI `https://docs.pey.mx/openapi.json`): `HttpClient` tipado + `AddStandardResilienceHandler` (Polly v8), mapea `error.type` a las excepciones de `Application/Payments` (`PaymentGatewayValidationException`, `InvalidClabeException`, `…NotFound…`, `…Authentication…`, `…State…`, `…Unavailable…`) y loguea `requestId` (nunca bodies ni la API key). **Reintentos por método**: GET en cualquier falla transitoria; POST **solo en 503/429**: Pey no tiene llave de idempotencia y reintentar tras un 500 o un timeout podría duplicar un QR o un push. Reglas de Pey (`Domain/Pey/PeyLimits`) se validan antes de llamar (`ArgumentException`). Pruebas contra WireMock en `tests/Local133.IntegrationTests/Pey` (sin SQL Server, corren en CI).
 - Solo vendedores `Active` pueden generar cobros. Tiempo real por SignalR (grupo por vendedor, evento `PaymentReceived`) con respaldo de polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}` y `GET /transaction/{id}` para push), corte semanal lunes 00:05 `America/Mexico_City`, vencimiento/suspensión.
+- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}`), corte semanal lunes 00:05 `America/Mexico_City`, vencimiento/suspensión.
 - Archivos vía `IFileStorage` (disco en dev, blob en prod). CLABE enmascarada en UI. Cambios de comisión/estatus quedan en `AuditLogs`.
 
 ## Flujo de trabajo obligatorio

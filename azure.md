@@ -11,7 +11,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | Recurso | Para qué | Desde |
 |---|---|---|
 | App Service (.NET 10) | Sitio MVC, API `/api`, webhook de Pey, hub SignalR y jobs de Hangfire (en el mismo proceso) | Fase 0.1 / 1.1 |
-| Azure SQL Database | Base `Local133` (EF Core) y el esquema `HangFire` (lo crea Hangfire, no EF). Tier: ver «Mantenimiento 2026-11-18» | Fase 0.2 / 2.3 |
+| Azure SQL Database | Base `Local133` (EF Core) y el esquema `HangFire` (lo crea Hangfire, no EF) | Fase 0.2 / 2.3 |
 | Key Vault (recomendado) | API key y secreto del webhook de Pey, secretos OAuth, contraseña del admin sembrado | Fase 1.3 / 1.5 / 2.1 |
 | Blob Storage | Fotos de productos. Hoy es `LocalDiskFileStorage`; falta la implementación para blob (Fase 7) | Fase 3.1 |
 | Azure SignalR Service (opcional) | Solo si hay más de una instancia | Fase 2.5 |
@@ -26,7 +26,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `Seed__Admin__Email` / `Seed__Admin__Password` | Siembra idempotente del admin al arrancar | Fase 1.5 |
 | `Pey__ApiKey` | Referencia a Key Vault. Sin ella el sitio arranca, pero fallan las llamadas a Pey | Fase 2.1 |
 | `Pey__WebhookSecret` | `whsec_…`. Sin él el webhook responde 500 | Fase 2.3 |
-| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto) | Fase 2.3 / 2.5 / 2.9 |
+| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas cada minuto) | Fase 2.3 / 2.5 |
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
 | `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8 | Fase 2.8 |
@@ -50,10 +50,6 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Fase 2.3 — Webhook y sondeo
 - Registrar `https://<dominio>/api/webhooks/pey` y su secreto en portal.mipey.mx (un webhook por API key).
 - Hangfire usa la misma base (esquema `HangFire`). Con varias instancias, Hangfire reparte los jobs por la base sin duplicarlos.
-- **Esquema `HangFire`**: no es una migración de EF. Lo crea o actualiza Hangfire **al arrancar el sitio** (`PrepareSchemaIfNecessary`, por defecto `true`), siempre que `Jobs__Enabled` no sea `false`. Toma un candado (`sp_getapplock`), así que varias instancias que arrancan a la vez no chocan. En el Log Stream aparece `Start installing Hangfire SQL objects...` → `Hangfire SQL objects installed.`
-  - El usuario de `ConnectionStrings__Default` necesita permisos de DDL (`db_ddladmin`, además de `db_datareader`/`db_datawriter`). Sin ellos el sitio **no arranca**.
-  - Si el usuario de la app solo lee y escribe, hay que correr a mano, con un usuario admin, el script `Install.sql` de la versión de `Hangfire.SqlServer` que se despliega. Es un recurso incrustado en `Hangfire.SqlServer.dll` (`Hangfire.SqlServer.Install.sql`): se reemplaza `$(HangFireSchema)` por `HangFire` y se corre de una vez (es un solo bloque, sin `GO`, y se puede repetir). Con la 1.8.25 queda `HangFire.[Schema]` en la versión 9. **Al actualizar el paquete**, volver a correr el script de la versión nueva antes de desplegar.
-  - Verificar: `SELECT * FROM HangFire.[Schema];` en la base. En SSMS o en el Query editor, las tablas salen en *Tables* como `HangFire.Job`, `HangFire.Server`… (dar *Refresh* si ya estaba conectado).
 
 ### Fase 2.4 – 2.6 — Cobro, tiempo real, cobro por celular
 - SignalR (`/hubs/ventas`): activar **WebSockets** en App Service. Con más de una instancia, usar ARR affinity o Azure SignalR Service.
@@ -69,13 +65,6 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **`App__PublicBaseUrl`**: las ligas de recibo se comparten por WhatsApp y deben apuntar al dominio público y estable (dominio propio con certificado). Sin esta llave se arma la URL con el host de la petición, que en App Service puede ser `*.azurewebsites.net` (o un host interno detrás de un proxy, porque `X-Forwarded-Host` no se procesa). Una liga ya enviada deja de servir si cambia el dominio.
 - Recibo `/recibo/{token}`: es anónimo. Responde con `X-Robots-Tag: noindex` y `Cache-Control: private, no-store`; si hay CDN o Front Door delante, no cachear `/recibo/*`.
 - Sin recursos nuevos ni secretos nuevos.
-
-### Fase 2.9 — Conciliación de pagos
-- **Migración `SalePaymentCheck`**: agrega la columna nullable `Sales.PaymentCheckedAt`, sin relleno. Se aplica con el resto de migraciones.
-- **Job `conciliar-pagos`** (Hangfire, cada minuto, en el mismo proceso): se programa solo al arrancar si `Jobs__Enabled` no es `false`. Sin ventas por consultar solo hace una consulta ligera a la base (usa el índice `(Status, ExpiresAt)`), así que cabe en el tier de la base (ver «Mantenimiento 2026-11-18»).
-- **Llamadas a Pey**: unas 4 por venta que no se paga (a los 2, 5 y 8 min y una final 10 min después de vencer), y un máximo de 50 ventas por corrida. Las ventas pagadas por webhook no generan llamadas. Los límites de peticiones de Pey siguen por confirmar con soporte.
-- Usa la misma `Pey__ApiKey`: sin llaves de configuración ni secretos nuevos. Sin la API key, el job registra un warning por venta y no sella la consulta.
-- Si el sitio se detuvo, al volver el job alcanza a hacer la consulta final de las ventas que vencieron en las últimas 24 h.
 
 ### Mantenimiento 2026-11-16 — Migración a .NET 10
 - **Antes del próximo despliegue**, cambiar la pila del App Service (Linux) a **.NET 10**: Portal → *Configuración* → *Pila* `.NET 10 (LTS)`, o `az webapp config set -g local133 -n local133 --linux-fx-version "DOTNETCORE|10.0"`. Un paquete `net10.0` sobre la pila .NET 9 no arranca.
@@ -94,13 +83,3 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **`Email__From`**: no hace falta, el valor de `appsettings.json` ya usa el dominio.
 - Las ligas de los correos de Identity se arman con el host de la petición: con dominio propio y `ForwardedHeaders__…` correctos salen con `https://<dominio>`.
 - Sin migraciones ni jobs nuevos.
-
-### Mantenimiento 2026-11-18 — Tier de Azure SQL
-- **Medición** (24 h, sitio sin tráfico, Hangfire y jobs activos, plan Basic de 5 DTU): ~2.25 % de DTU en promedio, 3–4 % de máximo por hora y 1 % de los 2 GB. Picos de 27–80 % que duraron un minuto, por consultas manuales o reinicios.
-- **Pruebas: Basic** (5 DTU, 2 GB). Sobra margen.
-- **Piloto con vendedores reales: S0** (Standard, 10 DTU, 250 GB): más margen para el historial de ventas, el webhook y varios vendedores cobrando a la vez, y quita el límite de 2 GB (ventas, `WebhookEvents` e historial de Hangfire). Subir a **S1** (20 DTU) solo si el promedio pasa del 60–70 % por periodos largos.
-- **No usar serverless ni la oferta gratuita de Azure SQL**: Hangfire consulta la base sin parar (heartbeat y jobs cada minuto), así que la base nunca se pausa, se paga el mínimo de vCores las 24 h (más caro que S0) y la cuota gratuita se acaba en días.
-- Cambio de tier en línea (al final hay un corte de segundos): `az sql db update -g local133 -s local133server -n local133 --edition Standard --service-objective S0`.
-- Alerta recomendada en la base: «DTU percentage, promedio > 70 % durante 15 min».
-- Un `Execution Timeout Expired` aislado en el heartbeat de Hangfire durante un reinicio del contenedor (con la DTU < 5 %) no es saturación: Hangfire lo reintenta solo. Solo hay que revisarlo si se repite.
-- Sin cambios de código, migraciones ni secretos.
