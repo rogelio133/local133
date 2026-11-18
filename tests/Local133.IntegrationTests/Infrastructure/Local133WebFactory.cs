@@ -64,6 +64,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting(JobsSetup.EnabledKey, "false");
         // Sin watcher de Sass: cada factory levantaría su propio `sass --watch` sobre wwwroot/css.
         builder.UseSetting(Program.SassWatchKey, "false");
+        // Sin Resend aunque user-secrets traiga la llave: los correos se capturan en memoria (Emails).
+        builder.UseSetting("Resend:ApiKey", "");
         // Los user-secrets de desarrollo también se cargan aquí: el admin solo se siembra si la prueba lo pide
         // (fuente agregada al final, gana sobre user-secrets).
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -71,6 +73,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             [AdminSeeder.EmailKey] = "",
             [AdminSeeder.PasswordKey] = "",
             ["Pey:WebhookSecret"] = WebhookSecret,
+            ["Resend:ApiKey"] = "",
             // Fotos de productos en una carpeta temporal propia (se vacía entre pruebas y se borra al final).
             ["Storage:LocalDirectory"] = StorageDirectory,
         }));
