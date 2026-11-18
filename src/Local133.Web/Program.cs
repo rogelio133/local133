@@ -98,7 +98,7 @@ try
     {
         app.UseHsts();
     }
-    
+#if DEBUG
     app.UseForwardedHeaders();//para dev tunnel
 
 
@@ -112,7 +112,7 @@ try
         }
         return next();
     });
-
+#endif
     app.UseHttpsRedirection();
     app.UseRouting();
     app.UseAuthentication();
