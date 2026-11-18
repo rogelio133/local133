@@ -8,7 +8,9 @@
 <body class="d-flex flex-column site-layout">
     <nav class="navbar navbar-expand bg-primary sticky-top d-print-none" data-bs-theme="dark">
         <div class="container">
-            <a class="navbar-brand" href="~/">Local133</a>
+            <a class="navbar-brand d-flex align-items-center" href="~/">
+                <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
+            </a>
             <div class="navbar-nav ms-auto me-2">
                 @if (User.IsInRole(Roles.Merchant))
                 {
