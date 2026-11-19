@@ -114,7 +114,10 @@ internal sealed class PeyClient(HttpClient http, IOptions<PeyOptions> options, I
         var url = Required(response.Url, "url");
         return new CreatedPaymentLink(
             Required(response.Id, "id"),
-            Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri : throw new PaymentGatewayException("Respuesta inesperada de Pey: 'url' no es una URL absoluta."));
+            // Se exige http(s): en Linux "/relativa" sí es absoluta para Uri (file:///relativa).
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+                ? uri
+                : throw new PaymentGatewayException("Respuesta inesperada de Pey: 'url' no es una URL http(s) absoluta."));
     }
 
     public async Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default)
