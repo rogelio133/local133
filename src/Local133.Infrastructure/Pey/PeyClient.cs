@@ -99,6 +99,64 @@ internal sealed class PeyClient(HttpClient http, IOptions<PeyOptions> options, I
         return GetPageAsync($"transaction/codi/qr/{Uri.EscapeDataString(codiQrId)}", nextToken, cancellationToken);
     }
 
+    public async Task<CreatedPaymentLink> CreatePaymentLinkAsync(
+        CreatePaymentLinkRequest request, CancellationToken cancellationToken = default)
+    {
+        PeyRequestGuard.Validate(request);
+        var body = new PeyCreatePaymentLinkBody(
+            request.Amount,
+            request.SuccessUrl.AbsoluteUri,
+            request.BackUrl.AbsoluteUri,
+            request.HasTip,
+            request.ClientReferenceId,
+            request.Metadata);
+        var response = await SendAsync<PeyCreatePaymentLinkResponse>(HttpMethod.Post, "payment-link/create", body, cancellationToken);
+        var url = Required(response.Url, "url");
+        return new CreatedPaymentLink(
+            Required(response.Id, "id"),
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri : throw new PaymentGatewayException("Respuesta inesperada de Pey: 'url' no es una URL absoluta."));
+    }
+
+    public async Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default)
+    {
+        PeyRequestGuard.RequireId(paymentLinkId, nameof(paymentLinkId));
+        var response = await SendAsync<PeyPaymentLinkResponse>(
+            HttpMethod.Get, $"payment-link/{Uri.EscapeDataString(paymentLinkId)}", body: null, cancellationToken);
+        return new GatewayPaymentLink(
+            Required(response.Id, "id"),
+            Required(response.Amount, "amount"),
+            ParsePaymentLinkStatus(response.Status),
+            response.SuccessUrl,
+            response.BackUrl,
+            response.HasTip ?? false,
+            response.PaymentMethods ?? [],
+            FromUnix(response.DateCreated),
+            response.ClientReferenceId,
+            ToTextMap(response.Metadata),
+            (response.Transactions ?? []).Select(t => new GatewayPaymentLinkTransaction(
+                Required(t.TransactionId, "transactions.transactionId"),
+                t.PaymentMethod,
+                FromUnix(t.DatePaid),
+                Required(t.Amount, "transactions.amount"),
+                t.AmountBreakdown is { } b ? new GatewayAmountBreakdown(b.Base, b.Tip, b.Fee) : null,
+                t.ApplicationFee,
+                ToTextMap(t.Metadata))).ToList());
+    }
+
+    /// <summary>El estatus del link viaja en minúsculas; uno que no conocemos es una respuesta inesperada.</summary>
+    private static PeyPaymentLinkStatus ParsePaymentLinkStatus(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "pending" => PeyPaymentLinkStatus.Pending,
+        "processing" => PeyPaymentLinkStatus.Processing,
+        "paid" => PeyPaymentLinkStatus.Paid,
+        "partial" => PeyPaymentLinkStatus.Partial,
+        null or "" => throw MissingField("status"),
+        _ => throw new PaymentGatewayException($"Respuesta inesperada de Pey: estatus de link desconocido '{status}'."),
+    };
+
+    private static Dictionary<string, string?> ToTextMap(Dictionary<string, JsonElement>? metadata) =>
+        metadata?.ToDictionary(p => p.Key, p => PeyJson.ScalarToString(p.Value)) ?? [];
+
     private async Task<GatewayTransactionPage> GetPageAsync(string path, string? nextToken, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(nextToken))

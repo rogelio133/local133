@@ -79,8 +79,23 @@ public sealed class FakePaymentGateway : IPaymentGateway
             status == PeyTransactionStatus.Paid ? paidAt ?? DateTimeOffset.UtcNow : null,
             new GatewayTransactionMetadata("000000000000000000", 40012, 40, null, "0192191044", external));
 
+    /// <summary>Links de pago pedidos con <c>POST /payment-link/create</c>, en orden.</summary>
+    public ConcurrentQueue<CreatePaymentLinkRequest> PaymentLinkRequests { get; } = new();
+
+    /// <summary>Si no es <c>null</c>, la creación del link lanza esta excepción.</summary>
+    public Exception? PaymentLinkException { get; set; }
+
+    /// <summary>URL simulada de la página de pago del link con el id dado.</summary>
+    public static Uri PaymentLinkUrlFor(string id) => new($"https://pay.example.test/{id}");
+
+    /// <summary>Links para <c>GET /payment-link/{id}</c>; un id sin entrada responde <c>NOT_FOUND</c>.</summary>
+    public ConcurrentDictionary<string, GatewayPaymentLink> PaymentLinks { get; } = new();
+
     public void Reset()
     {
+        PaymentLinkRequests.Clear();
+        PaymentLinkException = null;
+        PaymentLinks.Clear();
         CodiQrTransactions.Clear();
         CodiQrPageSize = 20;
         CodiQrTransactionLookups.Clear();
@@ -185,6 +200,24 @@ public sealed class FakePaymentGateway : IPaymentGateway
             : null;
         return Task.FromResult(new GatewayTransactionPage(page, next));
     }
+
+    public Task<CreatedPaymentLink> CreatePaymentLinkAsync(CreatePaymentLinkRequest request, CancellationToken cancellationToken = default)
+    {
+        PaymentLinkRequests.Enqueue(request);
+        if (PaymentLinkException is { } exception)
+        {
+            throw exception;
+        }
+
+        var id = $"01FAKEPL{Interlocked.Increment(ref _sequence):D18}";
+        return Task.FromResult(new CreatedPaymentLink(id, PaymentLinkUrlFor(id)));
+    }
+
+    public Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default) =>
+        PaymentLinks.TryGetValue(paymentLinkId, out var link)
+            ? Task.FromResult(link)
+            : throw new PaymentGatewayNotFoundException(
+                "Pey: link no encontrado.", PeyErrorType.NotFound, 404, "req_fake", "Payment link not found");
 
     private static NotSupportedException NotConfigured() => new("FakePaymentGateway: operación aún no simulada.");
 }

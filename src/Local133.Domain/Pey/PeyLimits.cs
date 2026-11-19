@@ -27,4 +27,7 @@ public static class PeyLimits
 
     /// <summary>Longitud máxima de <c>alias</c> y <c>name</c> de la cuenta bancaria.</summary>
     public const int BankAccountTextMaxLength = 255;
+
+    /// <summary>Longitud máxima de <c>clientReferenceId</c> de un link de pago.</summary>
+    public const int MaxClientReferenceIdLength = 255;
 }

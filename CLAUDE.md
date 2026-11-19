@@ -66,6 +66,11 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - Resumen del día `DaySummaryQuery`: suma de `Payments.Amount` con `PaidAt` hoy en México, ventas distintas de esos pagos y pendientes vigentes. Va en Ventas y en Inicio (solo si el vendedor ya cobra).
   - Días y horas: `Domain/Common/MexicoTime` (`Today`, `DateOf`, `DayRange(desde, hasta)` con fin exclusivo en UTC); formatos en `SaleFormats` (hora con espacios de no separación).
   - Detalle `/app/ventas/{id}`: productos (`SaleItems`), pagos con clave de rastreo y comisión, «Ver QR» si espera pago y el recibo si está pagada. El concepto se muestra sin el negocio con `Sale.ConceptTextOf` (inverso de `BuildConcept`).
+- **Link de pago (PoC, solo Development)** (`/app/link-de-pago`, `PaymentLinkPocController`; sin liga en el menú: se entra por URL directa; bitácora `log_plan/poc-link-de-pago.md`):
+  - Lo reutilizable es `IPaymentGateway.CreatePaymentLinkAsync`/`GetPaymentLinkAsync` (`Application/Payments/PaymentLinks.cs`).
+  - Pey **no acepta `bankAccountId` ni concepto**: el dinero cae en la cuenta de la plataforma. El concepto va en `metadata.concept` y en `clientReferenceId`.
+  - `successUrl`/`backUrl` deben ser HTTPS: base de `PublicSiteOptions.BaseUrlFor`, así que en local se arranca con el perfil `https` o con túnel + `App:PublicBaseUrl`.
+  - Fuera de Development responde 404. No guarda nada en la base.
 - **Recibo público** (`GET /recibo/{token}`, `Web/Controllers/ReceiptsController`, anónimo):
   - `Sale.ReceiptToken` (32 hex, `RandomNumberGenerator`) se genera al crear la venta (toda venta nueva debe traerlo; la 2.7 también). Solo hay recibo si la venta está pagada (`Sale.HasReceipt`); si no, 404.
   - Busca con `IgnoreQueryFilters()` (quien abre la liga puede tener sesión de otro vendedor). Encabezados `noindex`, `no-referrer`, `no-store`; `ViewData["NoIndex"]` en `_Head`.

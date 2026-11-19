@@ -1,0 +1,70 @@
+@using Local133.Web.Areas.Merchant.Models
+@using Local133.Domain.Common
+@model PaymentLinkPocReturnViewModel
+@{
+    ViewData["Title"] = "Link de pago";
+    var today = MexicoTime.Today(DateTimeOffset.UtcNow);
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <h1 class="h4 mb-3">Link de pago</h1>
+
+        @if (Model.Result == "pagado")
+        {
+            <div class="alert alert-success" data-payment-link-result>Pey te regresó por la URL de pago exitoso.</div>
+        }
+        else if (Model.Result == "cancelado")
+        {
+            <div class="alert alert-secondary" data-payment-link-result>Pey te regresó por la URL de cancelar.</div>
+        }
+
+        @if (Model.LinkId is null)
+        {
+            <p class="text-body-secondary">No hay un link reciente en esta sesión.</p>
+        }
+        else if (Model.Error is { } error)
+        {
+            <div class="alert alert-danger" role="alert">No se pudo consultar el link @Model.LinkId: @error</div>
+        }
+        else if (Model.Link is { } link)
+        {
+            <dl class="row small mb-3" data-payment-link-details>
+                <dt class="col-5">Id</dt>
+                <dd class="col-7 text-break">@link.Id</dd>
+                <dt class="col-5">Estatus</dt>
+                <dd class="col-7"><span class="badge text-bg-light border">@link.Status</span></dd>
+                <dt class="col-5">Monto</dt>
+                <dd class="col-7">@SaleQrViewModel.FormatAmount(link.Amount)</dd>
+                <dt class="col-5">Medios de pago</dt>
+                <dd class="col-7">@(link.PaymentMethods.Count == 0 ? "—" : string.Join(", ", link.PaymentMethods))</dd>
+                <dt class="col-5">Referencia</dt>
+                <dd class="col-7 text-break">@(link.ClientReferenceId ?? "—")</dd>
+                <dt class="col-5">Creado</dt>
+                <dd class="col-7">@(link.CreatedAt is { } created ? SaleFormats.DateTime(created, today) : "—")</dd>
+            </dl>
+
+            <h2 class="h6">Pagos</h2>
+            @if (link.Transactions.Count == 0)
+            {
+                <p class="text-body-secondary small">Sin pagos.</p>
+            }
+            else
+            {
+                <ul class="list-group mb-3">
+                    @foreach (var tx in link.Transactions)
+                    {
+                        <li class="list-group-item small">
+                            <div class="d-flex justify-content-between gap-2">
+                                <span>@SaleQrViewModel.FormatAmount(tx.Amount) · @(tx.PaymentMethod ?? "—")</span>
+                                <span class="text-body-secondary">@(tx.PaidAt is { } paid ? SaleFormats.DateTime(paid, today) : "")</span>
+                            </div>
+                            <div class="text-body-secondary text-break">@tx.TransactionId</div>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+
+        <a class="btn btn-primary w-100" href="~/app/link-de-pago">Generar otro link</a>
+    </div>
+</div>

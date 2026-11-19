@@ -67,6 +67,28 @@ internal static class PeyRequestGuard
         ValidateCommon(request.NumRef, request.BankAccountId, request.Metadata);
     }
 
+    public static void Validate(CreatePaymentLinkRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.Amount), request.Amount, "El monto del link de pago debe ser mayor a 0.");
+        }
+
+        RequireCents(request.Amount, nameof(request.Amount));
+        RequireHttpsUrl(request.SuccessUrl, nameof(request.SuccessUrl));
+        RequireHttpsUrl(request.BackUrl, nameof(request.BackUrl));
+        if (request.ClientReferenceId is not null
+            && (string.IsNullOrWhiteSpace(request.ClientReferenceId) || request.ClientReferenceId.Length > PeyLimits.MaxClientReferenceIdLength))
+        {
+            throw new ArgumentException(
+                $"La referencia del link debe tener entre 1 y {PeyLimits.MaxClientReferenceIdLength} caracteres (o ir en null).",
+                nameof(request.ClientReferenceId));
+        }
+
+        ValidateMetadata(request.Metadata);
+    }
+
     public static void RequireId(string? id, string paramName)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -87,6 +109,11 @@ internal static class PeyRequestGuard
             throw new ArgumentException("El id de la cuenta bancaria no puede ir vacío (usa null para la cuenta de la plataforma).", nameof(bankAccountId));
         }
 
+        ValidateMetadata(metadata);
+    }
+
+    private static void ValidateMetadata(IReadOnlyDictionary<string, string>? metadata)
+    {
         if (metadata is null)
         {
             return;
@@ -124,6 +151,14 @@ internal static class PeyRequestGuard
         if (decimal.Round(amount, PeyLimits.AmountDecimals) != amount)
         {
             throw new ArgumentException($"El monto admite hasta {PeyLimits.AmountDecimals} decimales.", paramName);
+        }
+    }
+
+    private static void RequireHttpsUrl(Uri? url, string paramName)
+    {
+        if (url is null || !url.IsAbsoluteUri || url.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new ArgumentException("Pey exige una URL absoluta con HTTPS.", paramName);
         }
     }
 

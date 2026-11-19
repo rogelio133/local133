@@ -31,4 +31,13 @@ public enum PeyErrorType
     ServiceUnavailable,
     FlagsUnavailable,
     InternalServerError,
+
+    /// <summary>Links de pago: <c>successUrl</c>/<c>backUrl</c> inválidas (deben ser HTTPS).</summary>
+    InvalidUrl,
+
+    InvalidHasTip,
+    InvalidClientReferenceId,
+
+    /// <summary>Links de pago: solo se puede actualizar uno en <c>pending</c> (409).</summary>
+    PaymentLinkNotPending,
 }
