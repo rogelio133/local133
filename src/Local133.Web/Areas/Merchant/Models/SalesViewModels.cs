@@ -133,9 +133,6 @@ public static class SaleFormats
     public static string DateTime(DateTimeOffset instant, DateOnly today) =>
         $"{Date(MexicoTime.DateOf(instant), today)}, {Time(instant)}";
 
-    /// <summary>«3 %» / «2.5 %» (sin partirse entre renglones).</summary>
-    public static string Rate(decimal rate) => (rate * 100).ToString("0.##", Spanish) + " %";
-
     /// <summary>Fecha del filtro en la URL y en <c>input type=date</c>.</summary>
     public static string IsoDate(DateOnly day) => day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }
@@ -231,9 +228,8 @@ public sealed class SalesHistoryViewModel
     };
 }
 
-/// <summary>Pago de una venta tal como lo ve el vendedor (con la comisión que se le cobrará).</summary>
-public sealed record SalePaymentView(
-    string PaidAtText, string AmountText, string? TrackingKey, string CommissionRateText, string CommissionAmountText);
+/// <summary>Pago de una venta tal como lo ve el vendedor.</summary>
+public sealed record SalePaymentView(string PaidAtText, string AmountText, string? TrackingKey);
 
 /// <summary>Detalle de una venta (/app/ventas/{id}).</summary>
 public sealed record SaleDetailViewModel(

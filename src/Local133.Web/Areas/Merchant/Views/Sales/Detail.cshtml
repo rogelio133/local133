@@ -60,7 +60,7 @@
             <section class="card mb-3" aria-labelledby="receipt-title" data-sale-receipt>
                 <div class="card-body">
                     <h2 class="h6" id="receipt-title">Recibo para tu cliente</h2>
-                    <p class="small text-body-secondary">Una liga que tu cliente puede abrir sin cuenta. No muestra tu comisión ni tus datos bancarios.</p>
+                    <p class="small text-body-secondary">Una liga que tu cliente puede abrir sin cuenta. No muestra tus datos bancarios.</p>
                     <partial name="_ReceiptShare" model="receipt" />
                 </div>
             </section>
@@ -109,15 +109,14 @@
                                 <span>@payment.PaidAtText</span>
                                 <span class="fw-semibold text-nowrap">@payment.AmountText</span>
                             </div>
-                            <div class="small text-body-secondary d-flex justify-content-between flex-wrap column-gap-3">
-                                <span class="text-break">Clave de rastreo: <span data-payment-tracking>@(payment.TrackingKey ?? "—")</span></span>
-                                <span class="text-nowrap" data-payment-commission>Comisión @payment.CommissionRateText: @payment.CommissionAmountText</span>
+                            <div class="small text-body-secondary text-break">
+                                Clave de rastreo: <span data-payment-tracking>@(payment.TrackingKey ?? "—")</span>
                             </div>
                         </li>
                     }
                 </ul>
                 <div class="card-footer small text-body-secondary">
-                    El dinero llegó completo a tu cuenta. La comisión (más IVA) se cobra en tu estado de cuenta semanal.
+                    El dinero llegó completo a tu cuenta.
                 </div>
             }
         </section>

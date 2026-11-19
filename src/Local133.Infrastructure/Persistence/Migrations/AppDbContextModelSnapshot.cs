@@ -102,10 +102,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
-                    b.Property<decimal?>("CommissionRateOverride")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("decimal(5,4)");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -124,10 +120,7 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Merchants", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_Merchants_CommissionRateOverride", "[CommissionRateOverride] IS NULL OR ([CommissionRateOverride] >= 0 AND [CommissionRateOverride] < 1)");
-                        });
+                    b.ToTable("Merchants", (string)null);
                 });
 
             modelBuilder.Entity("Local133.Domain.Payments.Payment", b =>
@@ -141,14 +134,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("CommissionAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("CommissionRate")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("decimal(5,4)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -171,9 +156,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("StatementId")
-                        .HasColumnType("int");
-
                     b.Property<string>("TrackingKey")
                         .HasMaxLength(64)
                         .IsUnicode(false)
@@ -191,10 +173,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.ToTable("Payments", null, t =>
                         {
                             t.HasCheckConstraint("CK_Payments_Amount", "[Amount] > 0");
-
-                            t.HasCheckConstraint("CK_Payments_CommissionAmount", "[CommissionAmount] >= 0");
-
-                            t.HasCheckConstraint("CK_Payments_CommissionRate", "[CommissionRate] >= 0 AND [CommissionRate] < 1");
                         });
                 });
 
@@ -409,10 +387,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("CommissionRate")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("decimal(5,4)");
-
                     b.Property<int>("GraceDays")
                         .HasColumnType("int");
 
@@ -427,8 +401,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.ToTable("SystemSettings", null, t =>
                         {
-                            t.HasCheckConstraint("CK_SystemSettings_CommissionRate", "[CommissionRate] >= 0 AND [CommissionRate] < 1");
-
                             t.HasCheckConstraint("CK_SystemSettings_GraceDays", "[GraceDays] >= 0");
 
                             t.HasCheckConstraint("CK_SystemSettings_SaleQrExpirationSeconds", "[SaleQrExpirationSeconds] = 0 OR [SaleQrExpirationSeconds] >= 360");
@@ -440,8 +412,7 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 1,
-                            CommissionRate = 0.03m,
-                            GraceDays = 3,
+                            GraceDays = 5,
                             SaleQrExpirationSeconds = 600,
                             VatRate = 0.16m
                         });

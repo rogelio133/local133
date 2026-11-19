@@ -117,3 +117,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### PoC 2026-11-18 — Link de pago de Pey
 - Sin cambios para Azure: la prueba de concepto (`/app/link-de-pago`) responde 404 fuera de Development y no tiene liga en el menú.
 - Si el link de pago se implementa de verdad, `successUrl`/`backUrl` exigen HTTPS: fijar `App__PublicBaseUrl` con el dominio público. Antes hay que resolver con Pey cómo dirigir el dinero a la cuenta del vendedor, porque el link no acepta `bankAccountId`.
+
+### Fase 5.1 — Retiro del modelo de comisión
+- **Migración `RemoveCommission` destructiva**: borra `Merchants.CommissionRateOverride`, `Payments.CommissionRate`, `Payments.CommissionAmount`, `Payments.StatementId` y `SystemSettings.CommissionRate` (con sus check constraints) y pone `SystemSettings.GraceDays` en 5. Se aplica sola al arrancar (ver «Migraciones al arrancar»). Antes de publicar, confirmar que hay un punto de restauración reciente de Azure SQL (la restauración a un punto en el tiempo viene activa en todos los tiers). Solo se pierde la comisión calculada de los pagos de prueba, que nunca se cobró.
+- El `Down` de la migración regresa las columnas con valor 0, no con los datos originales: para volver atrás de verdad se restaura la base.
+- Sin recursos, App Settings ni secretos nuevos.

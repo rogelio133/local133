@@ -8,6 +8,6 @@ public static class LegalDocuments
 {
     public const int VersionMaxLength = 20;
 
-    public const string CurrentTermsVersion = "2026-11-10";
-    public const string CurrentPrivacyNoticeVersion = "2026-11-10";
+    public const string CurrentTermsVersion = "2026-11-18";
+    public const string CurrentPrivacyNoticeVersion = "2026-11-18";
 }

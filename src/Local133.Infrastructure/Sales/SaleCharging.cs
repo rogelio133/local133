@@ -168,9 +168,9 @@ internal sealed class SaleCharging(
             qr = await gateway.CreateCodiQrAsync(new CreateCodiQrRequest(
                 sale.Amount,
                 expirationSeconds,
+                charger.PeyBankAccountId,
                 sale.Concept,
                 sale.NumRef,
-                charger.PeyBankAccountId,
                 MetadataFor(sale)), cancellationToken);
         }
         catch (PaymentGatewayValidationException ex)
@@ -222,10 +222,10 @@ internal sealed class SaleCharging(
             push = await gateway.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(
                 sale.Amount,
                 sale.PhoneNumber!,
+                bankAccountId,
                 expirationSeconds,
                 sale.Concept,
                 sale.NumRef,
-                bankAccountId,
                 MetadataFor(sale)), CancellationToken.None);
         }
         catch (PaymentGatewayValidationException ex)

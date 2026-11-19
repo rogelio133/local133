@@ -2,7 +2,8 @@ namespace Local133.Application.Payments;
 
 /// <summary>
 /// Pasarela de cobro CoDi (hoy Pey). Una sola API key de la plataforma: cada cobro elige la cuenta destino
-/// con <c>BankAccountId</c>; sin él, el dinero cae en la cuenta de la plataforma (estados de cuenta).
+/// con <c>BankAccountId</c>, obligatorio en QR y push. Solo el link de pago (suscripción) cae en la cuenta de la
+/// plataforma, porque Pey no le acepta cuenta destino.
 /// </summary>
 /// <remarks>
 /// Errores: cualquier respuesta no exitosa se lanza como un <see cref="PaymentGatewayException"/> (ver sus

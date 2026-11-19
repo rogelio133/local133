@@ -94,7 +94,6 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
         var merchant = await db.Merchants.SingleAsync(m => m.UserId == user.Id);
 
         Assert.Equal(MerchantStatus.PendingBankAccount, merchant.Status);
-        Assert.Null(merchant.CommissionRateOverride);
         Assert.True(merchant.CreatedAt >= notBefore);
 
         Assert.NotNull(user.TermsAcceptedAt);

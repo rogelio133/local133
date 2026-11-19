@@ -10,6 +10,8 @@ namespace Local133.IntegrationTests.Pey;
 /// <summary>Contratos de <c>PeyClient</c> contra Pey simulado (cuerpos tomados del OpenAPI 2026-10-20).</summary>
 public sealed class PeyClientTests : IDisposable
 {
+    private const string Account = "01JBAV";
+
     private readonly PeyFixture _pey = new();
 
     public void Dispose() => _pey.Dispose();
@@ -79,16 +81,16 @@ public sealed class PeyClientTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateCodiQr_SinCuentaYMontoAbierto_OmiteCamposOpcionales()
+    public async Task CreateCodiQr_MontoAbierto_OmiteCamposOpcionales()
     {
         Respond("POST", "/codi/qr", 201, """{"id":"IDC1","qrString":"x"}""");
 
-        await _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(Amount: 0, ExpirationSeconds: PeyLimits.NoExpiration));
+        await _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(Amount: 0, ExpirationSeconds: PeyLimits.NoExpiration, BankAccountId: Account));
 
         var body = PeyFixture.BodyOf(_pey.SingleRequest());
         Assert.Equal(0, body.GetProperty("amount").GetDecimal());
         Assert.Equal(0, body.GetProperty("expiration").GetInt32());
-        Assert.False(body.TryGetProperty("bankAccountId", out _)); // sin cuenta ⇒ cae en la cuenta de la plataforma
+        Assert.Equal(Account, body.GetProperty("bankAccountId").GetString()); // siempre a la cuenta del vendedor
         Assert.False(body.TryGetProperty("numRef", out _));
         Assert.False(body.TryGetProperty("metadata", out _));
         Assert.False(body.TryGetProperty("concept", out _));
@@ -101,7 +103,7 @@ public sealed class PeyClientTests : IDisposable
         Respond("POST", "/codi/pn", 200, """{"transactionId":"01J5KXYZ1234567890ABCD","codiId":"12345678901234567890"}""");
 
         var push = await _pey.Gateway.CreateCodiPushNotificationAsync(
-            new CreateCodiPushNotificationRequest(0.01m, "5512345678", Concept: "Prueba", BankAccountId: "01JBAV"));
+            new CreateCodiPushNotificationRequest(0.01m, "5512345678", Account, Concept: "Prueba"));
 
         Assert.Equal(new CodiPushNotification("01J5KXYZ1234567890ABCD", "12345678901234567890"), push);
         var body = PeyFixture.BodyOf(_pey.SingleRequest());
@@ -340,7 +342,7 @@ public sealed class PeyClientTests : IDisposable
         Respond("POST", "/codi/qr", status, $$$"""{"error":{"message":"detalle de Pey","type":"{{{wireType}}}","requestId":"req-1"}}""");
 
         var ex = await Assert.ThrowsAnyAsync<PaymentGatewayException>(
-            () => _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600)));
+            () => _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account)));
 
         Assert.IsType(expected, ex);
         Assert.Equal(wireType, JsonNamingPolicy.SnakeCaseUpper.ConvertName(ex.ErrorType.ToString()));
@@ -414,7 +416,7 @@ public sealed class PeyClientTests : IDisposable
         Respond("POST", "/codi/pn", 500, """{"error":{"message":"Error creating CoDi push notification","type":"INTERNAL_SERVER_ERROR"}}""");
 
         await Assert.ThrowsAsync<PaymentGatewayUnavailableException>(() =>
-            _pey.Gateway.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(1, "5512345678")));
+            _pey.Gateway.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(1, "5512345678", Account)));
 
         Assert.Single(_pey.Requests); // un segundo intento podría mandar dos push al pagador
     }
@@ -429,7 +431,7 @@ public sealed class PeyClientTests : IDisposable
             .InScenario("post").WhenStateIs("ok")
             .RespondWith(Response.Create().WithStatusCode(201).WithBody("""{"id":"IDC","qrString":"x"}"""));
 
-        var qr = await _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600));
+        var qr = await _pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account));
 
         Assert.Equal("IDC", qr.Id);
         var requests = _pey.Requests;
@@ -445,7 +447,7 @@ public sealed class PeyClientTests : IDisposable
             .RespondWith(Response.Create().WithStatusCode(201).WithBody("""{"id":"IDC","qrString":"x"}""").WithDelay(TimeSpan.FromSeconds(1)));
 
         var ex = await Assert.ThrowsAsync<PaymentGatewayUnavailableException>(() =>
-            pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600)));
+            pey.Gateway.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account)));
 
         Assert.Null(ex.StatusCode);
         Assert.True(ex.IsTransient);
@@ -475,21 +477,25 @@ public sealed class PeyClientTests : IDisposable
 
     public static TheoryData<Func<IPaymentGateway, Task>> InvalidRequests => new()
     {
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, ExpirationSeconds: 100)),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(-1, 600)),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(1.005m, 600)),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, NumRef: 10_000_000)),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, ExpirationSeconds: 100, BankAccountId: Account)),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(-1, 600, Account)),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(1.005m, 600, Account)),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account, NumRef: 10_000_000)),
         g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, BankAccountId: " ")),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600,
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, BankAccountId: "")),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, BankAccountId: null!)),
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account,
             Metadata: Enumerable.Range(0, 51).ToDictionary(i => $"k{i}", i => "v"))),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600,
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account,
             Metadata: new Dictionary<string, string> { [new string('k', 41)] = "v" })),
-        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600,
+        g => g.CreateCodiQrAsync(new CreateCodiQrRequest(10, 600, Account,
             Metadata: new Dictionary<string, string> { ["k"] = new string('v', 501) })),
-        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "551234567")),
-        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(0, "5512345678")),
-        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(1_000_000.01m, "5512345678")),
-        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "5512345678", ExpirationSeconds: 0)),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "551234567", Account)),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(0, "5512345678", Account)),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(1_000_000.01m, "5512345678", Account)),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "5512345678", Account, ExpirationSeconds: 0)),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "5512345678", BankAccountId: "")),
+        g => g.CreateCodiPushNotificationAsync(new CreateCodiPushNotificationRequest(10, "5512345678", BankAccountId: null!)),
         g => g.RegisterBankAccountAsync(new RegisterBankAccountRequest("Alias", "Nombre", "01218001582622571", PeyEntity.Person)),
         g => g.RegisterBankAccountAsync(new RegisterBankAccountRequest(" ", "Nombre", "012180015826225713", PeyEntity.Person)),
         g => g.RegisterBankAccountAsync(new RegisterBankAccountRequest("Alias", new string('n', 256), "012180015826225713", PeyEntity.Business)),

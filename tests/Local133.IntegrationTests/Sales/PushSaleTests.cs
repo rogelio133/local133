@@ -267,8 +267,6 @@ public partial class PushSaleTests(Local133WebFactory factory) : SaleFlowTestBas
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(paidAt.ToUnixTimeSeconds()), payment.PaidAt);
         Assert.Equal("0192191043", payment.TrackingKey);
         Assert.Equal(40012, payment.PayerBankCode);
-        Assert.Equal(SystemSettings.DefaultCommissionRate, payment.CommissionRate);
-        Assert.Equal(4.50m, payment.CommissionAmount);
 
         Assert.Equal(SaleStatus.Paid, (await LoadSaleAsync(sale.Id)).Status);
         var webhook = Assert.Single(await WebhookEventsAsync());

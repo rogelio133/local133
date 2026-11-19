@@ -11,7 +11,7 @@ public enum WebhookEventStatus
     /// <summary>Procesado.</summary>
     Processed,
 
-    /// <summary>Válido pero sin acción (tipo sin manejador todavía, pago de un estado de cuenta…).</summary>
+    /// <summary>Válido pero sin acción (tipo sin manejador todavía, pago del QR fijo…).</summary>
     Ignored,
 
     /// <summary>No se pudo procesar (venta no encontrada, payload inválido); requiere revisión.</summary>

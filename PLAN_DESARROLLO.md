@@ -184,47 +184,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 ### Fase 5 — Suscripciones (≈5–6 semanas)
 *(Cambio 2026-11-18: reemplaza «Estados de cuenta y cobranza», que no se llegó a construir. Planes, reglas, datos y detalle de cada subfase en [actualizaciones/suscripciones_2026_11_18.md](actualizaciones/suscripciones_2026_11_18.md).)* La 5.1 y la 5.2 no dependen de la 2.7 ni de la Fase 4, así que se pueden adelantar.
 
-1. **Retirar el modelo de comisión** (≈1–1.5 días):
-   - **Dominio**:
-     - borrar [Commission.cs](src/Local133.Domain/Payments/Commission.cs);
-     - en [Payment.cs](src/Local133.Domain/Payments/Payment.cs), quitar `CommissionRate`, `CommissionAmount`, `StatementId` y el parámetro `commissionRate` de `Payment.Record`;
-     - en [Merchant.cs](src/Local133.Domain/Merchants/Merchant.cs), quitar `CommissionRateOverride`;
-     - en [SystemSettings.cs](src/Local133.Domain/Settings/SystemSettings.cs), quitar `CommissionRate` y `DefaultCommissionRate`. Se quedan `VatRate` (desglose del IVA incluido) y `GraceDays`, que pasa a ser la gracia de la suscripción, con 5 por defecto;
-     - quitar las menciones de estados de cuenta de los comentarios de `Suspended` en [MerchantStatus.cs](src/Local133.Domain/Merchants/MerchantStatus.cs) y de `Ignored` en [WebhookEvent.cs](src/Local133.Domain/Webhooks/WebhookEvent.cs).
-   - **Aplicación**:
-     - quitar `StatementKind` y `StatementIdKey` de [SaleMetadata.cs](src/Local133.Application/Sales/SaleMetadata.cs);
-     - corregir los comentarios que hablan de comisión o de estados de cuenta en [IPaymentGateway.cs](src/Local133.Application/Payments/IPaymentGateway.cs), [Codi.cs](src/Local133.Application/Payments/Codi.cs) y [RecordPayment.cs](src/Local133.Application/Payments/RecordPayment.cs);
-     - volver obligatorio `BankAccountId` en `CreateCodiQrRequest` y `CreateCodiPushNotificationRequest`, y validarlo en `PeyRequestGuard`: ningún QR ni push debe caer ya en la cuenta de la plataforma.
-   - **Infraestructura**:
-     - en [PaymentRecorder.cs](src/Local133.Infrastructure/Payments/PaymentRecorder.cs), quitar la lectura de `SystemSettings.CommissionRate`, `Commission.EffectiveRate`, la rama de `StatementKind` y la comisión del log;
-     - en [MerchantConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/MerchantConfiguration.cs), [PaymentConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/PaymentConfiguration.cs) y [SystemSettingsConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/SystemSettingsConfiguration.cs), quitar los check constraints y la precisión de la comisión. La semilla queda con `GraceDays = 5`.
-   - **Migración** `RemoveCommission`, nueva (las anteriores no se editan): borra `Merchants.CommissionRateOverride`, `Payments.CommissionRate`, `Payments.CommissionAmount`, `Payments.StatementId` y `SystemSettings.CommissionRate`, con sus check constraints, y pone `GraceDays` en 5. Se pierde la comisión calculada de los pagos de prueba, que nunca se cobró.
-   - **Web**:
-     - en [SalesController.cs](src/Local133.Web/Areas/Merchant/Controllers/SalesController.cs) y [SalesViewModels.cs](src/Local133.Web/Areas/Merchant/Models/SalesViewModels.cs), quitar la comisión de `SalePaymentView` y `SaleFormats.Rate`, que solo usa la comisión;
-     - en [Detail.cshtml](src/Local133.Web/Areas/Merchant/Views/Sales/Detail.cshtml), quitar `data-payment-commission`, el pie «La comisión (más IVA) se cobra en tu estado de cuenta semanal» y el «No muestra tu comisión» del recibo;
-     - cambiar los textos «Próximamente» de [Admin Index](src/Local133.Web/Areas/Admin/Views/Home/Index.cshtml), [Settings](src/Local133.Web/Areas/Admin/Views/Home/Settings.cshtml) y [More.cshtml](src/Local133.Web/Areas/Merchant/Views/Home/More.cshtml), que hablan de comisión y de estados de cuenta;
-     - corregir los comentarios de [ReceiptsController.cs](src/Local133.Web/Controllers/ReceiptsController.cs).
-   - **Textos legales**:
-     - en [Terms.cshtml](src/Local133.Web/Views/Home/Terms.cshtml), cambiar las secciones 3 y 4 (comisión y suspensión) por planes, prueba, gracia y baja al gratuito;
-     - en [PrivacyNotice.cshtml](src/Local133.Web/Views/Home/PrivacyNotice.cshtml), quitar comisiones y estados de cuenta;
-     - subir las dos versiones en [LegalDocuments.cs](src/Local133.Domain/Legal/LegalDocuments.cs).
-   - **Pruebas**:
-     - borrar [CommissionTests.cs](tests/Local133.UnitTests/Payments/CommissionTests.cs); lo que valida `Payment.Record` sin comisión pasa a un `PaymentTests`;
-     - en [PeyWebhookTests.cs](tests/Local133.IntegrationTests/Sales/PeyWebhookTests.cs), quitar las asserts de comisión, las pruebas `Aplica_la_comision_propia…` y `Cambiar_la_comision_global…`, el helper `SetGlobalCommissionAsync` y el caso `StatementKind`, y renombrar `Un_centavo_se_registra_con_comision_cero`;
-     - quitar las asserts de comisión de [PushSaleTests.cs](tests/Local133.IntegrationTests/Sales/PushSaleTests.cs), [PaymentReconciliationJobTests.cs](tests/Local133.IntegrationTests/Sales/PaymentReconciliationJobTests.cs) y [MerchantRegistrationTests.cs](tests/Local133.IntegrationTests/Identity/MerchantRegistrationTests.cs);
-     - en [SalesHistoryTests.cs](tests/Local133.IntegrationTests/Sales/SalesHistoryTests.cs), cambiar la assert de «Comisión 3 %» por una que compruebe que ya no aparece;
-     - ajustar [PeyClientTests.cs](tests/Local133.IntegrationTests/Pey/PeyClientTests.cs) al `bankAccountId` obligatorio.
-
-     `ReceiptTests` y el `SystemSettings` de `TablesToIgnore` no cambian.
-   - **Documentación**:
-     - CLAUDE.md: reglas de arquitectura de comisión y estados de cuenta, sección de pagos, orden de fases, pruebas exigidas y módulos fuera del MVP;
-     - [README.md](README.md): la fila semilla de `SystemSettings`;
-     - `azure.md`: la migración borra columnas;
-     - bitácora `log_plan/fase-5.1-retiro-comision.md`.
-   - **Verificación**:
-     - una búsqueda de `commission|comisi[oó]n|statement|estados? de cuenta` no encuentra nada fuera de migraciones y bitácoras. La excepción es «estado de cuenta del banco» en la ayuda de la CLABE, que es otra cosa;
-     - `dotnet build`, `dotnet ef migrations has-pending-model-changes` y `dotnet test`;
-     - Playwright a 375, 768 y 1280 px de `/app/ventas/{id}`, `/terminos`, `/aviso-de-privacidad`, `/app/mas` y `/admin`.
+1. **Retirar el modelo de comisión**: dominio, base (migración `RemoveCommission`), detalle de venta, textos legales, pruebas y docs; `bankAccountId` obligatorio en QR y push. ✅ *(hecho 2026-11-18)* — [bitácora](log_plan/fase-5.1-retiro-comision.md)
 2. **CLABE única**: se revisa antes de llamar a Pey, con índice único filtrado (`CodiStatus <> 'Error'`) y un mensaje para aclaraciones. La migración se detiene si hay CLABEs repetidas, y la de prueba lo está en las bases de desarrollo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#52-clabe-única)
 3. **Planes y vigencia**: estados `Onboarding`, `Trial`, `Pro`, `Grace` y `Free`, calculados con la historia de periodos; prueba de 30 días al activarse la cuenta; precios y parámetros en `SystemSettings`. La migración les da la prueba a los vendedores activos. — [detalle](actualizaciones/suscripciones_2026_11_18.md#53-planes-y-vigencia)
 4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
