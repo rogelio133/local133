@@ -491,3 +491,6 @@ App_Data/
 # CSS generado por AspNetCore.SassCompiler desde src/Local133.Web/Styles (se regenera en build y publish)
 src/Local133.Web/wwwroot/css/site.css
 src/Local133.Web/wwwroot/css/site.css.map
+# Igual para la portada (src/Local133.LandingPage/Styles)
+src/Local133.LandingPage/wwwroot/css/landing.css
+src/Local133.LandingPage/wwwroot/css/landing.css.map

@@ -21,8 +21,16 @@ public sealed class InMemoryEmailSender : IEmailSender
 
     public IReadOnlyList<SentEmail> Sent => _sent.ToList();
 
+    /// <summary>Si no es nula, cada envío lanza esta excepción (simula un proveedor caído). Se limpia con <see cref="Clear"/>.</summary>
+    public Exception? FailWith { get; set; }
+
     public Task SendEmailAsync(string email, string subject, string htmlMessage)
     {
+        if (FailWith is { } failure)
+        {
+            throw failure;
+        }
+
         _sent.Enqueue(new SentEmail(email, subject, htmlMessage));
         return Task.CompletedTask;
     }
@@ -31,5 +39,9 @@ public sealed class InMemoryEmailSender : IEmailSender
         Sent.LastOrDefault(e => string.Equals(e.To, to, StringComparison.OrdinalIgnoreCase))
         ?? throw new InvalidOperationException($"No se envió correo a {to}.");
 
-    public void Clear() => _sent.Clear();
+    public void Clear()
+    {
+        _sent.Clear();
+        FailWith = null;
+    }
 }

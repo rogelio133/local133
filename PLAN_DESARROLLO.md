@@ -10,6 +10,7 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 - **ASP.NET Core 10 MVC** (vistas Razor + Bootstrap 5, móvil primero) en un solo proyecto web que también expone la API REST interna, el webhook y el hub SignalR; portal cliente y admin como áreas MVC. *(Cambio 2026-11-09: reemplaza la SPA React original. Cambio 2026-11-16: de .NET 9 a .NET 10 LTS, [bitácora](log_plan/mantenimiento-net10.md).)*
 - **SQL Server** con EF Core 10.
 - **Correo con Resend** (SDK oficial .NET, HTML armado en el código, llave de solo envío). Sin `Resend:ApiKey` los correos se guardan en disco. *(Cambio 2026-11-17, [bitácora](log_plan/mantenimiento-resend.md).)*
+- **Correo «Tu cuenta ya está activa»** al pasar el vendedor a activo (alta, webhook, sondeo o botón), uno por vendedor, y layout de marca para todos los correos. *(Cambio 2026-11-18, [bitácora](log_plan/mantenimiento-correo-cuenta-activa.md).)*
 - La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
 - **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
@@ -260,7 +261,8 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 
 **Otros**:
 - [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`).
-- [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta activada/rechazada (Notificaciones).
+- [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta **rechazada** (Notificaciones). El de cuenta activada ya está hecho ([bitácora](log_plan/mantenimiento-correo-cuenta-activa.md)).
+- [Correo de cuenta activa](log_plan/mantenimiento-correo-cuenta-activa.md): verlo en buzones reales (Gmail en Android y en web, Outlook, modo oscuro), con túnel + `App:PublicBaseUrl` o desde producción, porque el logo no carga desde `localhost`. Requiere confirmación para el envío real.
 - [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).
 - [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
 - [Correo con Resend](log_plan/mantenimiento-resend.md): restringir la llave a `notificaciones.local133.com.mx` en el panel de Resend (la API no cambia permisos), crear la de producción para Key Vault (ver `azure.md`) y repetir el correo real en un buzón propio con remitente `hola@` y liga que no sea `localhost` (túnel o producción); el primero llegó a spam. Decidir el buzón de las respuestas a `hola@` (el dominio no tiene MX).

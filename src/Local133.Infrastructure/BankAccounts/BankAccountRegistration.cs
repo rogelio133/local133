@@ -2,6 +2,7 @@ using FluentValidation;
 using Local133.Application.BankAccounts;
 using Local133.Application.Payments;
 using Local133.Domain.BankAccounts;
+using Local133.Domain.Merchants;
 using Local133.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@ internal sealed class BankAccountRegistration(
     AppDbContext db,
     IPaymentGateway gateway,
     IValidator<RegisterBankAccountCommand> validator,
+    IBankAccountActivationNotifier activationNotifier,
     TimeProvider clock,
     ILogger<BankAccountRegistration> logger) : IBankAccountRegistration
 {
@@ -97,7 +99,7 @@ internal sealed class BankAccountRegistration(
             current.Resubmit(holderName, clabe, alias, command.Entity, registered.Id, registered.CodiStatus, now);
         }
 
-        merchant.ApplyBankAccountStatus(registered.CodiStatus);
+        var activated = merchant.ApplyBankAccountStatus(registered.CodiStatus) && merchant.Status == MerchantStatus.Active;
         if (string.IsNullOrWhiteSpace(merchant.BusinessName))
         {
             merchant.BusinessName = alias;
@@ -117,6 +119,12 @@ internal sealed class BankAccountRegistration(
 
         logger.LogInformation("Vendedor {MerchantId} registró la CLABE {Clabe} en Pey ({PeyBankAccountId}, {CodiStatus})",
             merchant.Id, Clabe.Mask(clabe), registered.Id, registered.CodiStatus);
+        if (activated)
+        {
+            // Pey la activó en el alta (p. ej. la CLABE de prueba): el mismo aviso que con el webhook o el sondeo.
+            await activationNotifier.NotifyActivatedAsync(merchant.Id, cancellationToken);
+        }
+
         return new RegisterBankAccountResult.Submitted(registered.CodiStatus);
     }
 
