@@ -32,15 +32,30 @@ public partial class FileEmailSender(
 
         var fileName = $"{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}_{Sanitize(email)}_{Sanitize(subject)}.html";
         var path = Path.Combine(directory, fileName);
-        var document = $"""
-            <!DOCTYPE html>
-            <html lang="es-MX"><head><meta charset="utf-8"><title>{System.Net.WebUtility.HtmlEncode(subject)}</title></head>
-            <body><p><strong>Para:</strong> {System.Net.WebUtility.HtmlEncode(email)}<br><strong>Asunto:</strong> {System.Net.WebUtility.HtmlEncode(subject)}</p><hr>{htmlMessage}</body></html>
-            """;
-        await File.WriteAllTextAsync(path, document);
+        await File.WriteAllTextAsync(path, Document(email, subject, htmlMessage));
 
         var link = HrefRegex().Match(htmlMessage) is { Success: true } m ? System.Net.WebUtility.HtmlDecode(m.Groups[1].Value) : null;
         logger.LogInformation("Correo guardado en {Path} · Para {Email} · {Subject} · Liga: {Link}", path, email, subject, link);
+    }
+
+    /// <summary>
+    /// Documento guardado: el correo con una franja «Para / Asunto» arriba. Si el correo ya es un documento completo
+    /// (<see cref="EmailLayout"/>), la franja va justo después de su <c>&lt;body&gt;</c>; si es un fragmento, se envuelve.
+    /// </summary>
+    public static string Document(string email, string subject, string htmlMessage)
+    {
+        var header = $"""<p style="margin:0;padding:8px 12px;font:14px/1.4 Arial,sans-serif;background:#FFFFFF;border-bottom:1px solid #DDDDDD;"><strong>Para:</strong> {System.Net.WebUtility.HtmlEncode(email)}<br><strong>Asunto:</strong> {System.Net.WebUtility.HtmlEncode(subject)}</p>""";
+        if (BodyTagRegex().Match(htmlMessage) is { Success: true } body)
+        {
+            var at = body.Index + body.Length;
+            return string.Concat(htmlMessage.AsSpan(0, at), header, htmlMessage.AsSpan(at));
+        }
+
+        return $"""
+            <!DOCTYPE html>
+            <html lang="es-MX"><head><meta charset="utf-8"><title>{System.Net.WebUtility.HtmlEncode(subject)}</title></head>
+            <body>{header}<hr>{htmlMessage}</body></html>
+            """;
     }
 
     private static string Sanitize(string value)
@@ -51,4 +66,7 @@ public partial class FileEmailSender(
 
     [GeneratedRegex("href=[\"']([^\"']+)[\"']", RegexOptions.IgnoreCase)]
     private static partial Regex HrefRegex();
+
+    [GeneratedRegex("<body[^>]*>", RegexOptions.IgnoreCase)]
+    private static partial Regex BodyTagRegex();
 }

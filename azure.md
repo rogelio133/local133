@@ -15,6 +15,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | Key Vault (recomendado) | API key y secreto del webhook de Pey, secretos OAuth, contraseña del admin sembrado | Fase 1.3 / 1.5 / 2.1 |
 | Blob Storage | Fotos de productos. Hoy es `LocalDiskFileStorage`; falta la implementación para blob (Fase 7) | Fase 3.1 |
 | Azure SignalR Service (opcional) | Solo si hay más de una instancia | Fase 2.5 |
+| App Service de la portada (.NET 10) | `Local133.LandingPage` en `local133.com.mx`: sin base, sin secretos, sin jobs. Puede compartir el App Service Plan del portal | Portada 2026-11-18 |
 
 ## Configuración (App Settings)
 
@@ -29,7 +30,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto) | Fase 2.3 / 2.5 / 2.9 |
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
-| `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8 | Fase 2.8 |
+| `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale | Fase 2.8 · Correo de cuenta activa 2026-11-18 |
 | `Resend__ApiKey` | Referencia a Key Vault. Llave de **solo envío** restringida al dominio de envío. Sin ella los correos se guardan en disco y **no salen** | Mantenimiento 2026-11-17 |
 | `Email__From` | Opcional: `appsettings.json` ya trae `Local133 <hola@notificaciones.local133.com.mx>`. Si se cambia, debe ser de un dominio verificado en Resend | Mantenimiento 2026-11-17 |
 
@@ -122,3 +123,22 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Migración `RemoveCommission` destructiva**: borra `Merchants.CommissionRateOverride`, `Payments.CommissionRate`, `Payments.CommissionAmount`, `Payments.StatementId` y `SystemSettings.CommissionRate` (con sus check constraints) y pone `SystemSettings.GraceDays` en 5. Se aplica sola al arrancar (ver «Migraciones al arrancar»). Antes de publicar, confirmar que hay un punto de restauración reciente de Azure SQL (la restauración a un punto en el tiempo viene activa en todos los tiers). Solo se pierde la comisión calculada de los pagos de prueba, que nunca se cobró.
 - El `Down` de la migración regresa las columnas con valor 0, no con los datos originales: para volver atrás de verdad se restaura la base.
 - Sin recursos, App Settings ni secretos nuevos.
+
+### Portada 2026-11-18 — Proyecto `Local133.LandingPage`
+- **Sitio aparte**: `dotnet publish src/Local133.LandingPage -c Release -o <carpeta>` a su propio App Service (puede ir en el mismo App Service Plan que el portal, sin costo extra). No usa base, Key Vault, Hangfire ni SignalR.
+- **Dominios**: la portada en `local133.com.mx` (y `www`, redirigido a la raíz) y el portal en `app.local133.com.mx`. DNS en Akky: para la raíz, registro A + TXT `asuid` de verificación de App Service; para `www` y `app`, CNAME a `<app>.azurewebsites.net` + TXT `asuid.<sub>`. Certificado administrado gratuito de App Service en cada dominio.
+- **Mover el portal a `app.local133.com.mx`** obliga a actualizar: `App__PublicBaseUrl` (ligas de recibos y correos), las URIs de redirección de Google (`https://app.local133.com.mx/signin-google`) y Facebook (`/signin-facebook`), y la URL del webhook en portal.mipey.mx (`https://app.local133.com.mx/api/webhooks/pey`).
+- **App Settings de la portada** (no son secretos):
+
+  | Llave | Notas |
+  |---|---|
+  | `Landing__AppUrl` | Destino del botón «Empieza a cobrar». `appsettings.json` ya trae `https://app.local133.com.mx` |
+  | `Home__RotatingWords__0`… | Opcional: sobrescribe por índice las palabras que rotan (mismas reglas que el portal; `""` acorta la lista) |
+  | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `true`: la portada no configura forwarded headers en código; sin esto `UseHttpsRedirection` no ve el `https` del front-end de App Service y redirige en ciclo |
+- Activar «HTTPS Only» en el App Service de la portada.
+
+### Mantenimiento 2026-11-18 — Correo de cuenta activa y layout de correos
+- **`App__PublicBaseUrl` pasa a ser obligatoria**: el correo «Tu cuenta ya está activa» sale del webhook y del job de sondeo, que no tienen petición HTTP, así que la liga del botón (`/app/cobrar`) y el logo salen de esa llave. Fuera de Development, sin ella el correo **no se manda** (queda un error en el log). Si el portal se muda a `app.local133.com.mx`, cambiarla también por esto.
+- **Logo de los correos**: `wwwroot/img/email/local133-email-logo.png` debe servirse por HTTPS, público y sin autenticación (los archivos estáticos ya lo son). Gmail y Outlook lo descargan con su proxy desde `App__PublicBaseUrl`: un dominio interno o `localhost` no les sirve.
+- **Migración `MerchantActivationEmail`** (agrega `Merchants.ActivationEmailSentAt`, nula, no destructiva). Se aplica sola al arrancar.
+- Sin recursos ni secretos nuevos. El envío sigue por Resend (`Resend__ApiKey`).

@@ -38,6 +38,9 @@ Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM Syst
 ```powershell
 # Sitio en http://localhost:5231
 dotnet run --project src/Local133.Web --launch-profile http
+
+# Portada pública (local133.com.mx) en http://localhost:5241; su botón apunta al sitio local
+dotnet run --project src/Local133.LandingPage
 ```
 
 | URL | Qué es |

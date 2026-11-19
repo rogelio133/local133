@@ -16,6 +16,7 @@ namespace Local133.Infrastructure.BankAccounts;
 internal sealed class BankAccountStatusSync(
     AppDbContext db,
     IPaymentGateway gateway,
+    IBankAccountActivationNotifier activationNotifier,
     TimeProvider clock,
     ILogger<BankAccountStatusSync> logger) : IBankAccountStatusSync
 {
@@ -112,6 +113,12 @@ internal sealed class BankAccountStatusSync(
         {
             logger.LogInformation("Cuenta {Clabe} ({PeyBankAccountId}) del vendedor {MerchantId} ({Source}): {Previous} → {Current}; vendedor {MerchantStatus}",
                 Clabe.Mask(account.Clabe), account.PeyBankAccountId, merchant.Id, source, previous, account.CodiStatus, merchant.Status);
+        }
+
+        if (merchantChanged && merchant.Status == MerchantStatus.Active)
+        {
+            // Después de guardar: el aviso tiene su propio candado (un correo por vendedor) y nunca lanza.
+            await activationNotifier.NotifyActivatedAsync(merchant.Id, cancellationToken);
         }
 
         return new BankAccountStatusSyncResult.Synced(previous, account.CodiStatus, merchant.Status, changed);

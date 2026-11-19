@@ -31,41 +31,8 @@ body {
   max-width: 12rem;
 }
 
-/* Portada: la última palabra del título se borra y se tipea letra por letra (rotating-word.js). Va en su propia línea,
-   centrada: al cambiar de largo no mueve el resto del título ni cambia el número de líneas (máximo 15 caracteres,
-   caben a 375 px). */
-.rotating-word {
-  display: block;
-  white-space: nowrap;
-}
-
-/* Cursor de tipeo: fijo mientras escribe o borra, parpadea en la pausa. Al ser inline-block también sostiene el alto
-   de la línea cuando la palabra queda vacía (el título no salta). */
-.rotating-word.is-typing::after {
-  display: inline-block;
-  width: 0.12em; /* grueso como el trazo de Bungee */
-  height: 0.9em;
-  margin-left: 0.06em;
-  vertical-align: -0.05em;
-  content: "";
-  background-color: currentColor;
-}
-
-.rotating-word.is-paused::after {
-  animation: rotating-word-caret 1s steps(1) infinite;
-}
-
-@keyframes rotating-word-caret {
-  50% {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rotating-word.is-paused::after {
-    animation: none;
-  }
-}
+/* Portada (también la usa Local133.LandingPage). */
+@import "rotating-word";
 
 .tabbar {
   height: calc(var(--tabbar-height) + env(safe-area-inset-bottom));

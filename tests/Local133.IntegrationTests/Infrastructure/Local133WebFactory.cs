@@ -77,6 +77,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             [AdminSeeder.PasswordKey] = "",
             ["Pey:WebhookSecret"] = WebhookSecret,
             ["Resend:ApiKey"] = "",
+            // Sin dominio público aunque user-secrets traiga uno: las ligas salen del host de la petición y las de los
+            // correos de jobs/webhooks, del respaldo de desarrollo (SiteUrlOptions.DevelopmentFallbackBaseUrl).
+            ["App:PublicBaseUrl"] = "",
             // Fotos de productos en una carpeta temporal propia (se vacía entre pruebas y se borra al final).
             ["Storage:LocalDirectory"] = StorageDirectory,
         }));

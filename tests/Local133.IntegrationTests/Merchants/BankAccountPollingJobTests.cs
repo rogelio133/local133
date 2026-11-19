@@ -39,6 +39,28 @@ public class BankAccountPollingJobTests(Local133WebFactory factory) : WebTestBas
             Assert.Equal(PeyCodiStatus.Active, account.CodiStatus);
             Assert.True(account.StatusCheckedAt >= now.AddSeconds(-1));
         }
+
+        // Un correo por cada vendedor que pasó a activo; ninguno al que ya lo estaba ni al rechazado.
+        Assert.Equal(["a@prueba.mx", "b@prueba.mx", "c@prueba.mx"], ActivationEmails().Select(e => e.To).Order().ToArray());
+        Assert.All(ActivationEmails(), e => Assert.Equal(ActivationEmailLink, e.Link));
+
+        // La siguiente corrida ya no las consulta (están activas) y no repite correos.
+        Assert.Equal(0, await RunJobAsync());
+        Assert.Equal(3, ActivationEmails().Count);
+    }
+
+    [Theory]
+    [InlineData(PeyCodiStatus.Pending)]
+    [InlineData(PeyCodiStatus.Processing)]
+    [InlineData(PeyCodiStatus.Error)]
+    public async Task Sin_activacion_no_hay_correo(PeyCodiStatus lookup)
+    {
+        await AccountAsync("a@prueba.mx", PeyCodiStatus.Pending, checkedAt: null);
+        Factory.Gateway.LookupStatus = lookup;
+
+        await RunJobAsync();
+
+        Assert.Empty(ActivationEmails());
     }
 
     [Fact]

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Portada pública (local133.com.mx). Sitio aparte del portal (Local133.Web, app.local133.com.mx): no lo referencia.
+       Marca (SCSS) y limpieza de las palabras se comparten por enlace. Logo, íconos y rotating-word.js son copias
+       de Local133.Web/wwwroot (los static web assets no sirven archivos enlazados); SharedAssetsTests falla si difieren. -->
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.SassCompiler" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Limpieza de Home:RotatingWords (máximo de palabras y de caracteres que la CSS asume). -->
+    <Compile Include="..\Local133.Web\Hosting\HomeHeroOptions.cs" Link="Hosting\HomeHeroOptions.cs" />
+  </ItemGroup>
+
+</Project>

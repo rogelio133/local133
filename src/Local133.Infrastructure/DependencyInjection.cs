@@ -43,6 +43,8 @@ public static class DependencyInjection
 
         // Correo: Resend si existe Resend:ApiKey (user-secrets / Key Vault); si no, se guarda en disco.
         services.AddEmail(configuration);
+        // Base de las ligas de los correos que mandan webhooks y jobs (sin petición): App:PublicBaseUrl.
+        services.Configure<SiteUrlOptions>(configuration.GetSection(SiteUrlOptions.SectionName));
 
         // Archivos (fotos de productos): disco local (Storage:LocalDirectory); en producción se cambia por blob.
         services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
@@ -60,6 +62,8 @@ public static class DependencyInjection
         services.AddScoped<IBankAccountRegistration, BankAccountRegistration>();
         // Botón "Verificar estatus", job de sondeo y webhook bank.account.updated comparten este caso de uso.
         services.AddScoped<IBankAccountStatusSync, BankAccountStatusSync>();
+        // Correo «Tu cuenta ya está activa» (alta, webhook, sondeo o botón): uno por vendedor.
+        services.AddScoped<IBankAccountActivationNotifier, BankAccountActivationEmailNotifier>();
         services.AddScoped<ISaleCharging, SaleCharging>();
         services.AddScoped<ISaleExpiration, SaleExpiration>();
         services.AddScoped<IPaymentRecorder, PaymentRecorder>();

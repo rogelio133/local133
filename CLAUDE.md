@@ -19,11 +19,15 @@ src/
   Local133.Application     casos de uso, DTOs, validadores, interfaces (IPaymentGateway, IFileStorage…)
   Local133.Infrastructure  EF Core, PeyClient, procesamiento de webhooks, storage, email, jobs Hangfire
   Local133.Web             MVC (áreas Merchant/Admin, vistas Razor), Identity scaffoldeado, endpoints /api, hub SignalR, POST /api/webhooks/pey
+  Local133.LandingPage     portada pública (local133.com.mx), sitio aparte; no referencia a los demás proyectos
 tests/
   Local133.UnitTests         (solo Domain; corre en CI)
   Local133.IntegrationTests  (base `Local133_Tests` en SQL Server local, recreada con migraciones, limpiada con Respawn)
+  Local133.LandingPage.Tests (portada; sin SQL Server, corre en CI)
 ```
 Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa desde Infrastructure detrás de `IPaymentGateway`.
+
+**Portada (`Local133.LandingPage`)**: una sola página (`/`) con el logo, «Cobra con CoDi desde tu …» (palabras de `Home:RotatingWords`), el texto del lead y el botón «Empieza a cobrar» a `Landing:AppUrl` (`https://app.local133.com.mx`; en Development `http://localhost:5231`) en pestaña nueva. Arranca con `dotnet run --project src/Local133.LandingPage` → `http://localhost:5241`. Comparte con `Local133.Web` sin copiar: el SCSS (`Styles/landing.scss` importa `../../Local133.Web/Styles/_custom`, el Bootstrap de `Styles/vendor` y `_rotating-word.scss`) y `HomeHeroOptions.cs` (`Compile Link`). `local133.svg`, `favicon.ico`, `apple-touch-icon.png` y `js/rotating-word.js` sí son **copias** en su `wwwroot` (los static web assets no sirven archivos enlazados): al cambiar el original, copiarlo también; `SharedAssetsTests` falla si difieren. `wwwroot/css/landing.css` es generado (no se versiona).
 
 ## Comandos (una vez creado el scaffold de Fase 0)
 - Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings: `dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web` y `dotnet user-secrets set "Pey:WebhookSecret" "whsec_<secreto>" --project src/Local133.Web`; sin la API key el sitio arranca y solo fallan las llamadas a Pey; sin el secreto el webhook responde 500).
@@ -137,7 +141,13 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - Helpers de venta y webhooks firmados en `tests/Local133.IntegrationTests/Sales/SaleFlowTestBase` (`PostWebhookAsync`, `QrPaymentBodyFor`, `ChargeByPhoneAsync`, `PushPaymentBodyFor`). `FakePaymentGateway` simula también el push (`PushRequests`, `PushException`). `SalesHubTests` usa un cliente real de SignalR (long polling con `CookieContainerHandler`).
 - Correo (`Infrastructure/Email`, `AddEmail`): `IEmailSender` = `ResendEmailSender` (SDK oficial `Resend`) **solo si** existe `Resend:ApiKey` (llave de **solo envío**, en user-secrets: `dotnet user-secrets set "Resend:ApiKey" "<re_...>" --project src/Local133.Web`). Sin ella, `FileEmailSender` guarda `.html` en `src/Local133.Web/App_Data/emails` y escribe la liga en el log.
   - Remitente en `Email:From` (`appsettings.json`): `Local133 <hola@notificaciones.local133.com.mx>`. El dominio está verificado en Resend; su DNS está en Akky (DKIM `resend._domainkey`, return path `send.notificaciones`, DMARC `p=none` en `local133.com.mx`). Para probar sin escribirle a nadie, usar las direcciones de prueba `delivered+<etiqueta>@resend.dev`. En pruebas manuales con `curl` en Windows, el JSON va en un archivo UTF-8 (`--data-binary @archivo`), nunca en el argumento: `curl.exe` recibe sus argumentos en cp1252 y los acentos llegan como `�`. La app no tiene este problema.
-  - El HTML lo arma el sitio (`Web/Identity/AccountEmails`); no hay plantillas en Resend.
+  - El HTML lo arma el código; no hay plantillas en Resend. Todos los correos usan `Infrastructure/Email/EmailLayout.Render(EmailContent, siteBaseUrl)`: encabezado `#E4007C` con el logo PNG `wwwroot/img/email/local133-email-logo.png` (nunca SVG ni `data:`; al cambiarlo, subir `EmailLayout.LogoVersion`), título en Bungee con respaldo, botón rosa y textos codificados. Plantillas: `Web/Identity/AccountEmails` (la base del logo sale del host de la liga) y `Infrastructure/Email/MerchantEmails` (avisos de jobs y webhooks). **El botón debe ser la primera liga (`href`)**: `FileEmailSender` e `InMemoryEmailSender.Link` toman la primera. Por eso las fuentes van con `@import` y no con `<link href>`, y el logo no lleva liga.
+  - **Correo «Tu cuenta ya está activa»**: `IBankAccountActivationNotifier` (Application/BankAccounts; Infrastructure/BankAccounts/BankAccountActivationEmailNotifier).
+    - Se llama después de guardar, cuando `ApplyBankAccountStatus` deja al vendedor `Active`: en `BankAccountStatusSync.ApplyAsync` (webhook, sondeo y botón) y en `BankAccountRegistration` (alta con `ACTIVE` inmediato).
+    - Un correo por vendedor: el candado es `Merchant.ActivationEmailSentAt`, tomado con `ExecuteUpdateAsync` condicionado.
+    - Nunca lanza: un error de correo no tumba el webhook.
+    - Liga `{base}/app/cobrar`. La base sale de `SiteUrlOptions` (`App:PublicBaseUrl`); en Development, si falta, `http://localhost:5231`; fuera de Development, sin ella no se manda.
+    - Las pruebas vacían `App:PublicBaseUrl`. Helpers `WebTestBase.ActivationEmails()` / `ActivationEmailLink`, e `InMemoryEmailSender.FailWith` para simular fallas.
   - Una llave de idempotencia por envío (`account-email/{guid}`). Reintentos con el pipeline estándar en red, timeout, 5xx y 429 (respeta `Retry-After`); los demás 4xx no se reintentan. Si falla al final, se loguea y **no se lanza**: el registro y la recuperación nunca se bloquean por el envío.
   - Nunca loguear el cuerpo (trae la liga) ni el destinatario completo (solo su dominio).
   - Con `ApiToken` vacío el SDK lee la variable de entorno `RESEND_API_KEY`: por eso solo se registra con llave.

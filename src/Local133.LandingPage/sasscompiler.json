@@ -1,0 +1,6 @@
+{
+  "Source": "Styles/landing.scss",
+  "Target": "wwwroot/css/landing.css",
+  "Arguments": "--style=compressed --quiet-deps --silence-deprecation=import --silence-deprecation=global-builtin --silence-deprecation=color-functions --silence-deprecation=if-function",
+  "GenerateScopedCss": false
+}

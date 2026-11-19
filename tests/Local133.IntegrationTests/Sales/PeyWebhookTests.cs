@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Local133.Application.BankAccounts;
 using Local133.Application.Sales;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
@@ -12,6 +13,7 @@ using Local133.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Local133.IntegrationTests.Sales;
 
@@ -340,6 +342,13 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         Assert.Equal(MerchantStatus.Active, merchant.Status);
         Assert.Equal(checkedAt, account.StatusCheckedAt);
         Assert.Empty(Factory.Gateway.BankAccountLookups); // no consulta a Pey
+
+        var sent = Assert.Single(ActivationEmails());
+        Assert.Equal(Email, sent.To);
+        Assert.Equal(ActivationEmailLink, sent.Link);
+        Assert.Contains("•••• 5713", System.Net.WebUtility.HtmlDecode(sent.Html));
+        Assert.DoesNotContain(TestClabe, sent.Html);
+        Assert.NotNull(merchant.ActivationEmailSentAt);
     }
 
     [Fact]
@@ -350,6 +359,56 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
 
         Assert.Equal("Processed", await WebhookStatusAsync(await PostWebhookAsync(BankAccountUpdatedBody(peyId))));
 
+        Assert.Equal(MerchantStatus.Active, (await WithDbAsync(db => MerchantOfAsync(db, Email))).Status);
+        Assert.Empty(ActivationEmails()); // ya estaba activo: no hay transición ni correo
+    }
+
+    [Fact]
+    public async Task La_misma_activacion_vista_varias_veces_manda_un_solo_correo()
+    {
+        await CreateMerchantAsync(Email);
+        var peyId = "01JBAVWE4NS5TGXHWGMX3KH23Q";
+        var merchantId = await WithDbAsync(async db =>
+        {
+            var merchant = await MerchantOfAsync(db, Email);
+            merchant.Status = MerchantStatus.BankAccountInReview;
+            db.BankAccounts.Add(BankAccount.Submit(merchant.Id, "Ramón Orraca Lascurain", TestClabe, "Puesto", PeyEntity.Person,
+                peyId, PeyCodiStatus.Processing, DateTimeOffset.UtcNow.AddDays(-1)));
+            await db.SaveChangesAsync();
+            return merchant.Id;
+        });
+
+        await PostWebhookAsync(BankAccountUpdatedBody(peyId));
+        await PostWebhookAsync(BankAccountUpdatedBody(peyId)); // otro webhook-id, sin transición
+        // El sondeo o un segundo camino concurrente llaman al aviso otra vez: el candado lo frena.
+        await Task.WhenAll(Enumerable.Range(0, 3).Select(async _ =>
+        {
+            await using var scope = Factory.Services.CreateAsyncScope();
+            await scope.ServiceProvider.GetRequiredService<IBankAccountActivationNotifier>().NotifyActivatedAsync(merchantId);
+        }));
+
+        Assert.Single(ActivationEmails());
+    }
+
+    [Fact]
+    public async Task Si_el_correo_falla_el_webhook_queda_procesado()
+    {
+        await CreateMerchantAsync(Email);
+        var peyId = "01JBAVWE4NS5TGXHWGMX3KH23Q";
+        await WithDbAsync(async db =>
+        {
+            var merchant = await MerchantOfAsync(db, Email);
+            merchant.Status = MerchantStatus.BankAccountInReview;
+            db.BankAccounts.Add(BankAccount.Submit(merchant.Id, "Ramón Orraca Lascurain", TestClabe, "Puesto", PeyEntity.Person,
+                peyId, PeyCodiStatus.Processing, DateTimeOffset.UtcNow.AddDays(-1)));
+            await db.SaveChangesAsync();
+        });
+        Factory.Emails.FailWith = new InvalidOperationException("Resend caído");
+
+        var response = await PostWebhookAsync(BankAccountUpdatedBody(peyId));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Processed", await WebhookStatusAsync(response));
         Assert.Equal(MerchantStatus.Active, (await WithDbAsync(db => MerchantOfAsync(db, Email))).Status);
     }
 

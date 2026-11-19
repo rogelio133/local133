@@ -115,6 +115,13 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
 
     protected Task CreateMerchantAsync(string email) => CreateConfirmedUserAsync(email, Roles.Merchant);
 
+    /// <summary>Correos «Tu cuenta ya está activa» enviados (capturados en memoria).</summary>
+    protected IReadOnlyList<SentEmail> ActivationEmails() =>
+        Factory.Emails.Sent.Where(e => e.Subject == Local133.Infrastructure.Email.MerchantEmails.BankAccountActiveSubject).ToList();
+
+    /// <summary>Liga del botón del correo de cuenta activa (base de respaldo de desarrollo: las pruebas vacían App:PublicBaseUrl).</summary>
+    protected const string ActivationEmailLink = "http://localhost:5231/app/cobrar";
+
     protected static string? Location(HttpResponseMessage response) =>
         response.Headers.Location is { } uri ? (uri.IsAbsoluteUri ? uri.PathAndQuery : uri.OriginalString) : null;
 

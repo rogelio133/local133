@@ -22,6 +22,12 @@ public class Merchant : Entity
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// Cuándo se le avisó por correo que su cuenta quedó activa. Es el candado del aviso: el webhook y el sondeo
+    /// pueden ver la misma activación a la vez, y solo el primero que lo llena manda el correo.
+    /// </summary>
+    public DateTimeOffset? ActivationEmailSentAt { get; set; }
+
     public static Merchant Register(string userId, DateTimeOffset now) => new()
     {
         UserId = userId,

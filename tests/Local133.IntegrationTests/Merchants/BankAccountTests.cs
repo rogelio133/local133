@@ -66,6 +66,7 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
         Assert.Contains("•••• 5713", html);
         Assert.DoesNotContain(TestClabe, html);
         Assert.DoesNotContain("data-bank-account-form", html);
+        Assert.Empty(ActivationEmails()); // en revisión: todavía no hay aviso
     }
 
     [Fact]
@@ -82,6 +83,11 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
         var html = await GetHtmlAsync(client, Url);
         Assert.Contains("¡Tu cuenta quedó activa!", html);
         Assert.Contains("href=\"/app/cobrar\"", html);
+
+        var sent = Assert.Single(ActivationEmails());
+        Assert.Equal(Email, sent.To);
+        Assert.Equal(ActivationEmailLink, sent.Link);
+        Assert.Contains("¡Hola, Tacos Don Ramón!", WebUtility.HtmlDecode(sent.Html));
     }
 
     [Fact]
@@ -400,6 +406,7 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
         Assert.Contains("href=\"/app/cobrar\"", html);
         Assert.DoesNotContain("data-check-status", html);
         Assert.Contains("data-merchant-status=\"Active\"", await GetHtmlAsync(client, "/app"));
+        Assert.Equal(Email, Assert.Single(ActivationEmails()).To);
     }
 
     [Theory]

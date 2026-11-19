@@ -98,6 +98,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTimeOffset?>("ActivationEmailSentAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("BusinessName")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
