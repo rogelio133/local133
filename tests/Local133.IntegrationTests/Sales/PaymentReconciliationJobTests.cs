@@ -20,7 +20,7 @@ public class PaymentReconciliationJobTests(Local133WebFactory factory) : SaleFlo
     // --- QR ---------------------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task Pago_de_QR_sin_webhook_se_registra_con_su_comision_y_avisa_al_vendedor()
+    public async Task Pago_de_QR_sin_webhook_se_registra_y_avisa_al_vendedor()
     {
         var client = await ActiveMerchantAsync(Email);
         var sale = await ChargeAsync(client, "150.00");
@@ -38,8 +38,6 @@ public class PaymentReconciliationJobTests(Local133WebFactory factory) : SaleFlo
         Assert.Equal(150m, payment.Amount);
         Assert.Equal(paidAt.ToUnixTimeSeconds(), payment.PaidAt.ToUnixTimeSeconds());
         Assert.Equal("0192191044", payment.TrackingKey);
-        Assert.Equal(SystemSettings.DefaultCommissionRate, payment.CommissionRate);
-        Assert.Equal(4.50m, payment.CommissionAmount);
         var reloaded = await LoadSaleAsync(sale.Id);
         Assert.Equal(SaleStatus.Paid, reloaded.Status);
         Assert.NotNull(reloaded.PaymentCheckedAt);

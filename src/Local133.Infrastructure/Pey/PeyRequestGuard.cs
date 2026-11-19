@@ -104,9 +104,10 @@ internal static class PeyRequestGuard
             throw new ArgumentOutOfRangeException(nameof(numRef), numRef, "La referencia numérica debe tener hasta 7 dígitos.");
         }
 
-        if (bankAccountId is not null && string.IsNullOrWhiteSpace(bankAccountId))
+        // Sin cuenta, el dinero del cliente caería en la cuenta de la plataforma.
+        if (string.IsNullOrWhiteSpace(bankAccountId))
         {
-            throw new ArgumentException("El id de la cuenta bancaria no puede ir vacío (usa null para la cuenta de la plataforma).", nameof(bankAccountId));
+            throw new ArgumentException("La cuenta bancaria del vendedor es obligatoria.", nameof(bankAccountId));
         }
 
         ValidateMetadata(metadata);

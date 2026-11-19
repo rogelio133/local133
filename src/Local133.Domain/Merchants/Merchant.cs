@@ -20,9 +20,6 @@ public class Merchant : Entity
     /// <summary>Nombre del negocio (se captura en "Mi información").</summary>
     public string? BusinessName { get; set; }
 
-    /// <summary>Comisión propia del vendedor; si es <c>null</c> aplica la global de <c>SystemSettings</c>.</summary>
-    public decimal? CommissionRateOverride { get; set; }
-
     public DateTimeOffset CreatedAt { get; set; }
 
     public static Merchant Register(string userId, DateTimeOffset now) => new()

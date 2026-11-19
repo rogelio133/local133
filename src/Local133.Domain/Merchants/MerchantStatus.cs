@@ -12,7 +12,7 @@ public enum MerchantStatus
     /// <summary>Puede generar cobros.</summary>
     Active,
 
-    /// <summary>Suspendido (estado de cuenta sin pagar, decisión del admin o error en la cuenta bancaria).</summary>
+    /// <summary>Suspendido (decisión del admin o error en la cuenta bancaria). No pagar la suscripción no suspende: baja al plan gratuito.</summary>
     Suspended,
 
     /// <summary>Dado de baja.</summary>

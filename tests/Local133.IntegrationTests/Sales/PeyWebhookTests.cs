@@ -17,7 +17,7 @@ namespace Local133.IntegrationTests.Sales;
 
 /// <summary>
 /// Pasos 2.3 y 2.5: <c>POST /api/webhooks/pey</c> (firma Standard Webhooks, bitácora, idempotencia) y lo que procesa:
-/// pago de un QR (Payment con comisión, venta pagada, aviso en tiempo real) y activación de la cuenta bancaria.
+/// pago de un QR (Payment, venta pagada, aviso en tiempo real) y activación de la cuenta bancaria.
 /// </summary>
 public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
 {
@@ -43,9 +43,6 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(paidAt.ToUnixTimeSeconds()), payment.PaidAt);
         Assert.Equal("0192191042", payment.TrackingKey);
         Assert.Equal(40012, payment.PayerBankCode);
-        Assert.Equal(SystemSettings.DefaultCommissionRate, payment.CommissionRate);
-        Assert.Equal(4.50m, payment.CommissionAmount);
-        Assert.Null(payment.StatementId);
 
         var paid = await LoadSaleAsync(sale.Id);
         Assert.Equal(SaleStatus.Paid, paid.Status);
@@ -193,46 +190,7 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     // --- Pago de QR -------------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task Aplica_la_comision_propia_del_vendedor_y_cambiarla_despues_no_altera_el_pago()
-    {
-        var client = await ActiveMerchantAsync(Email);
-        await UpdateMerchantAsync(Email, m => m.CommissionRateOverride = 0.05m);
-        var sale = await ChargeAsync(client, "150.00");
-
-        await PostWebhookAsync(QrPaymentBodyFor(sale));
-        await UpdateMerchantAsync(Email, m => m.CommissionRateOverride = 0.01m);
-
-        var payment = Assert.Single(await WithDbAsync(db => db.Payments.AsNoTracking().ToListAsync()));
-        Assert.Equal(0.05m, payment.CommissionRate);
-        Assert.Equal(7.50m, payment.CommissionAmount);
-    }
-
-    [Fact]
-    public async Task Cambiar_la_comision_global_solo_afecta_pagos_nuevos()
-    {
-        var client = await ActiveMerchantAsync(Email);
-        var first = await ChargeAsync(client, "100.00");
-        await PostWebhookAsync(QrPaymentBodyFor(first));
-
-        // SystemSettings no se limpia entre pruebas: se restablece al final.
-        await SetGlobalCommissionAsync(0.04m);
-        try
-        {
-            var second = await ChargeAsync(client, "100.00");
-            await PostWebhookAsync(QrPaymentBodyFor(second));
-
-            var payments = await WithDbAsync(db => db.Payments.AsNoTracking().OrderBy(p => p.Id).ToListAsync());
-            Assert.Equal([0.03m, 0.04m], payments.Select(p => p.CommissionRate));
-            Assert.Equal([3.00m, 4.00m], payments.Select(p => p.CommissionAmount));
-        }
-        finally
-        {
-            await SetGlobalCommissionAsync(SystemSettings.DefaultCommissionRate);
-        }
-    }
-
-    [Fact]
-    public async Task Un_centavo_se_registra_con_comision_cero()
+    public async Task Un_centavo_se_registra()
     {
         var client = await ActiveMerchantAsync(Email);
         var sale = await ChargeAsync(client, "0.01");
@@ -241,7 +199,7 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
 
         var payment = Assert.Single(await WithDbAsync(db => db.Payments.AsNoTracking().ToListAsync()));
         Assert.Equal(0.01m, payment.Amount);
-        Assert.Equal(0m, payment.CommissionAmount);
+        Assert.Equal(SaleStatus.Paid, (await LoadSaleAsync(sale.Id)).Status);
     }
 
     [Theory]
@@ -319,13 +277,11 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         Assert.Empty(Factory.Notifier.Notifications);
     }
 
-    [Theory]
-    [InlineData(SaleMetadata.StatementKind)]
-    [InlineData(SaleMetadata.StaticKind)]
-    public async Task Pagos_que_no_son_de_una_venta_se_ignoran_por_ahora(string kind)
+    [Fact]
+    public async Task Pagos_del_QR_fijo_se_ignoran_por_ahora()
     {
-        var response = await PostWebhookAsync(QrPaymentBody(NewTransactionId(), "IDCPLATAFORMA", 58m,
-            new Dictionary<string, string> { [SaleMetadata.KindKey] = kind, [SaleMetadata.StatementIdKey] = "3" }));
+        var response = await PostWebhookAsync(QrPaymentBody(NewTransactionId(), "IDCFIJO", 58m,
+            new Dictionary<string, string> { [SaleMetadata.KindKey] = SaleMetadata.StaticKind }));
 
         Assert.Equal("Ignored", await WebhookStatusAsync(response));
         Assert.Empty(await WithDbAsync(db => db.Payments.AsNoTracking().ToListAsync()));
@@ -435,10 +391,4 @@ public class PeyWebhookTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         Assert.Equal(SaleStatus.Pending, (await LoadSaleAsync(saleId)).Status);
     }
 
-    private Task SetGlobalCommissionAsync(decimal rate) => WithDbAsync(async db =>
-    {
-        var settings = await db.SystemSettings.SingleAsync(s => s.Id == SystemSettings.SingletonId);
-        settings.CommissionRate = rate;
-        await db.SaveChangesAsync();
-    });
 }

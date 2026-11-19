@@ -32,7 +32,7 @@ public sealed record ReceivedCodiPayment(
     IReadOnlyDictionary<string, string?> External,
     CodiPaymentChannel Channel = CodiPaymentChannel.Qr);
 
-/// <summary>Registra pagos recibidos: crea el <c>Payment</c> (con la comisión vigente) y marca la venta pagada.</summary>
+/// <summary>Registra pagos recibidos: crea el <c>Payment</c> y marca la venta pagada.</summary>
 public interface IPaymentRecorder
 {
     Task<PaymentRecordResult> RecordCodiPaymentAsync(ReceivedCodiPayment payment, CancellationToken cancellationToken = default);
@@ -50,7 +50,7 @@ public abstract record PaymentRecordResult
     /// <summary>Esa transacción ya estaba registrada (otra entrega del mismo pago).</summary>
     public sealed record AlreadyRecorded(int SaleId) : PaymentRecordResult;
 
-    /// <summary>Pago válido que no es de una venta (estado de cuenta, QR fijo): lo atiende otra fase.</summary>
+    /// <summary>Pago válido que no es de una venta (QR fijo): lo atiende otra fase.</summary>
     public sealed record Ignored(string Reason) : PaymentRecordResult;
 
     /// <summary>No se pudo asociar a una venta; requiere revisión.</summary>

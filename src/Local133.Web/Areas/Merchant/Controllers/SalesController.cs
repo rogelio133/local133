@@ -75,9 +75,7 @@ public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimePro
                 .Select(p => new SalePaymentView(
                     SaleFormats.DateTime(p.PaidAt, today),
                     SaleQrViewModel.FormatAmount(p.Amount),
-                    p.TrackingKey,
-                    SaleFormats.Rate(p.CommissionRate),
-                    SaleQrViewModel.FormatAmount(p.CommissionAmount)))
+                    p.TrackingKey))
                 .ToList(),
             sale.HasReceipt
                 ? receiptLinks.ShareFor(Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, amountText,

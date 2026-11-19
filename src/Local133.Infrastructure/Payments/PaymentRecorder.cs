@@ -3,7 +3,6 @@ using Local133.Application.Payments;
 using Local133.Application.Sales;
 using Local133.Domain.Payments;
 using Local133.Domain.Sales;
-using Local133.Domain.Settings;
 using Local133.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Payments;
 
 /// <summary>
-/// Pago CoDi recibido (QR o notificación push) ⇒ <see cref="Payment"/> con la comisión vigente + venta pagada, en un
+/// Pago CoDi recibido (QR o notificación push) ⇒ <see cref="Payment"/> + venta pagada, en un
 /// solo guardado; luego avisa al vendedor en tiempo real. Idempotente por <c>transactionId</c> (índice único). Sin
 /// dependencia de la sesión: lo usan los webhooks y la conciliación (2.9).
 /// </summary>
@@ -38,11 +37,6 @@ internal sealed class PaymentRecorder(
         }
 
         var kind = Value(received.External, SaleMetadata.KindKey);
-        if (kind == SaleMetadata.StatementKind)
-        {
-            return new PaymentRecordResult.Ignored("Pago de un estado de cuenta: se concilia en la Fase 5.");
-        }
-
         if (kind == SaleMetadata.StaticKind)
         {
             return new PaymentRecordResult.Ignored("Pago del QR fijo: se registra a partir del paso 2.7.");
@@ -69,17 +63,10 @@ internal sealed class PaymentRecorder(
                 sale.Id, sale.MerchantId, received.TransactionId);
         }
 
-        var merchant = await db.Merchants.AsNoTracking().SingleAsync(m => m.Id == sale.MerchantId, cancellationToken);
-        var globalRate = await db.SystemSettings.AsNoTracking()
-            .Where(s => s.Id == SystemSettings.SingletonId)
-            .Select(s => s.CommissionRate)
-            .SingleAsync(cancellationToken);
-        var rate = Commission.EffectiveRate(merchant.CommissionRateOverride, globalRate);
-
         var previousStatus = sale.Status;
         var payment = Payment.Record(
             sale.MerchantId, sale.Id, received.TransactionId, received.Amount, received.PaidAt,
-            received.TrackingKey, received.PayerBankCode, rate, clock.GetUtcNow());
+            received.TrackingKey, received.PayerBankCode, clock.GetUtcNow());
         db.Payments.Add(payment);
         sale.MarkPaid(received.PaidAt);
 
@@ -95,9 +82,8 @@ internal sealed class PaymentRecorder(
         }
 
         logger.LogInformation(
-            "Pago {PeyTransactionId} de {Amount} en la venta {SaleId} (folio {Folio}) del vendedor {MerchantId}: comisión {CommissionAmount} ({CommissionRate}); venta {PreviousStatus} → {Status}",
-            payment.PeyTransactionId, payment.Amount, sale.Id, sale.Folio, sale.MerchantId, payment.CommissionAmount,
-            payment.CommissionRate, previousStatus, sale.Status);
+            "Pago {PeyTransactionId} de {Amount} en la venta {SaleId} (folio {Folio}) del vendedor {MerchantId}: venta {PreviousStatus} → {Status}",
+            payment.PeyTransactionId, payment.Amount, sale.Id, sale.Folio, sale.MerchantId, previousStatus, sale.Status);
         if (previousStatus == SaleStatus.Paid)
         {
             logger.LogWarning("La venta {SaleId} del vendedor {MerchantId} recibió un pago adicional ({PeyTransactionId})",

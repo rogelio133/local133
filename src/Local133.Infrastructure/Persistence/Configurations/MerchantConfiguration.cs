@@ -9,14 +9,11 @@ public class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
 {
     public void Configure(EntityTypeBuilder<Merchant> builder)
     {
-        builder.ToTable("Merchants", t =>
-            t.HasCheckConstraint("CK_Merchants_CommissionRateOverride",
-                "[CommissionRateOverride] IS NULL OR ([CommissionRateOverride] >= 0 AND [CommissionRateOverride] < 1)"));
+        builder.ToTable("Merchants");
 
         builder.Property(m => m.UserId).HasMaxLength(450);
         builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(m => m.BusinessName).HasMaxLength(Merchant.BusinessNameMaxLength);
-        builder.Property(m => m.CommissionRateOverride).HasPrecision(5, 4);
 
         // 1:1 con el usuario. Restrict: borrar un usuario no debe llevarse el historial financiero del vendedor.
         builder.HasOne<ApplicationUser>()

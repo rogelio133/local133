@@ -10,7 +10,7 @@ namespace Local133.Web.Controllers;
 
 /// <summary>
 /// Recibo público de una venta pagada (<c>/recibo/{token}</c>): la liga que el vendedor comparte con su cliente. No
-/// requiere sesión y nunca muestra la comisión, el celular, la CLABE ni ids de Pey.
+/// requiere sesión y nunca muestra el celular, la CLABE ni ids de Pey.
 /// </summary>
 [AllowAnonymous]
 [ApiExplorerSettings(IgnoreApi = true)]
@@ -80,5 +80,5 @@ public sealed record ReceiptViewModel(
     public bool IsCart => Items.Count > 0;
 }
 
-/// <summary>Pago en el recibo público (sin comisión).</summary>
+/// <summary>Pago en el recibo público.</summary>
 public sealed record ReceiptPaymentView(string PaidAtText, string AmountText, string? TrackingKey);

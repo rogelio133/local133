@@ -15,7 +15,7 @@ Proyecto desde cero. La fuente de verdad es [PLAN_DESARROLLO.md](PLAN_DESARROLLO
 ```
 Local133.sln
 src/
-  Local133.Domain          entidades, enums propios y de Pey (Domain/Pey), reglas (comisión, CLABE)
+  Local133.Domain          entidades, enums propios y de Pey (Domain/Pey), reglas (CLABE, suscripción)
   Local133.Application     casos de uso, DTOs, validadores, interfaces (IPaymentGateway, IFileStorage…)
   Local133.Infrastructure  EF Core, PeyClient, procesamiento de webhooks, storage, email, jobs Hangfire
   Local133.Web             MVC (áreas Merchant/Admin, vistas Razor), Identity scaffoldeado, endpoints /api, hub SignalR, POST /api/webhooks/pey
@@ -65,7 +65,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - Historial con `Areas/Merchant/Services/SalesHistoryQuery`: `?estado=pagadas|pendientes|vencidas|canceladas` (`SaleStatusFilters`) sobre el **estatus efectivo** (pendiente con QR vencido = vencida; `SalesHistoryQuery.WithStatus`), `?desde=&hasta=` (AAAA-MM-DD en hora de México), páginas de 20 (`SalesHistoryViewModel.PageSize`) agrupadas por día.
   - Resumen del día `DaySummaryQuery`: suma de `Payments.Amount` con `PaidAt` hoy en México, ventas distintas de esos pagos y pendientes vigentes. Va en Ventas y en Inicio (solo si el vendedor ya cobra).
   - Días y horas: `Domain/Common/MexicoTime` (`Today`, `DateOf`, `DayRange(desde, hasta)` con fin exclusivo en UTC); formatos en `SaleFormats` (hora con espacios de no separación).
-  - Detalle `/app/ventas/{id}`: productos (`SaleItems`), pagos con clave de rastreo y comisión, «Ver QR» si espera pago y el recibo si está pagada. El concepto se muestra sin el negocio con `Sale.ConceptTextOf` (inverso de `BuildConcept`).
+  - Detalle `/app/ventas/{id}`: productos (`SaleItems`), pagos con clave de rastreo, «Ver QR» si espera pago y el recibo si está pagada. El concepto se muestra sin el negocio con `Sale.ConceptTextOf` (inverso de `BuildConcept`).
 - **Link de pago (PoC, solo Development)** (`/app/link-de-pago`, `PaymentLinkPocController`; sin liga en el menú: se entra por URL directa; bitácora `log_plan/poc-link-de-pago.md`):
   - Lo reutilizable es `IPaymentGateway.CreatePaymentLinkAsync`/`GetPaymentLinkAsync` (`Application/Payments/PaymentLinks.cs`).
   - Pey **no acepta `bankAccountId` ni concepto**: el dinero cae en la cuenta de la plataforma. El concepto va en `metadata.concept` y en `clientReferenceId`.
@@ -74,7 +74,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
 - **Recibo público** (`GET /recibo/{token}`, `Web/Controllers/ReceiptsController`, anónimo):
   - `Sale.ReceiptToken` (32 hex, `RandomNumberGenerator`) se genera al crear la venta (toda venta nueva debe traerlo; la 2.7 también). Solo hay recibo si la venta está pagada (`Sale.HasReceipt`); si no, 404.
   - Busca con `IgnoreQueryFilters()` (quien abre la liga puede tener sesión de otro vendedor). Encabezados `noindex`, `no-referrer`, `no-store`; `ViewData["NoIndex"]` en `_Head`.
-  - Nunca muestra comisión, celular, CLABE ni ids de Pey.
+  - Nunca muestra celular, CLABE ni ids de Pey.
   - Ligas en `Web/Models/ReceiptLinks` (singleton): URL absoluta con `App:PublicBaseUrl` (`Web/Hosting/PublicSiteOptions`) o, sin ella, el host de la petición; mensaje y `wa.me`. Parcial `_ReceiptShare` + `wwwroot/js/receipt-share.js` (copiar liga, Web Share, imprimir).
   - Cobro por celular: el botón «Enviar recibo al •••• 5678» apunta a `GET /app/ventas/{id}/whatsapp`, que redirige a `wa.me/52{celular}`: el número completo nunca se escribe en la página.
   - Escritorio (`(hover: hover) and (pointer: fine)`): `wa.me` no siempre detecta la app de WhatsApp instalada, así que `receipt-share.js` cambia los botones a su `data-desktop-href`: `whatsapp://send` (`ReceiptLinks.WhatsAppAppUrl`) o `?destino=app` para el cliente, sin `target="_blank"`. También muestra el respaldo de WhatsApp Web (`?destino=web`). En el celular se queda `wa.me`.
@@ -93,13 +93,13 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
     - `codi.qr.payment_received` ⇒ `IPaymentRecorder` (canal `Qr`);
     - `codi.pn.payment_received` ⇒ `IPaymentRecorder` (canal `PushNotification`; el payload no trae `codiQrId`);
     - `bank.account.updated` ⇒ `ApplyWebhookAsync`;
-    - links de pago ⇒ `Ignored` (fuera del MVP).
+    - links de pago ⇒ `Ignored` (se procesan a partir de la 5.6, pago de la suscripción).
   - Payloads en `Infrastructure/Pey/PeyWebhookContracts.cs` (`datePaid` en segundos Unix). Nunca loguear el body (trae la CLABE del pagador).
 - Pagos: `IPaymentRecorder.RecordCodiPaymentAsync(ReceivedCodiPayment)` (Application/Payments; Infrastructure/Payments/PaymentRecorder) lo usan el webhook y la conciliación. `ReceivedCodiPayment.Channel` vale `Qr` o `PushNotification`.
   - Es idempotente por `Payments.PeyTransactionId` (índice único).
   - Con `Qr` busca la venta por `Sales.PeyQrId` y luego por `saleId` de la metadata. Con `PushNotification` la busca por `Sales.PeyTransactionId` y luego por `saleId`; en el respaldo la venta debe ser un push sin transacción o con la misma, y si no tenía se le asigna.
-  - Si el canal no coincide con `Sale.Method` o la metadata contradice a la venta ⇒ `Unmatched`. `kind` `statement`/`static` ⇒ `Ignored`.
-  - Crea un `Payment` con `Commission.EffectiveRate(override, global)` y `Commission.Calculate` (redondeo a centavos, punto medio hacia arriba) y llama `Sale.MarkPaid`, en un solo `SaveChanges`. Después avisa con `ISaleNotifier`.
+  - Si el canal no coincide con `Sale.Method` o la metadata contradice a la venta ⇒ `Unmatched`. `kind` `static` ⇒ `Ignored` (QR fijo, 2.7).
+  - Crea un `Payment` (`Payment.Record`, sin comisión) y llama `Sale.MarkPaid`, en un solo `SaveChanges`. Después avisa con `ISaleNotifier`.
 - Transiciones de `Sale`:
   - `MarkPaid`: el pago manda, también desde `Expired` y `Cancelled`.
   - `Cancel`: solo `Pending`. Cancelar es local, porque CoDi no anula el QR.
@@ -151,25 +151,25 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - **No desactivar Smart App Control**: no se puede reactivar sin reinstalar Windows. Si algo no se puede ejecutar, dejarlo anotado como verificación pendiente.
 
 ## Reglas de arquitectura (no negociables)
-- **La plataforma nunca toca el dinero del vendedor**: Pey deposita a la CLABE del vendedor (no hay split). La comisión se cobra aparte con estados de cuenta semanales pagados por QR CoDi **sin `bankAccountId`** (cae en la cuenta de la plataforma).
-- **Una API key y un webhook** para todos los vendedores; cada cobro elige destino con `bankAccountId`.
+- **La plataforma nunca toca el dinero del vendedor**: Pey deposita a la CLABE del vendedor (no hay split). El ingreso de la plataforma es la **suscripción** (gratuito con límites / Pro), que se paga aparte con **link de pago de Pey** (no acepta `bankAccountId`: cae en la cuenta de la plataforma) y se concilia por el webhook `payment_link.status_updated`. Diseño en `actualizaciones/suscripciones_2026_11_18.md`. No hay comisión por venta (se retiró en la 5.1).
+- **Una API key y un webhook** para todos los vendedores; cada cobro elige destino con `bankAccountId`, **obligatorio** en `CreateCodiQrRequest` y `CreateCodiPushNotificationRequest` (lo valida `PeyRequestGuard`): ningún QR ni push cae en la cuenta de la plataforma.
 - **Multi-tenant**: toda entidad de negocio lleva `MerchantId` + filtro global de EF Core + política de autorización. Probar aislamiento entre vendedores.
-- **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks (`webhook-id`, `webhook-timestamp`, `webhook-signature`) → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200 (500 solo en fallas transitorias, para que Pey reintente con el mismo id). Idempotente también por `transactionId`. Conciliar con `metadata` `{kind, merchantId, saleId | statementId}` (vuelve como string en `metadata.externalMetadata`).
+- **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks (`webhook-id`, `webhook-timestamp`, `webhook-signature`) → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200 (500 solo en fallas transitorias, para que Pey reintente con el mismo id). Idempotente también por `transactionId`. Conciliar con `metadata` `{kind, merchantId, saleId}` (links de la suscripción: `{kind: "subscription", merchantId, subscriptionChargeId}`) (vuelve como string en `metadata.externalMetadata`).
 - **Ventas ≠ Pagos**: un QR puede tener 0..N `Payments`; las ventas expiran por tiempo (no hay webhook de expiración).
-- **Comisión**: la tasa se guarda **en cada `Payment`** al cobrarse (`CommissionRate`, `CommissionAmount`); tasa = `Merchant.CommissionRateOverride ?? SystemSettings` global (3% por defecto; IVA parametrizable). Cambiar la tasa nunca altera pagos existentes.
+- **Precios de la suscripción**: el monto se guarda **en cada cargo** al crearlo; cambiar un precio en `SystemSettings` nunca altera lo ya cobrado (solo los links nuevos). Precios con IVA incluido (`VatRate` sirve para desglosarlo).
 - **Snapshots**: `SaleItems` copia nombre/precio; `Products` usa baja lógica (`IsDeleted`).
 - **Restricciones de Pey**: `expiration` = 0 o ≥ 360 s (venta dinámica usa 600); `amount: 0` + `expiration: 0` = QR fijo; `numRef` ≤ 7 dígitos; `metadata` ≤ 50 pares escalares; `POST /bank-account` requiere `alias`, `name`, `clabe`, `entity` (PERSON/BUSINESS), sin `taxId`. Validar dígito verificador de la CLABE antes de enviar.
 - `bank.account.updated` solo llega al pasar a `ACTIVE`; `ERROR` se detecta con **polling** (job cada 30 min a `GET /bank-account/{id}`).
 - **PeyClient** (`Infrastructure/Pey`, registrado con `AddPeyGateway`; contratos del OpenAPI `https://docs.pey.mx/openapi.json`): `HttpClient` tipado + `AddStandardResilienceHandler` (Polly v8), mapea `error.type` a las excepciones de `Application/Payments` (`PaymentGatewayValidationException`, `InvalidClabeException`, `…NotFound…`, `…Authentication…`, `…State…`, `…Unavailable…`) y loguea `requestId` (nunca bodies ni la API key). **Reintentos por método**: GET en cualquier falla transitoria; POST **solo en 503/429**: Pey no tiene llave de idempotencia y reintentar tras un 500 o un timeout podría duplicar un QR o un push. Reglas de Pey (`Domain/Pey/PeyLimits`) se validan antes de llamar (`ArgumentException`). Pruebas contra WireMock en `tests/Local133.IntegrationTests/Pey` (sin SQL Server, corren en CI).
 - Solo vendedores `Active` pueden generar cobros. Tiempo real por SignalR (grupo por vendedor, evento `PaymentReceived`) con respaldo de polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}` y `GET /transaction/{id}` para push), corte semanal lunes 00:05 `America/Mexico_City`, vencimiento/suspensión.
-- Archivos vía `IFileStorage` (disco en dev, blob en prod). CLABE enmascarada en UI. Cambios de comisión/estatus quedan en `AuditLogs`.
+- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}` y `GET /transaction/{id}` para push), suscripciones (diario 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba y baja al gratuito tras `GraceDays`; la falta de pago **no suspende**) y conciliación de links de pago.
+- Archivos vía `IFileStorage` (disco en dev, blob en prod). CLABE enmascarada en UI. Cambios de precios, planes o estatus quedan en `AuditLogs`.
 
 ## Flujo de trabajo obligatorio
-- Implementar **por fases en el orden del plan** (0 Cimientos → 1 Registro/auth → 2 Ventas → 3 Productos/carrito → 4 Mi información → 5 Estados de cuenta/cobranza → 6 Admin → 7 Endurecimiento). Cada fase debe terminar en algo demostrable. La cuenta bancaria mínima se construye dentro de la Fase 2.
+- Implementar **por fases en el orden del plan** (0 Cimientos → 1 Registro/auth → 2 Ventas → 3 Productos/carrito → 4 Mi información → 5 Suscripciones → 6 Admin → 7 Endurecimiento). Cada fase debe terminar en algo demostrable. La cuenta bancaria mínima se construye dentro de la Fase 2.
 - **Publicación en Azure (`azure.md`)**: al terminar cada subfase, actualizar [azure.md](azure.md) (en la raíz; crearlo si no existe) con lo que hay que considerar y hacer para publicar en Azure por lo que se agregó en esa subfase: recursos (App Service, Azure SQL, Blob Storage…), configuración y secretos (App Settings / Key Vault, nombres con `__`), migraciones, jobs de Hangfire, webhooks y URLs de callback, SignalR, HTTPS/proxy, dominios, etc. Cada punto indica la subfase en que aplica (p. ej. «Fase 2.3»). Si la subfase no cambia nada para Azure, anotarlo explícitamente («Fase X.Y: sin cambios para Azure»). No poner secretos reales en el archivo.
-- Módulos fuera del MVP (inventario, cajeros, CFDI, Excel, links de pago con tarjeta, PWA offline) no se implementan sin pedirlo.
-- Pruebas exigidas por el plan: unitarias (comisión y redondeo, jerarquía de tasas, CLABE, corte semanal con zona horaria y bordes, transiciones de estatus); integración (webhook con firma válida/inválida/duplicada, `PeyClient` contra WireMock por cada `error.type`, aislamiento entre vendedores, acceso a áreas e Identity según rol).
+- Módulos fuera del MVP (inventario, vendedores adicionales, CFDI de la suscripción, links de pago con tarjeta para las ventas del vendedor, PWA offline) no se implementan sin pedirlo. La exportación a Excel sí entra, como función de Pro (5.9).
+- Pruebas exigidas por el plan: unitarias (CLABE, vigencia de la suscripción con prueba, gracia, periodos encadenados, bordes de mes y zona horaria; precios, fundador y descuento de bienvenida; límite mensual del gratuito; tope de premios de referidos; transiciones de estatus); integración (webhook con firma válida/inválida/duplicada, `payment_link.status_updated`, bloqueos del gratuito en el servidor, CLABE única, `PeyClient` contra WireMock por cada `error.type`, aislamiento entre vendedores, acceso a áreas e Identity según rol).
 - **Validación del frontend con Playwright (obligatoria)**: toda implementación o ajuste que toque vistas Razor, páginas de Identity, layouts, CSS o JS se revisa en el navegador con el MCP de Playwright antes de darla por terminada. Las pruebas de integración no sustituyen esta revisión.
   - Configuración (una vez): `claude mcp add playwright --scope project -- cmd /c npx @playwright/mcp@latest --browser msedge --viewport-size "375,812"` y reiniciar la sesión. Correrlo desde PowerShell o cmd, no desde Git Bash: Git Bash convierte `/c` en `C:/` y el servidor nunca responde (timeout). Si se usa Git Bash, anteponer `MSYS_NO_PATHCONV=1`. En `.mcp.json` el primer argumento de `cmd` debe ser `"/c"`. Se usa Edge instalado (firmado), no el Chromium que descarga Playwright, por Smart App Control.
   - Arranque: `dotnet build` y luego, desde `src/Local133.Web`, `dotnet bin/Debug/net10.0/Local133.Web.dll --urls http://localhost:5231` en segundo plano con `ASPNETCORE_ENVIRONMENT=Development`. Usuarios de prueba: registrar uno y confirmarlo con el `.html` de `App_Data/emails`, o usar el admin sembrado. Al terminar, detener el sitio.

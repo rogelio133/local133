@@ -224,9 +224,9 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         Assert.Contains("data-sale-items", html);
         Assert.Contains("Taco al pastor", html);
         Assert.Contains("6 × $25.00", html);
-        // Pagos con clave de rastreo y comisión (3 %).
+        // Pagos con clave de rastreo; sin comisión desde la 5.1.
         Assert.Contains("data-payment-tracking>0192191042<", html);
-        Assert.Contains("Comisión 3&#xA0;%: $4.50", html);
+        Assert.DoesNotContain("Comisión", html);
         // Recibo para compartir.
         Assert.Contains("data-sale-receipt", html);
         Assert.Contains($"data-receipt-url=\"https://localhost/recibo/{sale.ReceiptToken}\"", html);
@@ -369,7 +369,7 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
     {
         var tracked = await db.Sales.IgnoreQueryFilters().SingleAsync(s => s.Id == sale.Id);
         db.Payments.Add(Payment.Record(
-            tracked.MerchantId, tracked.Id, NewTransactionId(), amount, paidAt, "TRK123", 40012, 0.03m, DateTimeOffset.UtcNow));
+            tracked.MerchantId, tracked.Id, NewTransactionId(), amount, paidAt, "TRK123", 40012, DateTimeOffset.UtcNow));
         tracked.MarkPaid(paidAt);
         await db.SaveChangesAsync();
     });
