@@ -17,7 +17,8 @@ internal static class PeyErrorMapper
 
             PeyErrorType.InvalidRequest or PeyErrorType.InvalidAmount or PeyErrorType.InvalidParameter
                 or PeyErrorType.InvalidParameters or PeyErrorType.IncompleteParameters or PeyErrorType.BadRequest
-                or PeyErrorType.RequestParsingError
+                or PeyErrorType.RequestParsingError or PeyErrorType.InvalidUrl or PeyErrorType.InvalidHasTip
+                or PeyErrorType.InvalidClientReferenceId
                 => new PaymentGatewayValidationException(message, type, statusCode, requestId, gatewayMessage),
 
             PeyErrorType.NotFound or PeyErrorType.BankAccountNotFound
@@ -27,6 +28,7 @@ internal static class PeyErrorMapper
                 => new PaymentGatewayAuthenticationException(message, type, statusCode, requestId, gatewayMessage),
 
             PeyErrorType.InvalidState or PeyErrorType.PeyConsistencyError or PeyErrorType.ConcurrentUpdate
+                or PeyErrorType.PaymentLinkNotPending
                 => new PaymentGatewayStateException(message, type, statusCode, requestId, gatewayMessage),
 
             PeyErrorType.ServiceUnavailable or PeyErrorType.FlagsUnavailable or PeyErrorType.InternalServerError

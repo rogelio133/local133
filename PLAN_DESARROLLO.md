@@ -2,7 +2,7 @@
 
 ## 1. Contexto
 
-Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos) cobren con CoDi usando la API de Pey. El vendedor se registra, da de alta su cuenta bancaria, y cobra generando un QR (carrito o monto directo). El negocio cobra una comisión configurable (3% por defecto) mediante estados de cuenta semanales.
+Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos) cobren con CoDi usando la API de Pey. El vendedor se registra, da de alta su cuenta bancaria, y cobra generando un QR (carrito o monto directo). El negocio cobra una **suscripción**: un plan gratuito con límites y un plan Pro de $199 al mes o $1,990 al año (IVA incluido), con 30 días de prueba, que se paga con el link de pago de Pey. *(Cambio 2026-11-18: reemplaza la comisión del 3 % por venta, agrupada en estados de cuenta semanales. Diseño en [actualizaciones/suscripciones_2026_11_18.md](actualizaciones/suscripciones_2026_11_18.md).)*
 
 Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 
@@ -10,7 +10,8 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 - **ASP.NET Core 10 MVC** (vistas Razor + Bootstrap 5, móvil primero) en un solo proyecto web que también expone la API REST interna, el webhook y el hub SignalR; portal cliente y admin como áreas MVC. *(Cambio 2026-11-09: reemplaza la SPA React original. Cambio 2026-11-16: de .NET 9 a .NET 10 LTS, [bitácora](log_plan/mantenimiento-net10.md).)*
 - **SQL Server** con EF Core 10.
 - **Correo con Resend** (SDK oficial .NET, HTML armado en el código, llave de solo envío). Sin `Resend:ApiKey` los correos se guardan en disco. *(Cambio 2026-11-17, [bitácora](log_plan/mantenimiento-resend.md).)*
-- Estado de cuenta semanal se paga con **QR CoDi hacia la cuenta de la plataforma**, conciliado por webhook; falta de pago ⇒ suspensión.
+- La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
+- **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
 
 ---
@@ -21,17 +22,19 @@ Base URL `https://api.pey.mx` · Auth `Authorization: Bearer <api-key>` · Sin s
 
 | # | Hallazgo | Consecuencia |
 |---|---|---|
-| 1 | Pey deposita **directo a la CLABE del vendedor**; no hay split de pagos | La comisión del 3% no se retiene: se factura aparte (estado de cuenta). La plataforma nunca toca el dinero del vendedor. |
+| 1 | Pey deposita **directo a la CLABE del vendedor**; no hay split de pagos | La plataforma nunca toca el dinero del vendedor. Su ingreso es la suscripción, que se paga aparte con link de pago. *(Antes: comisión del 3 % facturada en estados de cuenta; cambio 2026-11-18.)* |
 | 2 | Una sola API key de la plataforma registra N cuentas (`POST /bank-account`) y cada cobro elige destino con `bankAccountId` | Modelo multi-vendedor con **una API key y un webhook** (Pey permite 1 webhook por API key). |
 | 3 | Alta de cuenta tarda **hasta 5 días hábiles** (Banxico) | Pantalla de "cuenta en revisión" + notificación al activarse. El vendedor puede cargar productos mientras tanto. |
 | 4 | Webhook `bank.account.updated` **solo se envía al pasar a `ACTIVE`** | `ERROR` (y `errorMessage`) solo se detecta con **polling** a `GET /bank-account/{id}` ⇒ job en segundo plano. |
 | 5 | `amount: 0` en `POST /codi/qr` = el pagador escribe el monto; `expiration: 0` = no expira | Habilita el **QR fijo imprimible**. |
 | 6 | `expiration` en segundos: `0` o **mínimo 360** | QR dinámico de venta con 600 s; no se puede menos de 6 min. |
-| 7 | `numRef` máx. 7 dígitos; `metadata` hasta 50 pares escalares (vuelven como string en `metadata.externalMetadata`) | `numRef` = folio corto de venta; `metadata` = `{kind, merchantId, saleId \| statementId}` para conciliar. |
+| 7 | `numRef` máx. 7 dígitos; `metadata` hasta 50 pares escalares (vuelven como string en `metadata.externalMetadata`) | `numRef` = folio corto de venta; `metadata` = `{kind, merchantId, saleId}` para conciliar. El link de la suscripción lleva `{kind: "subscription", merchantId, subscriptionChargeId}`. |
 | 8 | Webhooks firmados con **Standard Webhooks** (`webhook-id`, `webhook-timestamp`, `webhook-signature`; se valida el body crudo) | Verificar firma + idempotencia por `webhook-id` y por `transactionId`. |
 | 9 | CLABE de prueba que activa de inmediato: `012180015826225713` (Ramón Orraca Lascurain); pagos no se devuelven | Usarla en desarrollo con montos de $0.01. |
 | 10 | `POST /bank-account` exige `alias`, `name`, `clabe`, `entity`; no acepta `taxId` | El formulario necesita **tipo de titular (persona/empresa)**, que no estaba en la idea original. |
 | 11 | No está documentado webhook de rechazo/expiración de push ni si un QR puede pagarse más de una vez | Modelar **Pagos separados de Ventas** (un QR ⇒ 0..N pagos) y expirar ventas por tiempo. Confirmar con soporte de Pey. |
+| 12 | **Link de pago** (`POST /payment-link/create`): no acepta `bankAccountId` ni concepto, así que el dinero cae en la cuenta de la plataforma. Acepta CoDi y tarjeta. `successUrl`/`backUrl` deben ser HTTPS. **No expira ni se cancela**; `POST /payment-link/update` solo cambia el monto en `pending` | Sirve para cobrar la suscripción, no para las ventas del vendedor. Un link por cargo; todo link pagado se abona, aunque sea viejo. |
+| 13 | Webhook `payment_link.status_updated` (`pending`/`processing`/`paid`; `paymentLinkId`, `clientReferenceId`, `transactions[]` con `amountBreakdown {base, tip, fee}` y `applicationFee`). `GET /payment-link/{id}` también puede dar `partial`, sin documentar. Con tarjeta el `fee` parece sumarse a lo que paga el cliente | Abonar solo con `paid` y una suma de `base` que cubra el monto; `partial` ⇒ revisión manual. Respaldo con `GET /payment-link/{id}`. Confirmar con Pey quién paga `fee` y `applicationFee`. |
 
 ### Enumeradores de Pey (para `Domain/Pey`)
 
@@ -41,7 +44,7 @@ enum PeyEntity            { BUSINESS, PERSON }
 enum PeyTransactionStatus { PENDING, PAID }
 enum PeyPaymentMethod     { CARD, CODI }
 enum PeyPayableType       { PAYMENT_LINK, API_CODI_QR, API_CODI_PN }
-enum PeyPaymentLinkStatus { pending, processing, paid, partial }   // futuro (tarjetas)
+enum PeyPaymentLinkStatus { pending, processing, paid, partial }   // suscripciones (link de pago)
 enum PeyOwnerType         { API_KEY }
 // webhook "type"
 "codi.qr.payment_received" | "codi.pn.payment_received" | "bank.account.updated" | "payment_link.status_updated"
@@ -60,8 +63,11 @@ enum MerchantStatus  { PendingBankAccount, BankAccountInReview, Active, Suspende
 enum ChargeMethod    { DynamicQr, StaticQr, PushNotification }
 enum SaleSource      { Cart, DirectAmount, OpenAmount }      // OpenAmount = QR fijo
 enum SaleStatus      { Pending, Paid, Expired, Cancelled }
-enum StatementStatus { Open, Issued, Paid, Overdue, Cancelled }
-enum SuspensionReason{ UnpaidStatement, Admin, BankAccountError }
+enum SuspensionReason{ Admin, BankAccountError }             // la falta de pago ya no suspende (2026-11-18)
+enum PlanTier        { Onboarding, Trial, Pro, Grace, Free } // calculado, no se guarda
+enum SubscriptionPackage      { OneMonth, ThreeMonths, SixMonths, Annual }
+enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant }
+enum SubscriptionChargeStatus { Pending, Processing, Paid, Partial, Failed }
 ```
 
 ### Dónde se invoca cada API
@@ -76,7 +82,8 @@ enum SuspensionReason{ UnpaidStatement, Admin, BankAccountError }
 | Cobro por celular | `POST /codi/pn` `{amount, phoneNumber(10), concept, expiration≥360, bankAccountId, metadata}` → `transactionId` |
 | Confirmar pago | Webhooks `codi.qr.payment_received` (match por `codiQrId`) y `codi.pn.payment_received` (sin `codiQrId`: match por el `transactionId` que devolvió `POST /codi/pn`, guardado en `Sales.PeyTransactionId`) |
 | Respaldo si se pierde webhook | `GET /transaction/codi/qr/{idc}` para ventas pendientes; nocturno `GET /transaction/bank-account/{id}` |
-| Pago de estado de cuenta | `POST /codi/qr` **sin** `bankAccountId` (cae en la cuenta de la plataforma), `metadata:{kind:"statement", statementId}` |
+| Pago de la suscripción | `POST /payment-link/create` `{amount, successUrl, backUrl, hasTip:false, clientReferenceId:"sub-{id}", metadata:{kind:"subscription", merchantId, subscriptionChargeId}}` (sin `bankAccountId`: cae en la cuenta de la plataforma) |
+| Confirmar pago de la suscripción | Webhook `payment_link.status_updated` (`paid`) ⇒ periodo Pro. Respaldo: `GET /payment-link/{id}` de los cargos pendientes y barrido nocturno de `GET /transaction/api-key` (`payableType` `PAYMENT_LINK`) |
 | Detalle / soporte en admin | `GET /transaction/{id}`, `GET /transaction/api-key` |
 
 ---
@@ -87,20 +94,19 @@ enum SuspensionReason{ UnpaidStatement, Admin, BankAccountError }
 
 **Ajustes a lo propuesto**
 - *Cuenta bancaria*: agregar **tipo de titular (Persona/Empresa)**; `nombre del negocio` se envía como `alias`. Mostrar estatus y mensaje de error; permitir reintento/cambio de CLABE. Validar dígito verificador de la CLABE antes de enviar.
-- *Estados de cuenta*: agregar **pago del estado de cuenta** (QR CoDi), fecha límite y detalle de movimientos que lo componen.
-- *Comisión*: guardar la tasa **en cada pago** al momento de cobrarse (cambiar la comisión no altera lo ya vendido). Jerarquía: tasa del vendedor ?? tasa global. Definir si el 3% es **más IVA** (parámetro).
+- *Estados de cuenta* y *comisión*: se reemplazan por la **suscripción** (cambio 2026-11-18, [diseño](actualizaciones/suscripciones_2026_11_18.md)). Se conserva la idea de guardar el monto en cada cargo: cambiar un precio no altera lo ya cobrado.
 - *Registro*: sumar verificación de correo, recuperación de contraseña y aceptación de términos/aviso de privacidad.
 
 **Módulos que faltan (necesarios para el MVP)**
 1. **Historial de ventas / inicio** (cliente): ventas del día, lista con filtros, detalle, estado del pago. Sin esto el vendedor no puede verificar cobros.
 2. **Onboarding / estatus de activación**: checklist visible (perfil → cuenta bancaria → en revisión → activo).
-3. **Notificaciones** (email; WhatsApp después): cuenta activada/rechazada, estado de cuenta emitido, por vencer, suspensión.
-4. **Cobranza y suspensión** (admin + job): vencidos, suspender/reactivar, marcar pagado/condonar manualmente.
-5. **Admin – transacciones y monitoreo**: ventas globales, bitácora de webhooks, reintento de conciliación, tablero (GMV, comisión devengada/cobrada, vendedores por estatus).
-6. **Admin – usuarios y auditoría**: roles admin, registro de quién cambió comisiones/estatus.
+3. **Notificaciones** (correo y avisos en el sitio; WhatsApp después): cuenta activada/rechazada, pago de la suscripción por vencer, gracia, baja al gratuito, 80 % del límite de cobros.
+4. **Suscripciones y cobranza** (job + admin): recordatorios, gracia y baja automática al gratuito; en el admin, registrar un pago manual, regalar días y suspender/reactivar.
+5. **Admin – transacciones y monitoreo**: ventas globales, bitácora de webhooks, reintento de conciliación, tablero (GMV, ingresos por suscripción, vendedores por plan y por estatus).
+6. **Admin – usuarios y auditoría**: roles admin, registro de quién cambió precios, planes o estatus.
 
 **Módulos para después (fuera del MVP)**
-Categorías e inventario · cajeros/empleados por negocio · CFDI de la comisión · exportación a Excel · links de pago con tarjeta (Pey Payment Link) · PWA instalable con modo offline para catálogo.
+Categorías e inventario · vendedores adicionales (en Pro como «Próximamente») · CFDI de la suscripción · PWA instalable con modo offline para catálogo. *(2026-11-18: la exportación a Excel entra en Pro (5.9). Se descartan los links de pago con tarjeta para las ventas del vendedor: el link de Pey no acepta `bankAccountId` y el dinero caería en la plataforma.)*
 
 ---
 
@@ -109,7 +115,7 @@ Categorías e inventario · cajeros/empleados por negocio · CFDI de la comisió
 ```
 Local133.sln
 src/
-  Local133.Domain          entidades, enums (propios y Pey), reglas (comisión, CLABE)
+  Local133.Domain          entidades, enums (propios y Pey), reglas (CLABE, vigencia y precios de la suscripción)
   Local133.Application     casos de uso, DTOs, validadores (FluentValidation), interfaces
   Local133.Infrastructure  EF Core (SQL Server), PeyClient, webhooks, storage, email, jobs
   Local133.Web             MVC: áreas Merchant/Admin (vistas Razor + Bootstrap), Identity scaffoldeado
@@ -125,13 +131,13 @@ tests/
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · corte semanal (lunes 00:05 `America/Mexico_City`) · vencimiento y suspensión.
+- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba, baja al gratuito y resumen mensual) · conciliación de links de pago. *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con SkiaSharp. *(Cambio 2026-11-14: antes ImageSharp; ver 3.1.)*
 - **Secretos**: API key y secreto de webhook de Pey en user-secrets / variables de entorno. CLABE enmascarada en UI.
 
 ### Modelo de datos (tablas principales)
 
-`Merchants` (perfil, estatus, `CommissionRateOverride`) · `BankAccounts` (titular, CLABE, alias, entity, `PeyBankAccountId`, `CodiStatus`, `ErrorMessage`) · `Products` (nombre, descripción, precio, foto, `IsDeleted`) · `Sales` (folio, método, origen, monto, estatus, `PeyQrId`, `QrString`, `PeyTransactionId`, expiración, token público de recibo) · `SaleItems` (snapshot de nombre/precio/cantidad) · `Payments` (`PeyTransactionId` único, `SaleId`, monto, `DatePaid`, `TrackingKey`, `CommissionRate`, `CommissionAmount`, `StatementId`) · `StaticQrs` · `Statements` (periodo, subtotal, IVA, total, estatus, vencimiento, `PeyQrId`, `PaidAt`) · `SystemSettings` (comisión global, IVA, días de gracia) · `WebhookEvents` · `AuditLogs` · tablas de Identity.
+`Merchants` (perfil, estatus, `ReferralCode`, `PublicSlug`) · `BankAccounts` (titular, CLABE única, alias, entity, `PeyBankAccountId`, `CodiStatus`, `ErrorMessage`) · `Products` (nombre, descripción, precio, foto, `IsDeleted`) · `Sales` (folio, método, origen, monto, estatus, `PeyQrId`, `QrString`, `PeyTransactionId`, expiración, token público de recibo) · `SaleItems` (snapshot de nombre/precio/cantidad) · `Payments` (`PeyTransactionId` único, `SaleId`, monto, `PaidAt`, `TrackingKey`) · `StaticQrs` · `Subscriptions` · `SubscriptionPeriods` · `SubscriptionCharges` (un link de pago por cargo) · `SubscriptionPayments` · `Referrals` · `Notifications` · `SystemSettings` (precios, prueba, gracia, límites del gratuito, IVA, expiración del QR) · `WebhookEvents` · `AuditLogs` · tablas de Identity. *(Cambio 2026-11-18: sin comisión ni `Statements`. Campos en el [diseño](actualizaciones/suscripciones_2026_11_18.md#9-modelo-de-datos).)*
 
 ---
 
@@ -159,9 +165,9 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 2. **Cuenta bancaria mínima**: formulario (titular, CLABE con validación, alias, tipo de titular) → `POST /bank-account`; pantalla de estatus. ✅ *(hecho 2026-11-11; «Verificar estatus» agregado el mismo día)* — [bitácora](log_plan/fase-2.2-cuenta-bancaria.md)
 3. **Endpoint de webhook** con verificación de firma, `WebhookEvents`, manejo de `bank.account.updated` ⇒ `Active`. Job de sondeo de estatus. ✅ *(hecho 2026-11-12, junto con la 2.5)* — [bitácora](log_plan/fase-2.3-webhook-y-sondeo.md)
 4. **Venta por monto directo**: campo de monto → crea `Sale` → `POST /codi/qr` (`generateImage: false`) → vista con el QR (dibujado en el navegador con QRCode.js a partir de `qrString`) y cuenta regresiva en JS. ✅ *(hecho 2026-11-11; campo Concepto obligatorio el 2026-11-12)* — [bitácora](log_plan/fase-2.4-venta-monto-directo.md)
-5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta. ✅ *(hecho 2026-11-12; corrección de forwarded headers el 2026-11-13)* — [bitácora](log_plan/fase-2.5-tiempo-real.md)
+5. **Confirmación en tiempo real**: `codi.qr.payment_received` → crea `Payment` (con comisión calculada; se retira en la [5.1](#fase-5--suscripciones-56-semanas)) → `Sale.Paid` → SignalR → pantalla de "Pago recibido". Expiración y cancelación de venta. ✅ *(hecho 2026-11-12; corrección de forwarded headers el 2026-11-13)* — [bitácora](log_plan/fase-2.5-tiempo-real.md)
 6. **Cobro por celular**: `POST /codi/pn` + webhook `codi.pn.payment_received`. ✅ *(hecho 2026-11-13)* — [bitácora](log_plan/fase-2.6-cobro-por-celular.md)
-7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`.
+7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`. Es función de Pro y no hace falta para lanzar las suscripciones: mientras no exista se muestra como «Próximamente». Si el vendedor baja al gratuito, el QR impreso sigue cobrando (Pey no lo anula): esos pagos se registran y cuentan para el límite. *(2026-11-18)*
 8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp). ✅ *(hecho 2026-11-14, junto con la 3.3)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 9. Job de conciliación (`GET /transaction/codi/qr/{idc}`) para ventas pendientes. ✅ *(hecho 2026-11-18; también cobros por celular con `GET /transaction/{id}`)* — [bitácora](log_plan/fase-2.9-conciliacion.md)
 10. Bloqueo: solo vendedores `Active` pueden generar cobros.
@@ -172,25 +178,97 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 3. Detalle de venta con productos en historial y recibo. ✅ *(hecho 2026-11-14, dentro de la 2.8)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 
 ### Fase 4 — Mi información (≈4 días)
-1. Datos generales: nombre, dirección, teléfono, email, logo y foto del local.
-2. Cuenta bancaria completa: historial de estatus, mensaje de error, reintento/cambio de cuenta (invalida y regenera el QR fijo).
+1. Datos generales: nombre, dirección, teléfono, email, logo y foto del local. El logo y la foto se usan en el recibo con marca y en el catálogo público (5.10).
+2. Cuenta bancaria completa: historial de estatus, mensaje de error, reintento/cambio de cuenta (invalida y regenera el QR fijo). El cambio respeta la CLABE única (5.2).
 
-### Fase 5 — Estados de cuenta y cobranza (≈1.5 semanas)
-1. Job de corte semanal: agrupa `Payments` sin estado de cuenta del periodo lun–dom, calcula subtotal + IVA, emite `Statement` con vencimiento.
-2. Portal cliente: lista, detalle con movimientos, descarga PDF, **pagar con QR CoDi** (cuenta de la plataforma).
-3. Webhook con `metadata.kind = "statement"` ⇒ `Paid`. Job de vencidos ⇒ `Overdue` ⇒ suspensión tras días de gracia; reactivación automática al pagar.
-4. Correos: emitido, por vencer, suspendido.
+### Fase 5 — Suscripciones (≈5–6 semanas)
+*(Cambio 2026-11-18: reemplaza «Estados de cuenta y cobranza», que no se llegó a construir. Planes, reglas, datos y detalle de cada subfase en [actualizaciones/suscripciones_2026_11_18.md](actualizaciones/suscripciones_2026_11_18.md).)* La 5.1 y la 5.2 no dependen de la 2.7 ni de la Fase 4, así que se pueden adelantar.
+
+1. **Retirar el modelo de comisión** (≈1–1.5 días):
+   - **Dominio**:
+     - borrar [Commission.cs](src/Local133.Domain/Payments/Commission.cs);
+     - en [Payment.cs](src/Local133.Domain/Payments/Payment.cs), quitar `CommissionRate`, `CommissionAmount`, `StatementId` y el parámetro `commissionRate` de `Payment.Record`;
+     - en [Merchant.cs](src/Local133.Domain/Merchants/Merchant.cs), quitar `CommissionRateOverride`;
+     - en [SystemSettings.cs](src/Local133.Domain/Settings/SystemSettings.cs), quitar `CommissionRate` y `DefaultCommissionRate`. Se quedan `VatRate` (desglose del IVA incluido) y `GraceDays`, que pasa a ser la gracia de la suscripción, con 5 por defecto;
+     - quitar las menciones de estados de cuenta de los comentarios de `Suspended` en [MerchantStatus.cs](src/Local133.Domain/Merchants/MerchantStatus.cs) y de `Ignored` en [WebhookEvent.cs](src/Local133.Domain/Webhooks/WebhookEvent.cs).
+   - **Aplicación**:
+     - quitar `StatementKind` y `StatementIdKey` de [SaleMetadata.cs](src/Local133.Application/Sales/SaleMetadata.cs);
+     - corregir los comentarios que hablan de comisión o de estados de cuenta en [IPaymentGateway.cs](src/Local133.Application/Payments/IPaymentGateway.cs), [Codi.cs](src/Local133.Application/Payments/Codi.cs) y [RecordPayment.cs](src/Local133.Application/Payments/RecordPayment.cs);
+     - volver obligatorio `BankAccountId` en `CreateCodiQrRequest` y `CreateCodiPushNotificationRequest`, y validarlo en `PeyRequestGuard`: ningún QR ni push debe caer ya en la cuenta de la plataforma.
+   - **Infraestructura**:
+     - en [PaymentRecorder.cs](src/Local133.Infrastructure/Payments/PaymentRecorder.cs), quitar la lectura de `SystemSettings.CommissionRate`, `Commission.EffectiveRate`, la rama de `StatementKind` y la comisión del log;
+     - en [MerchantConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/MerchantConfiguration.cs), [PaymentConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/PaymentConfiguration.cs) y [SystemSettingsConfiguration.cs](src/Local133.Infrastructure/Persistence/Configurations/SystemSettingsConfiguration.cs), quitar los check constraints y la precisión de la comisión. La semilla queda con `GraceDays = 5`.
+   - **Migración** `RemoveCommission`, nueva (las anteriores no se editan): borra `Merchants.CommissionRateOverride`, `Payments.CommissionRate`, `Payments.CommissionAmount`, `Payments.StatementId` y `SystemSettings.CommissionRate`, con sus check constraints, y pone `GraceDays` en 5. Se pierde la comisión calculada de los pagos de prueba, que nunca se cobró.
+   - **Web**:
+     - en [SalesController.cs](src/Local133.Web/Areas/Merchant/Controllers/SalesController.cs) y [SalesViewModels.cs](src/Local133.Web/Areas/Merchant/Models/SalesViewModels.cs), quitar la comisión de `SalePaymentView` y `SaleFormats.Rate`, que solo usa la comisión;
+     - en [Detail.cshtml](src/Local133.Web/Areas/Merchant/Views/Sales/Detail.cshtml), quitar `data-payment-commission`, el pie «La comisión (más IVA) se cobra en tu estado de cuenta semanal» y el «No muestra tu comisión» del recibo;
+     - cambiar los textos «Próximamente» de [Admin Index](src/Local133.Web/Areas/Admin/Views/Home/Index.cshtml), [Settings](src/Local133.Web/Areas/Admin/Views/Home/Settings.cshtml) y [More.cshtml](src/Local133.Web/Areas/Merchant/Views/Home/More.cshtml), que hablan de comisión y de estados de cuenta;
+     - corregir los comentarios de [ReceiptsController.cs](src/Local133.Web/Controllers/ReceiptsController.cs).
+   - **Textos legales**:
+     - en [Terms.cshtml](src/Local133.Web/Views/Home/Terms.cshtml), cambiar las secciones 3 y 4 (comisión y suspensión) por planes, prueba, gracia y baja al gratuito;
+     - en [PrivacyNotice.cshtml](src/Local133.Web/Views/Home/PrivacyNotice.cshtml), quitar comisiones y estados de cuenta;
+     - subir las dos versiones en [LegalDocuments.cs](src/Local133.Domain/Legal/LegalDocuments.cs).
+   - **Pruebas**:
+     - borrar [CommissionTests.cs](tests/Local133.UnitTests/Payments/CommissionTests.cs); lo que valida `Payment.Record` sin comisión pasa a un `PaymentTests`;
+     - en [PeyWebhookTests.cs](tests/Local133.IntegrationTests/Sales/PeyWebhookTests.cs), quitar las asserts de comisión, las pruebas `Aplica_la_comision_propia…` y `Cambiar_la_comision_global…`, el helper `SetGlobalCommissionAsync` y el caso `StatementKind`, y renombrar `Un_centavo_se_registra_con_comision_cero`;
+     - quitar las asserts de comisión de [PushSaleTests.cs](tests/Local133.IntegrationTests/Sales/PushSaleTests.cs), [PaymentReconciliationJobTests.cs](tests/Local133.IntegrationTests/Sales/PaymentReconciliationJobTests.cs) y [MerchantRegistrationTests.cs](tests/Local133.IntegrationTests/Identity/MerchantRegistrationTests.cs);
+     - en [SalesHistoryTests.cs](tests/Local133.IntegrationTests/Sales/SalesHistoryTests.cs), cambiar la assert de «Comisión 3 %» por una que compruebe que ya no aparece;
+     - ajustar [PeyClientTests.cs](tests/Local133.IntegrationTests/Pey/PeyClientTests.cs) al `bankAccountId` obligatorio.
+
+     `ReceiptTests` y el `SystemSettings` de `TablesToIgnore` no cambian.
+   - **Documentación**:
+     - CLAUDE.md: reglas de arquitectura de comisión y estados de cuenta, sección de pagos, orden de fases, pruebas exigidas y módulos fuera del MVP;
+     - [README.md](README.md): la fila semilla de `SystemSettings`;
+     - `azure.md`: la migración borra columnas;
+     - bitácora `log_plan/fase-5.1-retiro-comision.md`.
+   - **Verificación**:
+     - una búsqueda de `commission|comisi[oó]n|statement|estados? de cuenta` no encuentra nada fuera de migraciones y bitácoras. La excepción es «estado de cuenta del banco» en la ayuda de la CLABE, que es otra cosa;
+     - `dotnet build`, `dotnet ef migrations has-pending-model-changes` y `dotnet test`;
+     - Playwright a 375, 768 y 1280 px de `/app/ventas/{id}`, `/terminos`, `/aviso-de-privacidad`, `/app/mas` y `/admin`.
+2. **CLABE única**: se revisa antes de llamar a Pey, con índice único filtrado (`CodiStatus <> 'Error'`) y un mensaje para aclaraciones. La migración se detiene si hay CLABEs repetidas, y la de prueba lo está en las bases de desarrollo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#52-clabe-única)
+3. **Planes y vigencia**: estados `Onboarding`, `Trial`, `Pro`, `Grace` y `Free`, calculados con la historia de periodos; prueba de 30 días al activarse la cuenta; precios y parámetros en `SystemSettings`. La migración les da la prueba a los vendedores activos. — [detalle](actualizaciones/suscripciones_2026_11_18.md#53-planes-y-vigencia)
+4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
+5. **Límites del gratuito**, validados en el servidor:
+   - catálogo de solo lectura, carrito bloqueado, recibo sin WhatsApp e historial de 30 días;
+   - 100 cobros concretados al mes, más 5 de cortesía, con contador visible y avisos al 80 % y al 100 %;
+   - tope de cobros generados.
+
+   — [detalle](actualizaciones/suscripciones_2026_11_18.md#55-límites-del-gratuito)
+6. **Mi plan y pago con link de Pey**:
+   - paquetes de 1, 3 y 6 meses y anual, con precio de fundador y anual congelado;
+   - un link por cargo;
+   - se abona solo con el webhook `payment_link.status_updated` o con una consulta a Pey, y hay conciliación;
+   - reutiliza el backend de la [PoC](log_plan/poc-link-de-pago.md) y borra su pantalla.
+
+   — [detalle](actualizaciones/suscripciones_2026_11_18.md#56-mi-plan-y-pago-con-link-de-pey)
+7. **Recordatorios, gracia y baja al gratuito**: job diario con links de renovación, avisos 15 (anual) y 3 días antes, el día del vencimiento y el día 3 de la gracia, fin de prueba y baja al gratuito. — [detalle](actualizaciones/suscripciones_2026_11_18.md#57-recordatorios-gracia-y-baja-al-gratuito)
+8. **Afiliados**:
+   - código y liga por vendedor, capturados en el registro;
+   - 30 % de un mes para el referido en su primer pago;
+   - 10 días para el que refiere cuando el referido paga, hasta 12 en 12 meses.
+
+   — [detalle](actualizaciones/suscripciones_2026_11_18.md#58-afiliados)
+9. **Pro de lanzamiento**: historial completo con búsqueda y exportación a Excel, y corte de caja diario. — [detalle](actualizaciones/suscripciones_2026_11_18.md#59-pro-de-lanzamiento)
+10. **Valor visible**:
+    - recibo con marca: logo en Pro, y en el gratuito «Cobrado con Local133» con el código del vendedor;
+    - catálogo público con liga;
+    - «lo que te pierdes» y resumen mensual.
+
+    Depende de la 4.1. — [detalle](actualizaciones/suscripciones_2026_11_18.md#510-valor-visible)
+11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. — [detalle](actualizaciones/suscripciones_2026_11_18.md#511-precios-y-textos-legales)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
-1. Listado de clientes con búsqueda y filtros (estatus, fecha, adeudo); detalle con pestañas General / Cuenta / Ventas / Estados de cuenta.
-2. Comisión por cliente y **parámetros globales** (comisión, IVA, días de gracia, expiración del QR), con auditoría.
-3. Cobranza: marcar pagado/condonar, suspender/reactivar.
-4. Tablero, transacciones globales, bitácora de webhooks con reproceso.
+1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan.
+2. **Plan por cliente**: periodos, cargos y pagos de la suscripción, y referidos. Acciones: regalar días, registrar un pago manual y anular un premio. **Parámetros globales**: precios y fundador, días de prueba y de gracia, límites del gratuito, uso justo, premios de referidos, IVA y expiración del QR. Todo con auditoría.
+3. Cobranza: cargos `partial` o con monto menor, links pagados sin abonar, CLABE en disputa (ver quién la tiene y liberarla), suspender/reactivar.
+4. Tablero (GMV, ingresos por suscripción, vendedores por plan, conversión de prueba a pago, lugares de fundador), transacciones globales, bitácora de webhooks con reproceso.
+
+*(Cambio 2026-11-18: antes, comisión por cliente, estados de cuenta y condonación.)*
 
 ### Fase 7 — Endurecimiento y salida (≈1 semana)
-Rate limiting en generación de cobros · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx; declarar la IP o red del proxy en `ForwardedHeaders:KnownProxies`/`KnownNetworks`, o el sitio redirigirá con 307 lo que el proxy le entregue por HTTP) · prueba piloto con 3–5 vendedores.
+Rate limiting en generación de cobros y de links de pago · pruebas de carga del webhook · respaldos · monitoreo y alertas (fallos de webhook, errores Pey) · despliegue a producción (HTTPS público para el webhook, registrar URL y secreto en portal.mipey.mx; declarar la IP o red del proxy en `ForwardedHeaders:KnownProxies`/`KnownNetworks`, o el sitio redirigirá con 307 lo que el proxy le entregue por HTTP) · prueba piloto con 3–5 vendedores.
 
-**Total estimado:** ≈10–11 semanas para una persona.
+**Total estimado:** ≈14–15 semanas para una persona. *(2026-11-18: la Fase 5 pasó de ≈1.5 a ≈5–6 semanas con las suscripciones.)*
 
 ---
 
@@ -205,12 +283,14 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS. La venta 24 ya se concilió en la [2.9](log_plan/fase-2.9-conciliacion.md#conciliación-real-contra-pey-2026-11-18-confirmada-por-el-usuario).
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
+- [PoC link de pago](log_plan/poc-link-de-pago.md): generar un link real (perfil `https` o túnel) y ver la página de Pey. El dinero cae en la cuenta de la plataforma.
 
 **Confirmar con soporte de Pey** (ver también §6):
 - [2.4](log_plan/fase-2.4-venta-monto-directo.md): límite del `concept` y que `qrString` sea solo ASCII.
 - [2.5](log_plan/fase-2.5-tiempo-real.md): tolerancia del timestamp del webhook, política de reintentos y si un QR con monto acepta varios pagos.
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): qué responde si el celular no tiene CoDi (¿400 o 200 sin que llegue nada?) y si hay aviso de rechazo del pagador.
 - [2.9](log_plan/fase-2.9-conciliacion.md): límites de peticiones (la conciliación hace unas 4 consultas por venta no pagada).
+- [PoC link de pago](log_plan/poc-link-de-pago.md): cómo dirigir el dinero del link a la CLABE del vendedor (no acepta `bankAccountId`); si el pagador ve algún concepto; el monto mínimo con tarjeta; el payload de `payment_link.status_updated`. *(2026-11-18: para la suscripción el dinero debe caer en la cuenta de la plataforma, así que dirigirlo al vendedor ya no hace falta. El payload del webhook está documentado en docs.pey.mx; ver el [hallazgo 13](#2-hallazgos-de-la-api-de-pey-afectan-el-diseño).)*
 
 **Revisión en navegador sin hacer** (no hay evidencia de una revisión posterior que la cubra):
 - [1.4](log_plan/fase-1.4-merchant-y-terminos.md): la validación en cliente bloquea el registro con la casilla de términos sin marcar.
@@ -231,22 +311,24 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 
 ## 6. Riesgos y pendientes por confirmar
 
-- **Con soporte de Pey**: ¿un QR con monto puede pagarse más de una vez?, ¿hay webhook de rechazo/expiración de push?, política de reintentos de webhooks, límites de cuentas por API key y de peticiones, fecha del sandbox.
-- **Espera de 5 días hábiles** para activar: principal fricción de adopción; mitigar con comunicación clara y notificación inmediata.
-- **Cobranza**: el vendedor ya recibió el 100% de su dinero; la única palanca es la suspensión. Considerar corte semanal con vencimiento corto (3–5 días).
-- **Fiscal/legal** (validar con contador/abogado): CFDI por la comisión, IVA, aviso de privacidad y términos; resguardo de CLABE y datos personales.
+- **Con soporte de Pey**: ¿un QR con monto puede pagarse más de una vez?, ¿hay webhook de rechazo/expiración de push?, política de reintentos de webhooks, límites de cuentas por API key y de peticiones, fecha del sandbox. Del link de pago de la suscripción: quién paga el `fee` con tarjeta y qué es `applicationFee`; si un link puede ofrecer solo CoDi; qué es `partial` y si un link pagado acepta otro pago; si los links expiran o se pueden desactivar; reintentos de `payment_link.status_updated`; si Pey acepta la misma CLABE dos veces ([detalle](actualizaciones/suscripciones_2026_11_18.md#11-por-confirmar)).
+- **Espera de 5 días hábiles** para activar: principal fricción de adopción; mitigar con comunicación clara y notificación inmediata. La prueba de 30 días empieza al activarse la cuenta, así que la espera no le quita días.
+- **Cobranza**: la palanca es la baja al gratuito, que no le quita el cobro básico. Riesgo: que el gratuito alcance y nadie pague; en el piloto, medir la conversión de prueba a pago y cuánto se usa el límite. Los links de Pey no expiran ni se cancelan: un pago tardío siempre se abona. *(Cambio 2026-11-18: antes, la palanca era la suspensión.)*
+- **Fiscal/legal** (validar con contador/abogado): CFDI de la suscripción (fuera de esta implementación; mientras tanto, factura global), precio con IVA incluido, términos (uso justo, referidos, fundador, cancelación y reembolsos), aviso de privacidad (referidos y retención de cuentas inactivas); resguardo de CLABE y datos personales.
+- **Abuso del gratuito** con varias cuentas: CLABE única, y premios de referidos solo cuando el referido paga.
+- **Tarjeta en el link de pago**: si Pey le cobra la comisión al pagador, con tarjeta se paga más que el precio «IVA incluido». Avisarlo en «Mi plan» o pedir que el link ofrezca solo CoDi.
 - **Dependencia de un solo proveedor**: aislar Pey tras `IPaymentGateway` para poder cambiar o agregar otro.
 
 ---
 
 ## 7. Verificación
 
-- **Unitarias**: cálculo y redondeo de comisión, jerarquía de tasas, dígito verificador de CLABE, corte semanal (zona horaria, bordes de semana), transiciones de estatus.
-- **Integración**: webhook con firma válida/ inválida/duplicada; `PeyClient` contra servidor simulado (WireMock) con cada `error.type`; aislamiento entre vendedores; páginas de Identity y áreas `Merchant`/`Admin` accesibles solo con el rol correcto (redirección a login / 403).
+- **Unitarias**: dígito verificador de CLABE; vigencia de la suscripción (prueba, gracia, periodos encadenados, bordes de mes y zona horaria); precios (paquetes, fundador, descuento de bienvenida); límite mensual del gratuito; tope de premios de referidos; transiciones de estatus. *(2026-11-18: sin comisión ni corte semanal.)*
+- **Integración**: webhook con firma válida/ inválida/duplicada; webhook `payment_link.status_updated` (`paid`, `processing`, `partial`, repetido, link viejo); bloqueos del gratuito en el servidor; CLABE única; `PeyClient` contra servidor simulado (WireMock) con cada `error.type`; aislamiento entre vendedores; páginas de Identity y áreas `Merchant`/`Admin` accesibles solo con el rol correcto (redirección a login / 403).
 - **Extremo a extremo (producción Pey, $0.01)**:
   1. Registrarse → capturar CLABE de prueba `012180015826225713` → recibir `bank.account.updated` → estatus `Active`.
-  2. Venta por monto directo → escanear QR con app bancaria → pantalla cambia a "Pago recibido" sin recargar → aparece en historial con comisión.
+  2. Venta por monto directo → escanear QR con app bancaria → pantalla cambia a "Pago recibido" sin recargar → aparece en el historial.
   3. Venta con carrito, cobro por celular y QR fijo.
-  4. Forzar corte semanal → estado de cuenta emitido → pagarlo por QR → `Paid`; simular vencimiento → suspensión → pago → reactivación.
-  5. Admin: cambiar comisión de un cliente y la global → verificar que solo afecta pagos nuevos.
+  4. Con el precio de prueba en $0.01, pagar un link de suscripción con CoDi → webhook → Pro. Simular el vencimiento → gracia → baja al gratuito (catálogo de solo lectura, carrito bloqueado) → pago → Pro desde el día del pago.
+  5. Afiliados: registrarse con el código de otro vendedor → primer pago con 30 % de descuento → 10 días más para el que refirió. Admin: cambiar un precio → solo afecta los links nuevos.
 - Exponer el webhook en local con un túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en el portal de Pey.

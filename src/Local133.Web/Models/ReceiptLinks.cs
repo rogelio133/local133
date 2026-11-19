@@ -14,18 +14,8 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
     /// <summary>Ruta del recibo (relativa a la raíz del sitio).</summary>
     public static string PathFor(string token) => PathPrefix + token;
 
-    /// <summary>
-    /// URL absoluta del recibo: con <see cref="PublicSiteOptions.PublicBaseUrl"/> si está configurada; si no, con el
-    /// esquema (ya corregido por los forwarded headers) y el host de la petición.
-    /// </summary>
-    public string UrlFor(HttpRequest request, string token)
-    {
-        var configured = options.Value.PublicBaseUrl?.Trim().TrimEnd('/');
-        var baseUrl = string.IsNullOrEmpty(configured)
-            ? $"{request.Scheme}://{request.Host}{request.PathBase}"
-            : configured;
-        return baseUrl + PathFor(token);
-    }
+    /// <summary>URL absoluta del recibo (base de <see cref="PublicSiteOptions.BaseUrlFor"/>).</summary>
+    public string UrlFor(HttpRequest request, string token) => options.Value.BaseUrlFor(request) + PathFor(token);
 
     /// <summary>
     /// Todo lo necesario para compartir el recibo. En un cobro por celular además se ofrece mandarlo al chat de ese

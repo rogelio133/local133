@@ -35,4 +35,13 @@ public interface IPaymentGateway
 
     /// <summary><c>GET /transaction/codi/qr/{idc}</c>: pagos de un QR, 20 por página (conciliación).</summary>
     Task<GatewayTransactionPage> GetCodiQrTransactionsAsync(string codiQrId, string? nextToken = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// <c>POST /payment-link/create</c>: crea una página de pago hospedada por Pey. No lleva <c>bankAccountId</c>:
+    /// el dinero cae en la cuenta ligada a la API key (la de la plataforma).
+    /// </summary>
+    Task<CreatedPaymentLink> CreatePaymentLinkAsync(CreatePaymentLinkRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary><c>GET /payment-link/{id}</c>: estatus, medios de pago y pagos del link.</summary>
+    Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default);
 }

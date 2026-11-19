@@ -75,6 +75,39 @@ internal sealed record PeyTransactionMetadata(
 
 internal sealed record PeyTransactionPageResponse(List<PeyTransactionResponse>? Items, string? NextToken);
 
+internal sealed record PeyCreatePaymentLinkBody(
+    decimal Amount,
+    string SuccessUrl,
+    string BackUrl,
+    bool HasTip,
+    string? ClientReferenceId,
+    IReadOnlyDictionary<string, string>? Metadata);
+
+internal sealed record PeyCreatePaymentLinkResponse(string? Id, string? Url);
+
+/// <param name="Status">En minúsculas (<c>pending</c>…): se lee como texto y se convierte en <c>PeyClient</c>.</param>
+internal sealed record PeyPaymentLinkResponse(
+    string? Id,
+    decimal? Amount,
+    string? Status,
+    string? SuccessUrl,
+    string? BackUrl,
+    bool? HasTip,
+    List<string>? PaymentMethods,
+    long? DateCreated,
+    string? ClientReferenceId,
+    Dictionary<string, JsonElement>? Metadata,
+    List<PeyPaymentLinkTransactionResponse>? Transactions);
+
+internal sealed record PeyPaymentLinkTransactionResponse(
+    string? TransactionId,
+    string? PaymentMethod,
+    long? DatePaid,
+    decimal? Amount,
+    PeyAmountBreakdown? AmountBreakdown,
+    decimal? ApplicationFee,
+    Dictionary<string, JsonElement>? Metadata);
+
 /// <summary>Error de Pey: <c>{ "error": { message, type, requestId } }</c>; <c>message</c> suelto por si responde el gateway.</summary>
 internal sealed record PeyErrorEnvelope(PeyErrorBody? Error, string? Message);
 

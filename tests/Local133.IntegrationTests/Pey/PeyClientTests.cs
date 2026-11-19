@@ -111,6 +111,117 @@ public sealed class PeyClientTests : IDisposable
     }
 
     [Fact]
+    public async Task CreatePaymentLink_EnviaCuerpoYLeeIdYUrl()
+    {
+        Respond("POST", "/payment-link/create", 200, """{"id":"01HXYZPL","url":"https://pay.pey.mx/01HXYZPL"}""");
+
+        var link = await _pey.Gateway.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(
+            Amount: 10.50m,
+            SuccessUrl: new Uri("https://local133.mx/app/link-de-pago/regreso?resultado=pagado"),
+            BackUrl: new Uri("https://local133.mx/app/link-de-pago/regreso?resultado=cancelado"),
+            ClientReferenceId: "2 tacos al pastor",
+            Metadata: new Dictionary<string, string> { ["kind"] = "payment-link-poc", ["concept"] = "2 tacos al pastor" }));
+
+        Assert.Equal(new CreatedPaymentLink("01HXYZPL", new Uri("https://pay.pey.mx/01HXYZPL")), link);
+        var request = _pey.SingleRequest();
+        Assert.Equal($"Bearer {PeyFixture.ApiKey}", request.Headers!["Authorization"].Single());
+        var body = PeyFixture.BodyOf(request);
+        Assert.Equal(10.50m, body.GetProperty("amount").GetDecimal());
+        Assert.Equal("https://local133.mx/app/link-de-pago/regreso?resultado=pagado", body.GetProperty("successUrl").GetString());
+        Assert.Equal("https://local133.mx/app/link-de-pago/regreso?resultado=cancelado", body.GetProperty("backUrl").GetString());
+        Assert.False(body.GetProperty("hasTip").GetBoolean());
+        Assert.Equal("2 tacos al pastor", body.GetProperty("clientReferenceId").GetString());
+        Assert.Equal("2 tacos al pastor", body.GetProperty("metadata").GetProperty("concept").GetString());
+        Assert.False(body.TryGetProperty("bankAccountId", out _)); // Pey no lo acepta en links
+    }
+
+    [Fact]
+    public async Task CreatePaymentLink_SinOpcionales_LosOmite()
+    {
+        Respond("POST", "/payment-link/create", 200, """{"id":"PL1","url":"https://pay.pey.mx/PL1"}""");
+
+        await _pey.Gateway.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(
+            1, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"), HasTip: true));
+
+        var body = PeyFixture.BodyOf(_pey.SingleRequest());
+        Assert.True(body.GetProperty("hasTip").GetBoolean());
+        Assert.False(body.TryGetProperty("clientReferenceId", out _));
+        Assert.False(body.TryGetProperty("metadata", out _));
+    }
+
+    [Theory]
+    [InlineData("""{"id":"PL1"}""")]                         // falta url
+    [InlineData("""{"id":"PL1","url":"/relativa"}""")]       // url no absoluta
+    public async Task CreatePaymentLink_RespuestaIncompleta_LanzaPaymentGatewayException(string body)
+    {
+        Respond("POST", "/payment-link/create", 200, body);
+
+        var ex = await Assert.ThrowsAsync<PaymentGatewayException>(() => _pey.Gateway.CreatePaymentLinkAsync(
+            new CreatePaymentLinkRequest(1, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"))));
+
+        Assert.Contains("Respuesta inesperada", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetPaymentLink_LeeEstatusEnMinusculasYTransacciones()
+    {
+        Respond("GET", "/payment-link/01HXYZPL", 200, """
+            {"id":"01HXYZPL","amount":100,"status":"partial","successUrl":"https://a.mx/ok","backUrl":"https://a.mx/back",
+             "hasTip":true,"paymentMethods":["CARD"],"dateCreated":1704067200,"clientReferenceId":"ref-1",
+             "metadata":{"concept":"Tacos"},
+             "transactions":[{"transactionId":"01TX1","paymentMethod":"CARD","datePaid":1704067260,"amount":40,
+                              "amountBreakdown":{"base":35,"tip":5},"applicationFee":null,"metadata":{"saleId":"9"}}]}
+            """);
+
+        var link = await _pey.Gateway.GetPaymentLinkAsync("01HXYZPL");
+
+        Assert.Equal(PeyPaymentLinkStatus.Partial, link.Status);
+        Assert.Equal(100m, link.Amount);
+        Assert.True(link.HasTip);
+        Assert.Equal(["CARD"], link.PaymentMethods);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1704067200), link.CreatedAt);
+        Assert.Equal("ref-1", link.ClientReferenceId);
+        Assert.Equal("Tacos", link.Metadata["concept"]);
+        var tx = Assert.Single(link.Transactions);
+        Assert.Equal("01TX1", tx.TransactionId);
+        Assert.Equal(40m, tx.Amount);
+        Assert.Equal(new GatewayAmountBreakdown(35, 5, null), tx.AmountBreakdown);
+        Assert.Null(tx.ApplicationFee);
+        Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1704067260), tx.PaidAt);
+        Assert.Equal("9", tx.Metadata["saleId"]);
+    }
+
+    [Theory]
+    [InlineData("pending", PeyPaymentLinkStatus.Pending)]
+    [InlineData("processing", PeyPaymentLinkStatus.Processing)]
+    [InlineData("paid", PeyPaymentLinkStatus.Paid)]
+    public async Task GetPaymentLink_MinimoYCadaEstatus(string wire, PeyPaymentLinkStatus expected)
+    {
+        Respond("GET", "/payment-link/PL1", 200, $$"""{"id":"PL1","amount":1,"status":"{{wire}}"}""");
+
+        var link = await _pey.Gateway.GetPaymentLinkAsync("PL1");
+
+        Assert.Equal(expected, link.Status);
+        Assert.False(link.HasTip);
+        Assert.Empty(link.PaymentMethods);
+        Assert.Empty(link.Transactions);
+        Assert.Empty(link.Metadata);
+    }
+
+    [Theory]
+    [InlineData("""{"id":"PL1","amount":1}""")]                       // falta status
+    [InlineData("""{"id":"PL1","amount":1,"status":"refunded"}""")]   // estatus que no conocemos
+    [InlineData("""{"id":"PL1","amount":1,"status":"1"}""")]          // número en texto: no es un estatus
+    public async Task GetPaymentLink_EstatusInvalido_LanzaPaymentGatewayException(string body)
+    {
+        Respond("GET", "/payment-link/PL1", 200, body);
+
+        var ex = await Assert.ThrowsAsync<PaymentGatewayException>(() => _pey.Gateway.GetPaymentLinkAsync("PL1"));
+
+        Assert.Contains("Respuesta inesperada", ex.Message);
+    }
+
+    [Fact]
     public async Task GetTransaction_LeeObjetoCompleto()
     {
         Respond("GET", "/transaction/01HXYZTXN", 200, """
@@ -216,6 +327,10 @@ public sealed class PeyClientTests : IDisposable
         { "INTERNAL_SERVER_ERROR", 500, typeof(PaymentGatewayUnavailableException) },
         { "SERVICE_UNAVAILABLE", 503, typeof(PaymentGatewayUnavailableException) },
         { "FLAGS_UNAVAILABLE", 503, typeof(PaymentGatewayUnavailableException) },
+        { "INVALID_URL", 400, typeof(PaymentGatewayValidationException) },
+        { "INVALID_HAS_TIP", 400, typeof(PaymentGatewayValidationException) },
+        { "INVALID_CLIENT_REFERENCE_ID", 400, typeof(PaymentGatewayValidationException) },
+        { "PAYMENT_LINK_NOT_PENDING", 409, typeof(PaymentGatewayStateException) },
     };
 
     [Theory]
@@ -380,6 +495,15 @@ public sealed class PeyClientTests : IDisposable
         g => g.RegisterBankAccountAsync(new RegisterBankAccountRequest("Alias", new string('n', 256), "012180015826225713", PeyEntity.Business)),
         g => g.GetBankAccountAsync(""),
         g => g.GetCodiQrTransactionsAsync(" "),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(10, new Uri("http://a.mx/ok"), new Uri("https://a.mx/back"))),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(10, new Uri("https://a.mx/ok"), new Uri("/back", UriKind.Relative))),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(0, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"))),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(1.005m, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"))),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(10, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"),
+            ClientReferenceId: new string('r', 256))),
+        g => g.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(10, new Uri("https://a.mx/ok"), new Uri("https://a.mx/back"),
+            Metadata: new Dictionary<string, string> { ["k"] = new string('v', 501) })),
+        g => g.GetPaymentLinkAsync(" "),
     };
 
     [Theory]
