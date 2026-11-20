@@ -22,9 +22,12 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
     /// número (el cliente que pagó) por <paramref name="customerWhatsAppPath"/>: un endpoint del sitio que redirige a
     /// WhatsApp, para que el celular completo nunca quede escrito en la página (solo se muestra enmascarado).
     /// </summary>
+    /// <param name="canShare">
+    /// El plan permite los botones de WhatsApp y «Compartir» (Pro). En el gratuito solo se copia la liga (5.5).
+    /// </param>
     public ReceiptShare ShareFor(
         HttpRequest request, string token, string? businessName, int folio, string amountText, string? customerPhone = null,
-        string? customerWhatsAppPath = null)
+        string? customerWhatsAppPath = null, bool canShare = true)
     {
         var url = UrlFor(request, token);
         var message = Message(businessName, folio, amountText, url);
@@ -37,8 +40,13 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
             WhatsAppAppUrl(message),
             WhatsAppWebUrl(message),
             toCustomer ? customerWhatsAppPath : null,
-            toCustomer ? PhoneNumber.Mask(customerPhone!) : null);
+            toCustomer ? PhoneNumber.Mask(customerPhone!) : null,
+            canShare);
     }
+
+    /// <summary>Aviso cuando el gratuito intenta mandar el recibo por WhatsApp.</summary>
+    public const string ShareRequiresPro =
+        "Con el plan gratuito copia la liga del recibo y pégala donde quieras. Con Pro lo envías por WhatsApp en un toque.";
 
     /// <summary>
     /// Liga <c>wa.me</c> con el mensaje: sin número abre el selector de contactos; con un celular mexicano de 10
@@ -93,6 +101,7 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
 /// Ruta del sitio que redirige al chat del cliente (cobro por celular); acepta <c>?destino=app|web</c>.
 /// </param>
 /// <param name="CustomerMaskedPhone">Celular (enmascarado) del cliente, si hay <paramref name="CustomerWhatsAppPath"/>.</param>
+/// <param name="CanShare">Botones de WhatsApp y «Compartir» (Pro); sin ellos solo se copia la liga (gratuito).</param>
 public sealed record ReceiptShare(
     string Url, string Path, string Message, string WhatsAppUrl, string WhatsAppAppUrl, string WhatsAppWebUrl,
-    string? CustomerWhatsAppPath, string? CustomerMaskedPhone);
+    string? CustomerWhatsAppPath, string? CustomerMaskedPhone, bool CanShare = true);

@@ -1,0 +1,14 @@
+@model Local133.Web.Areas.Merchant.Models.ProRequiredViewModel
+@* Aviso «Disponible con Pro» (5.5): lo que se gana con Pro y el botón a «Mi plan». Reutilizable en cualquier pantalla. *@
+<div class="card border-primary" data-pro-required>
+    <div class="card-body">
+        <span class="badge text-bg-primary mb-2"><i class="bi bi-stars me-1" aria-hidden="true"></i>Disponible con Pro</span>
+        <h2 class="h5 card-title"><i class="bi @Model.Icon text-primary me-1" aria-hidden="true"></i> @Model.Title</h2>
+        <p class="card-text text-body-secondary mb-2">@Model.Message</p>
+        @if (Model.Detail is not null)
+        {
+            <p class="card-text fw-semibold" data-pro-required-detail>@Model.Detail</p>
+        }
+        <a class="btn btn-primary" href="@Url.Content("~" + Local133.Web.Areas.Merchant.Models.PlanUrls.Plan)" data-pro-required-link>Conoce Pro</a>
+    </div>
+</div>

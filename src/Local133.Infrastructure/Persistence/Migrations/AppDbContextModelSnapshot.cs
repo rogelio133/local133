@@ -330,6 +330,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasIndex("MerchantId", "Folio")
                         .IsUnique();
 
+                    b.HasIndex("MerchantId", "PaidAt");
+
                     b.HasIndex("Status", "ExpiresAt");
 
                     b.ToTable("Sales", null, t =>
@@ -405,9 +407,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("FounderSlots")
                         .HasColumnType("int");
 
-                    b.Property<int>("FreeCourtesyCharges")
-                        .HasColumnType("int");
-
                     b.Property<int>("FreeHistoryDays")
                         .HasColumnType("int");
 
@@ -457,7 +456,7 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_SystemSettings_GraceDays", "[GraceDays] >= 0");
 
-                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeCourtesyCharges] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 AND [FreeHistoryDays] >= 0 AND [ProFairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
+                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 AND [FreeHistoryDays] >= 0 AND [ProFairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
 
                             t.HasCheckConstraint("CK_SystemSettings_Prices", "[MonthlyPrice] > 0 AND [AnnualPrice] > 0 AND [FounderMonthlyPrice] > 0 AND [FounderAnnualPrice] > 0");
 
@@ -478,7 +477,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                             FounderAnnualPrice = 1490m,
                             FounderMonthlyPrice = 149m,
                             FounderSlots = 100,
-                            FreeCourtesyCharges = 5,
                             FreeHistoryDays = 30,
                             FreeMonthlyGeneratedLimit = 300,
                             FreeMonthlyPaidLimit = 100,

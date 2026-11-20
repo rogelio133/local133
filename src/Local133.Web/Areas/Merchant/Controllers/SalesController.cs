@@ -1,4 +1,5 @@
 using Local133.Application.Auth;
+using Local133.Application.Subscriptions;
 using Local133.Domain.Common;
 using Local133.Domain.Sales;
 using Local133.Infrastructure.Persistence;
@@ -19,8 +20,10 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app/ventas")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimeProvider clock) : Controller
+public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks receiptLinks, TimeProvider clock) : Controller
 {
+    /// <summary>Mensaje (TempData) que el detalle muestra una vez (p. ej. WhatsApp en el gratuito).</summary>
+    public const string NoticeKey = "SaleDetailNotice";
     [HttpGet("")]
     public async Task<IActionResult> Index(
         [FromQuery(Name = SaleStatusFilters.QueryKey)] string? status,
@@ -30,8 +33,9 @@ public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimePro
         CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         var model = await SalesHistoryQuery.BuildAsync(
-            db, merchant, SaleStatusFilters.Parse(status), ParseDate(from), ParseDate(to), page, clock.GetUtcNow(),
+            db, merchant, plan, SaleStatusFilters.Parse(status), ParseDate(from), ParseDate(to), page, clock.GetUtcNow(),
             cancellationToken);
         return View(model);
     }
@@ -47,13 +51,21 @@ public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimePro
         }
 
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
+        var now = clock.GetUtcNow();
+        var today = MexicoTime.Today(now);
+        if (plan.HistoryStartUtc(now) is { } historyStart && sale.CreatedAt < historyStart)
+        {
+            // Gratuito: la venta sigue guardada, pero fuera de los días de historial. Aviso de Pro, no 404.
+            return View("DetailLocked", new SaleLockedViewModel(
+                sale.Folio, SaleFormats.DateTime(sale.CreatedAt, today), plan.FreeHistoryDays));
+        }
+
         var payments = await db.Payments.AsNoTracking()
             .Where(p => p.SaleId == sale.Id)
             .OrderBy(p => p.PaidAt).ThenBy(p => p.Id)
             .ToListAsync(cancellationToken);
 
-        var now = clock.GetUtcNow();
-        var today = MexicoTime.Today(now);
         var status = sale.EffectiveStatus(now);
         var amountText = SaleQrViewModel.FormatAmount(sale.Amount);
         var model = new SaleDetailViewModel(
@@ -79,7 +91,7 @@ public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimePro
                 .ToList(),
             sale.HasReceipt
                 ? receiptLinks.ShareFor(Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, amountText,
-                    sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id))
+                    sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id), plan.Entitlements.CanShareReceipt)
                 : null);
         return View(model);
     }
@@ -102,6 +114,13 @@ public class SalesController(AppDbContext db, ReceiptLinks receiptLinks, TimePro
         }
 
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        if (!(await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements.CanShareReceipt)
+        {
+            // Gratuito (5.5): el recibo se comparte copiando la liga; WhatsApp es de Pro.
+            TempData[NoticeKey] = ReceiptLinks.ShareRequiresPro;
+            return RedirectToAction(nameof(Detail), new { id });
+        }
+
         var message = ReceiptLinks.Message(
             merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount), receiptLinks.UrlFor(Request, sale.ReceiptToken));
         Response.Headers.CacheControl = "no-store";

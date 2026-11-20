@@ -152,3 +152,15 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
   Se aplica sola al arrancar. En la base de pruebas de Azure, la prueba de esos vendedores cuenta desde el día del despliegue.
 - Los precios y parámetros viven en la base (`SystemSettings`), no en App Settings. Para cambiarlos antes de la Fase 6 (admin), se hace un `UPDATE` en la fila 1. Cada cargo guardará su propio monto (5.6).
 - Sin recursos, App Settings, secretos ni jobs nuevos.
+
+### Fase 5.5 — Límites del gratuito
+- **Migración `SalesPaidAtIndex`** (no destructiva): crea el índice `IX_Sales_MerchantId_PaidAt` para contar los cobros concretados del mes. Se aplica sola al arrancar. En una tabla `Sales` grande puede tardar unos segundos: el arranque espera a que termine.
+- Al desplegar, los vendedores cuya prueba ya terminó quedan en el plan gratuito con todos sus límites. Su prueba empezó el día que se aplicó la migración de la 5.3, así que en la base de pruebas de Azure hoy todos siguen en prueba.
+- Los límites (100 cobros concretados, 300 generados, 30 días de historial, uso justo de 5,000) se leen de `SystemSettings`. Para cambiarlos antes de la Fase 6 se hace un `UPDATE` en la fila 1.
+- Los avisos de 80 y 100 cobros y del uso justo de Pro solo se escriben en el log (Application Insights o Log stream) hasta la 5.4.
+- Sin recursos, App Settings, secretos ni jobs nuevos.
+
+### Ajuste 2026-11-20 — Sin cobros de cortesía en el gratuito
+- **Migración `RemoveFreeCourtesyCharges`** (destructiva, solo un parámetro): quita la columna `SystemSettings.FreeCourtesyCharges` y vuelve a crear `CK_SystemSettings_Limits` sin ella. Se aplica sola al arrancar; no hay datos que rescatar.
+- El gratuito bloquea al llegar a `FreeMonthlyPaidLimit` (100) cobros concretados.
+- Sin recursos, App Settings, secretos ni jobs nuevos.

@@ -1,5 +1,6 @@
 using Local133.Application.Payments;
 using Local133.Application.Sales;
+using Local133.Application.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Hosting;
 using Local133.Web.Hubs;
@@ -50,6 +51,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>Avisos de pago en tiempo real enviados (además de enviarse por SignalR).</summary>
     public RecordingSaleNotifier Notifier { get; } = new();
+
+    /// <summary>Umbrales del límite del gratuito y del uso justo de Pro detectados tras cada pago (5.5).</summary>
+    public RecordingChargeLimitNotifier LimitNotifier { get; } = new();
 
     /// <summary>Secreto Standard Webhooks de prueba (<c>Pey:WebhookSecret</c>).</summary>
     public const string WebhookSecret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
@@ -106,6 +110,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 return Notifier;
             });
 
+            services.RemoveAll<IChargeLimitNotifier>();
+            services.AddSingleton<IChargeLimitNotifier>(LimitNotifier);
+
             services.AddTransient<IStartupFilter, ChallengeEndpointsStartupFilter>();
 
             // Proveedor externo falso: las pruebas no dependen de Google/Facebook ni de sus secretos.
@@ -136,6 +143,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Emails.Clear();
         Gateway.Reset();
         Notifier.Reset();
+        LimitNotifier.Reset();
         var defaults = new FakeExternalUser();
         ExternalUser.ProviderKey = defaults.ProviderKey;
         ExternalUser.Email = defaults.Email;

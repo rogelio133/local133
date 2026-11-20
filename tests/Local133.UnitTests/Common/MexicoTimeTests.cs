@@ -85,6 +85,38 @@ public class MexicoTimeTests
     }
 
     [Fact]
+    public void MonthRange_va_del_dia_1_al_dia_1_siguiente_en_hora_de_Mexico()
+    {
+        var (start, end) = MexicoTime.MonthRange(new DateOnly(2026, 11, 19));
+
+        // México no tiene horario de verano desde 2022: UTC−6 todo el año.
+        Assert.Equal(new DateTimeOffset(2026, 11, 1, 6, 0, 0, TimeSpan.Zero), start);
+        Assert.Equal(new DateTimeOffset(2026, 12, 1, 6, 0, 0, TimeSpan.Zero), end);
+    }
+
+    [Fact]
+    public void MonthRange_de_diciembre_termina_en_enero()
+    {
+        var (start, end) = MexicoTime.MonthRange(new DateOnly(2026, 12, 31));
+
+        Assert.Equal(new DateTimeOffset(2026, 12, 1, 6, 0, 0, TimeSpan.Zero), start);
+        Assert.Equal(new DateTimeOffset(2027, 1, 1, 6, 0, 0, TimeSpan.Zero), end);
+        Assert.Equal(new DateOnly(2027, 1, 1), MexicoTime.NextMonthStart(new DateOnly(2026, 12, 31)));
+    }
+
+    [Theory]
+    [InlineData(2026, 12, 1, 5, 59, 11)] // 30/11 23:59 en México
+    [InlineData(2026, 12, 1, 6, 0, 12)]  // 01/12 00:00 en México
+    public void El_mes_de_un_instante_es_el_de_Mexico_y_no_el_de_UTC(int y, int m, int d, int h, int min, int expectedMonth)
+    {
+        var instant = new DateTimeOffset(y, m, d, h, min, 0, TimeSpan.Zero);
+        var (start, end) = MexicoTime.MonthRange(MexicoTime.Today(instant));
+
+        Assert.True(instant >= start && instant < end);
+        Assert.Equal(expectedMonth, MexicoTime.ToLocal(start).Month);
+    }
+
+    [Fact]
     public void DayRange_rechaza_un_rango_invertido() =>
         Assert.Throws<ArgumentException>(() => MexicoTime.DayRange(new DateOnly(2026, 11, 14), new DateOnly(2026, 11, 13)));
 }

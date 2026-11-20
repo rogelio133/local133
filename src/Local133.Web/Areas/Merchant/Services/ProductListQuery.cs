@@ -13,9 +13,10 @@ namespace Local133.Web.Areas.Merchant.Services;
 public static class ProductListQuery
 {
     /// <param name="listPath">Página que muestra la lista (para la paginación y «Ver todos»).</param>
+    /// <param name="canManage">Puede editar: no está dado de baja y su plan lo permite (el gratuito es de solo lectura).</param>
     public static async Task<ProductListViewModel> BuildAsync(
         AppDbContext db, Domain.Merchants.Merchant merchant, string? q, int? page, IUrlHelper url, string listPath,
-        CancellationToken cancellationToken)
+        bool canManage, CancellationToken cancellationToken)
     {
         var query = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
         if (query is { Length: > ProductListViewModel.QueryMaxLength })
@@ -47,7 +48,9 @@ public static class ProductListQuery
                 ThumbnailUrl(url, p.Id, p.PhotoKey))).ToList(),
             Page = pageInfo,
             Query = query,
-            CanManage = merchant.CanManageProducts,
+            CanManage = canManage,
+            ReadOnlyReason = canManage ? null
+                : merchant.CanManageProducts ? CatalogReadOnlyReason.Plan : CatalogReadOnlyReason.Disabled,
             ListPath = listPath,
         };
     }

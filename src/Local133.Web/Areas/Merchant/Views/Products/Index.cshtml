@@ -26,10 +26,20 @@
         {
             <div class="alert alert-warning" role="alert" data-product-warning><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @warning</div>
         }
-        @if (!Model.CanManage)
+        @if (Model.ReadOnlyReason == CatalogReadOnlyReason.Disabled)
         {
             <div class="alert alert-secondary" role="status" data-products-readonly>
                 Tu cuenta está dada de baja: puedes consultar tus productos, pero no modificarlos.
+            </div>
+        }
+        else if (Model.ReadOnlyReason == CatalogReadOnlyReason.Plan)
+        {
+            <div class="mb-3" data-products-readonly data-products-readonly-plan>
+                <partial name="_ProRequired" model='new ProRequiredViewModel(
+                    "Tu catálogo es de solo lectura",
+                    "Con el plan gratuito puedes consultar tus productos. Con Pro los agregas, los editas y cobras con ellos.",
+                    Model.Query is null ? ProductListViewModel.WaitingCatalogText(Model.Page.TotalCount) : null,
+                    "bi-box-seam")' />
             </div>
         }
 

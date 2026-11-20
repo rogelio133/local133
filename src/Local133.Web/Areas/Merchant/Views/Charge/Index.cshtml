@@ -12,6 +12,10 @@
         <partial name="_ChargeModeNav" model="false" />
 
         <div class="charge-mode-panel">
+            @if (Model.Usage is { } usage)
+            {
+                <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
+            }
             @if (Model.Blocked is { } blocked)
             {
                 <div data-charge-blocked>

@@ -100,6 +100,12 @@ public sealed class CartChargeViewModel
 
     public ChargeBlockedNotice? Blocked { get; init; }
 
+    /// <summary>Contador del mes del gratuito (5.5); <c>null</c> sin límite o si aún no puede cobrar.</summary>
+    public ChargeUsageViewModel? Usage { get; init; }
+
+    /// <summary>Gratuito: el carrito es de Pro y el panel muestra este aviso en lugar del catálogo.</summary>
+    public ProRequiredViewModel? ProRequired { get; init; }
+
     /// <summary>Primera página del catálogo (con la búsqueda de la URL); <c>null</c> si no puede cobrar.</summary>
     public ProductListViewModel? Catalog { get; init; }
 
@@ -129,6 +135,9 @@ public sealed class ChargeFormViewModel
 
     /// <summary>Aviso cuando no puede cobrar; <c>null</c> = puede cobrar.</summary>
     public ChargeBlockedNotice? Blocked { get; init; }
+
+    /// <summary>Contador del mes del gratuito (5.5); <c>null</c> sin límite o si aún no puede cobrar.</summary>
+    public ChargeUsageViewModel? Usage { get; init; }
 
     public static ChargeBlockedNotice? BlockedNoticeFor(Domain.Merchants.Merchant merchant, BankAccount? account)
     {

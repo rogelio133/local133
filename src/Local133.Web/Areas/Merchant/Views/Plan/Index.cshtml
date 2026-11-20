@@ -1,0 +1,69 @@
+@using Local133.Web.Areas.Merchant.Models
+@using Local133.Domain.Subscriptions
+@model MyPlanViewModel
+@{
+    ViewData["Title"] = "Mi plan";
+}
+@* Provisional (5.5): estado, contador y lo que incluye cada plan. La 5.6 agrega los paquetes y el pago con link de Pey. *@
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-my-plan>
+        <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
+        <h1 class="h4 mb-3">Mi plan</h1>
+
+        @if (Model.Plan is { } plan)
+        {
+            <div class="card card-body mb-3 d-flex flex-row align-items-center gap-3 @(plan.Tier == PlanTier.Grace ? "border-warning" : "")" data-plan-tier="@plan.Tier">
+                <i class="bi @plan.Icon fs-3 @(plan.Tier == PlanTier.Free ? "text-body-secondary" : plan.Tier == PlanTier.Grace ? "text-warning" : "text-primary")" aria-hidden="true"></i>
+                <span class="flex-grow-1">
+                    <span class="d-block fw-bold" data-plan-title>@plan.Title</span>
+                    <span class="d-block small text-body-secondary" data-plan-detail>@plan.Detail</span>
+                </span>
+            </div>
+        }
+        else
+        {
+            <div class="card card-body mb-3" data-plan-onboarding>
+                <span class="fw-bold">Tu prueba de Pro aún no empieza</span>
+                <span class="small text-body-secondary">Al activarse tu cuenta bancaria tendrás @Model.TrialDays días de Pro sin costo.</span>
+            </div>
+        }
+
+        @if (Model.Usage is { } usage)
+        {
+            <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
+        }
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Qué incluye cada plan</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" data-plan-features>
+                    <thead>
+                        <tr>
+                            <th scope="col" class="fw-normal text-body-secondary small ps-3">Función</th>
+                            <th scope="col" class="small">Gratuito</th>
+                            <th scope="col" class="small pe-3">Pro</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        @foreach (var row in Model.Features)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    @row.Feature
+                                    @if (row.ComingSoon)
+                                    {
+                                        <partial name="_ComingSoonBadge" />
+                                    }
+                                </td>
+                                <td>@row.Free</td>
+                                <td class="fw-semibold pe-3">@row.Pro</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <partial name="_ComingSoon" model='new ComingSoonViewModel("Pagar Pro", "5.6", "Muy pronto podrás pagar o adelantar tu plan desde aquí, con CoDi.")' />
+    </div>
+</div>

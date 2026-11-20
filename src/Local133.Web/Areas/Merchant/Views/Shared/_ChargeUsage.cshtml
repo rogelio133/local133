@@ -1,0 +1,21 @@
+@model Local133.Web.Areas.Merchant.Models.ChargeUsageViewModel
+@* Contador del mes del plan gratuito (5.5): «82 de 100 cobros este mes», con aviso al 80 % y bloqueo al llegar al límite. *@
+<div class="card card-body @(Model.IsBlocked ? "border-danger" : Model.IsWarning ? "border-warning" : "")" data-charge-usage data-charge-usage-state="@Model.State">
+    <div class="d-flex justify-content-between align-items-baseline gap-2 flex-wrap">
+        <span class="fw-bold" data-charge-usage-title>@Model.Title</span>
+        @if (!Context.Request.Path.Equals(Local133.Web.Areas.Merchant.Models.PlanUrls.Plan, StringComparison.OrdinalIgnoreCase))
+        {
+            <a class="small text-nowrap" href="@Url.Content("~" + Local133.Web.Areas.Merchant.Models.PlanUrls.Plan)">Plan gratuito</a>
+        }
+    </div>
+    <div class="progress mt-2" role="progressbar" aria-label="Cobros del mes" aria-valuenow="@Model.Percent" aria-valuemin="0" aria-valuemax="100" style="height: .5rem">
+        <div class="progress-bar @Model.BarClass" style="width: @(Model.Percent)%"></div>
+    </div>
+    <p class="small mb-0 mt-2 @(Model.IsWarning ? "" : "text-body-secondary")" data-charge-usage-message>
+        @if (Model.IsWarning)
+        {
+            <i class="bi @(Model.IsBlocked ? "bi-exclamation-octagon-fill text-danger" : "bi-exclamation-triangle-fill text-warning") me-1" aria-hidden="true"></i>
+        }
+        @Model.Message
+    </p>
+</div>

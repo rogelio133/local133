@@ -1,6 +1,7 @@
 using System.Globalization;
 using Local133.Application.Payments;
 using Local133.Application.Sales;
+using Local133.Application.Subscriptions;
 using Local133.Domain.Payments;
 using Local133.Domain.Sales;
 using Local133.Infrastructure.Persistence;
@@ -18,6 +19,7 @@ namespace Local133.Infrastructure.Payments;
 internal sealed class PaymentRecorder(
     AppDbContext db,
     ISaleNotifier notifier,
+    IChargeLimitAlerts limitAlerts,
     TimeProvider clock,
     ILogger<PaymentRecorder> logger) : IPaymentRecorder
 {
@@ -109,6 +111,19 @@ internal sealed class PaymentRecorder(
         {
             // El pago ya quedó guardado; la vista también lo detecta con polling.
             logger.LogWarning(ex, "No se pudo avisar en tiempo real del pago de la venta {SaleId}", sale.Id);
+        }
+
+        if (previousStatus != SaleStatus.Paid)
+        {
+            // Un cobro concretado más en el mes: umbrales del gratuito y uso justo de Pro. Nunca tumba el pago.
+            try
+            {
+                await limitAlerts.PaidChargeRecordedAsync(sale.MerchantId, sale.Id, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "No se pudieron revisar los límites del mes tras el pago de la venta {SaleId}", sale.Id);
+            }
         }
 
         return new PaymentRecordResult.Recorded(payment.Id, sale.Id, sale.MerchantId);

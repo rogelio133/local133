@@ -75,6 +75,11 @@ public static class DependencyInjection
         services.AddScoped<IProductCatalog, ProductCatalog>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.
         services.AddScoped<IPlanAccess, PlanAccess>();
+        // Límites del gratuito (5.5): conteo de cobros del mes y umbrales tras cada pago.
+        services.AddScoped<IChargeUsage, ChargeUsage>();
+        services.AddScoped<IChargeLimitAlerts, ChargeLimitAlerts>();
+        // 5.4: avisos en el sitio y correos. Por ahora, solo el log.
+        services.TryAddSingleton<IChargeLimitNotifier, LoggingChargeLimitNotifier>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 

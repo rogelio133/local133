@@ -177,6 +177,24 @@ public sealed class SalesHistoryViewModel
     /// <summary>El vendedor tiene al menos una venta (sin filtros).</summary>
     public bool HasAnySales { get; init; }
 
+    /// <summary>
+    /// Días de historial del plan gratuito (5.5); <c>null</c> = historial completo con filtro de fechas (Pro).
+    /// </summary>
+    public int? HistoryDays { get; init; }
+
+    /// <summary>Ventas de antes de <see cref="HistoryDays"/> que el gratuito no muestra (se ocultan, no se borran).</summary>
+    public int HiddenOlderCount { get; init; }
+
+    public bool IsHistoryLimited => HistoryDays is not null;
+
+    /// <summary>«Tienes 47 ventas de hace más de 30 días.»</summary>
+    public string? HiddenOlderText => HiddenOlderCount switch
+    {
+        <= 0 => null,
+        1 => $"Tienes 1 venta de hace más de {HistoryDays} días.",
+        _ => $"Tienes {HiddenOlderCount:N0} ventas de hace más de {HistoryDays} días.",
+    };
+
     public bool HasDateFilter => From is not null || To is not null;
 
     public bool IsFiltered => Status != SaleStatusFilter.All || HasDateFilter;
@@ -227,6 +245,9 @@ public sealed class SalesHistoryViewModel
         _ => null,
     };
 }
+
+/// <summary>Detalle de una venta que el gratuito ya no muestra (más vieja que sus días de historial).</summary>
+public sealed record SaleLockedViewModel(int Folio, string CreatedAtText, int HistoryDays);
 
 /// <summary>Pago de una venta tal como lo ve el vendedor.</summary>
 public sealed record SalePaymentView(string PaidAtText, string AmountText, string? TrackingKey);

@@ -37,6 +37,19 @@ public static class MexicoTime
     /// <summary>Instantes (UTC) de un día en México.</summary>
     public static (DateTimeOffset StartUtc, DateTimeOffset EndUtc) DayRange(DateOnly day) => DayRange(day, day);
 
+    /// <summary>Primer día del mes calendario de <paramref name="day"/>.</summary>
+    public static DateOnly MonthStart(DateOnly day) => new(day.Year, day.Month, 1);
+
+    /// <summary>Primer día del mes siguiente al de <paramref name="day"/> (cuando se reinician los límites del mes).</summary>
+    public static DateOnly NextMonthStart(DateOnly day) => MonthStart(day).AddMonths(1);
+
+    /// <summary>
+    /// Instantes (UTC) del mes calendario de <paramref name="day"/> en México: de la medianoche del día 1 a la del día
+    /// 1 del mes siguiente (exclusivo).
+    /// </summary>
+    public static (DateTimeOffset StartUtc, DateTimeOffset EndUtc) MonthRange(DateOnly day) =>
+        (StartOfDayUtc(MonthStart(day)), StartOfDayUtc(NextMonthStart(day)));
+
     /// <summary>
     /// Suma meses en el calendario de México y conserva la hora local: del 31 de enero a las 15:00, un mes llega al
     /// último día de febrero a las 15:00 (28 o 29). El resultado va en UTC.

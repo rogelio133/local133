@@ -1,3 +1,4 @@
+using Local133.Application.Subscriptions;
 using Local133.Domain.Common;
 using Local133.Domain.Sales;
 using Local133.Infrastructure.Persistence;
@@ -14,9 +15,16 @@ namespace Local133.Web.Areas.Merchant.Services;
 public static class SalesHistoryQuery
 {
     public static async Task<SalesHistoryViewModel> BuildAsync(
-        AppDbContext db, Domain.Merchants.Merchant merchant, SaleStatusFilter status, DateOnly? from, DateOnly? to,
-        int? page, DateTimeOffset now, CancellationToken cancellationToken)
+        AppDbContext db, Domain.Merchants.Merchant merchant, MerchantPlan plan, SaleStatusFilter status, DateOnly? from,
+        DateOnly? to, int? page, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        // Gratuito (5.5): solo los últimos días, con el filtro de estatus; el rango de fechas es de Pro.
+        var historyStart = plan.HistoryStartUtc(now);
+        if (historyStart is not null)
+        {
+            (from, to) = (null, null);
+        }
+
         if (from is { } f && to is { } t && t < f)
         {
             (from, to) = (to, from);
@@ -24,7 +32,8 @@ public static class SalesHistoryQuery
 
         // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
         var all = db.Sales.AsNoTracking().Where(s => s.MerchantId == merchant.Id);
-        var sales = WithStatus(all, status, now);
+        var visible = historyStart is { } cutoff ? all.Where(s => s.CreatedAt >= cutoff) : all;
+        var sales = WithStatus(visible, status, now);
         if (from is { } start)
         {
             var startUtc = MexicoTime.DayRange(start).StartUtc;
@@ -70,6 +79,10 @@ public static class SalesHistoryQuery
             To = to,
             Today = today,
             HasAnySales = pageInfo.TotalCount > 0 || await all.AnyAsync(cancellationToken),
+            HistoryDays = historyStart is null ? null : plan.FreeHistoryDays,
+            HiddenOlderCount = historyStart is { } hiddenBefore
+                ? await all.CountAsync(s => s.CreatedAt < hiddenBefore, cancellationToken)
+                : 0,
         };
     }
 
