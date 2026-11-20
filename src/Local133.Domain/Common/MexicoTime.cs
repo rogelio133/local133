@@ -2,7 +2,7 @@ namespace Local133.Domain.Common;
 
 /// <summary>
 /// Calendario del negocio: la hora del centro de México (<c>America/Mexico_City</c>). Los días del historial, el
-/// resumen del día y el corte semanal se cuentan en esta zona, no en UTC.
+/// resumen del día y la vigencia de la suscripción se cuentan en esta zona, no en UTC.
 /// </summary>
 public static class MexicoTime
 {
@@ -37,10 +37,25 @@ public static class MexicoTime
     /// <summary>Instantes (UTC) de un día en México.</summary>
     public static (DateTimeOffset StartUtc, DateTimeOffset EndUtc) DayRange(DateOnly day) => DayRange(day, day);
 
-    private static DateTimeOffset StartOfDayUtc(DateOnly day)
+    /// <summary>
+    /// Suma meses en el calendario de México y conserva la hora local: del 31 de enero a las 15:00, un mes llega al
+    /// último día de febrero a las 15:00 (28 o 29). El resultado va en UTC.
+    /// </summary>
+    public static DateTimeOffset AddMonths(DateTimeOffset instant, int months) =>
+        FromLocal(ToLocal(instant).DateTime.AddMonths(months));
+
+    /// <summary>Suma días en el calendario de México y conserva la hora local. El resultado va en UTC.</summary>
+    public static DateTimeOffset AddDays(DateTimeOffset instant, int days) =>
+        FromLocal(ToLocal(instant).DateTime.AddDays(days));
+
+    private static DateTimeOffset StartOfDayUtc(DateOnly day) =>
+        FromLocal(day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified));
+
+    /// <summary>Instante (UTC) de una hora local de México.</summary>
+    private static DateTimeOffset FromLocal(DateTime local)
     {
-        var local = day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified);
-        // Si la medianoche no existiera (cambio de horario), se toma la primera hora válida.
+        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        // Si la hora no existiera (cambio de horario), se toma la primera hora válida.
         while (Zone.IsInvalidTime(local))
         {
             local = local.AddMinutes(30);

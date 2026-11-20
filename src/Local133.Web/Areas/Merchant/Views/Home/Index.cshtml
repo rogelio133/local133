@@ -88,12 +88,35 @@
                                         <a class="btn btn-outline-primary btn-sm mt-2" href="~/app/cuenta-bancaria">Ver estatus</a>
                                     }
                                 }
+                                @if (step.Kind == OnboardingStepKind.ReadyToCharge && Model.TrialNotice is { } trialNotice)
+                                {
+                                    <div class="small text-body-secondary mt-1" data-trial-notice>
+                                        <i class="bi bi-stars text-primary me-1" aria-hidden="true"></i>@trialNotice
+                                    </div>
+                                }
                             </div>
                         </li>
                     }
                 </ul>
             </div>
             break;
+    }
+
+    @if (Model.Plan is { } plan)
+    {
+        var (planIconClass, planBorder) = plan.Tier switch
+        {
+            Local133.Domain.Subscriptions.PlanTier.Grace => ("text-warning", "border-warning"),
+            Local133.Domain.Subscriptions.PlanTier.Free => ("text-body-secondary", ""),
+            _ => ("text-primary", ""),
+        };
+        <div class="card card-body mt-3 d-flex flex-row align-items-center gap-3 @planBorder" data-plan-tier="@plan.Tier">
+            <i class="bi @plan.Icon fs-3 @planIconClass" aria-hidden="true"></i>
+            <span class="flex-grow-1">
+                <span class="d-block fw-bold" data-plan-title>@plan.Title</span>
+                <span class="d-block small text-body-secondary" data-plan-detail>@plan.Detail</span>
+            </span>
+        </div>
     }
 
     @if (Model.Today is { } today)

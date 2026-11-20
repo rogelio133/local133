@@ -187,7 +187,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 
 1. **Retirar el modelo de comisión**: dominio, base (migración `RemoveCommission`), detalle de venta, textos legales, pruebas y docs; `bankAccountId` obligatorio en QR y push. ✅ *(hecho 2026-11-18)* — [bitácora](log_plan/fase-5.1-retiro-comision.md)
 2. **CLABE única**: se revisa antes de llamar a Pey, con índice único filtrado (`CodiStatus <> 'Error'`) y un mensaje para aclaraciones. La migración se detiene si hay CLABEs repetidas, y la de prueba lo está en las bases de desarrollo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#52-clabe-única)
-3. **Planes y vigencia**: estados `Onboarding`, `Trial`, `Pro`, `Grace` y `Free`, calculados con la historia de periodos; prueba de 30 días al activarse la cuenta; precios y parámetros en `SystemSettings`. La migración les da la prueba a los vendedores activos. — [detalle](actualizaciones/suscripciones_2026_11_18.md#53-planes-y-vigencia)
+3. **Planes y vigencia**: estados `Onboarding`, `Trial`, `Pro`, `Grace` y `Free`, calculados con la historia de periodos; prueba de 30 días al activarse la cuenta; precios y parámetros en `SystemSettings`. La migración les da la prueba a los vendedores activos. ✅ *(hecho 2026-11-19; periodos al instante, en hora de México)* — [bitácora](log_plan/fase-5.3-planes-y-vigencia.md)
 4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
 5. **Límites del gratuito**, validados en el servidor:
    - catálogo de solo lectura, carrito bloqueado, recibo sin WhatsApp e historial de 30 días;

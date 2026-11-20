@@ -3,6 +3,7 @@ using Local133.Application.Payments;
 using Local133.Application.Products;
 using Local133.Application.Sales;
 using Local133.Application.Storage;
+using Local133.Application.Subscriptions;
 using Local133.Application.Tenancy;
 using Local133.Application.Webhooks;
 using Local133.Infrastructure.BankAccounts;
@@ -14,6 +15,7 @@ using Local133.Infrastructure.Pey;
 using Local133.Infrastructure.Products;
 using Local133.Infrastructure.Sales;
 using Local133.Infrastructure.Storage;
+using Local133.Infrastructure.Subscriptions;
 using Local133.Infrastructure.Webhooks;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +73,8 @@ public static class DependencyInjection
         services.AddScoped<IPaymentReconciliation, PaymentReconciliation>();
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
         services.AddScoped<IProductCatalog, ProductCatalog>();
+        // Estado del plan (suscripción) del vendedor, con caché por petición.
+        services.AddScoped<IPlanAccess, PlanAccess>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 

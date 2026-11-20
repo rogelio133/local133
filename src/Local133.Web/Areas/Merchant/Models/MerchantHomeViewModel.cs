@@ -5,21 +5,29 @@ namespace Local133.Web.Areas.Merchant.Models;
 /// <summary>Inicio del vendedor (/app): saludo, estatus y checklist de activación.</summary>
 public sealed record MerchantHomeViewModel(
     string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null,
-    DaySummaryViewModel? Today = null)
+    DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0)
 {
     public const string DefaultRejection = "Banxico no pudo registrarla para CoDi.";
 
     /// <param name="bankAccountRejection">Motivo del rechazo de su cuenta bancaria, si Pey la rechazó.</param>
     /// <param name="today">Resumen del día (vendedores que ya cobran); <c>null</c> durante el onboarding.</param>
+    /// <param name="plan">Tarjeta del plan; <c>null</c> en el onboarding y para un vendedor dado de baja.</param>
+    /// <param name="trialDays">Días de la prueba de Pro, para el aviso del checklist.</param>
     public static MerchantHomeViewModel From(
-        Domain.Merchants.Merchant merchant, string? userName, string? bankAccountRejection = null, DaySummaryViewModel? today = null) => new(
+        Domain.Merchants.Merchant merchant, string? userName, string? bankAccountRejection = null, DaySummaryViewModel? today = null,
+        PlanSummaryViewModel? plan = null, int trialDays = 0) => new(
         string.IsNullOrWhiteSpace(merchant.BusinessName) ? userName ?? "vendedor" : merchant.BusinessName,
         merchant.Status,
         OnboardingChecklist.For(merchant.Status).Select(OnboardingStepViewModel.From).ToArray(),
         bankAccountRejection,
-        today);
+        today,
+        merchant.Status == MerchantStatus.Disabled ? null : plan,
+        trialDays);
 
     public bool IsOnboarding => Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview;
+
+    /// <summary>Aviso del último paso del checklist: la prueba empieza al activarse la cuenta.</summary>
+    public string? TrialNotice => TrialDays > 0 ? $"Al activarse empiezan tus {TrialDays} días de prueba de Pro, sin costo." : null;
 
     /// <summary>Número (base 1) del paso en curso.</summary>
     public int CurrentStepNumber => Steps.Select((s, i) => (s, i)).First(x => x.s.State == OnboardingStepState.Current).i + 1;
