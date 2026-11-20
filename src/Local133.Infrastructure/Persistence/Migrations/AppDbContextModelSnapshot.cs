@@ -390,10 +390,61 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("AnnualPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FounderAnnualPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FounderMonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("FounderSlots")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FreeCourtesyCharges")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FreeHistoryDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FreeMonthlyGeneratedLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FreeMonthlyPaidLimit")
+                        .HasColumnType("int");
+
                     b.Property<int>("GraceDays")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("MonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProFairUseMonthlyPaid")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReferenceTerminalFeeRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<int>("ReferralRewardDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReferralRewardsPerYear")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ReferralWelcomeDiscountRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
                     b.Property<int>("SaleQrExpirationSeconds")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TrialDays")
                         .HasColumnType("int");
 
                     b.Property<decimal>("VatRate")
@@ -406,7 +457,15 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_SystemSettings_GraceDays", "[GraceDays] >= 0");
 
+                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeCourtesyCharges] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 AND [FreeHistoryDays] >= 0 AND [ProFairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
+
+                            t.HasCheckConstraint("CK_SystemSettings_Prices", "[MonthlyPrice] > 0 AND [AnnualPrice] > 0 AND [FounderMonthlyPrice] > 0 AND [FounderAnnualPrice] > 0");
+
+                            t.HasCheckConstraint("CK_SystemSettings_Rates", "[ReferralWelcomeDiscountRate] >= 0 AND [ReferralWelcomeDiscountRate] < 1 AND [ReferenceTerminalFeeRate] >= 0 AND [ReferenceTerminalFeeRate] < 1");
+
                             t.HasCheckConstraint("CK_SystemSettings_SaleQrExpirationSeconds", "[SaleQrExpirationSeconds] = 0 OR [SaleQrExpirationSeconds] >= 360");
+
+                            t.HasCheckConstraint("CK_SystemSettings_TrialDays", "[TrialDays] > 0");
 
                             t.HasCheckConstraint("CK_SystemSettings_VatRate", "[VatRate] >= 0 AND [VatRate] < 1");
                         });
@@ -415,9 +474,111 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 1,
+                            AnnualPrice = 1990m,
+                            FounderAnnualPrice = 1490m,
+                            FounderMonthlyPrice = 149m,
+                            FounderSlots = 100,
+                            FreeCourtesyCharges = 5,
+                            FreeHistoryDays = 30,
+                            FreeMonthlyGeneratedLimit = 300,
+                            FreeMonthlyPaidLimit = 100,
                             GraceDays = 5,
+                            MonthlyPrice = 199m,
+                            ProFairUseMonthlyPaid = 5000,
+                            ReferenceTerminalFeeRate = 0.035m,
+                            ReferralRewardDays = 10,
+                            ReferralRewardsPerYear = 12,
+                            ReferralWelcomeDiscountRate = 0.30m,
                             SaleQrExpirationSeconds = 600,
+                            TrialDays = 30,
                             VatRate = 0.16m
+                        });
+                });
+
+            modelBuilder.Entity("Local133.Domain.Subscriptions.Subscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("FounderNumber")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsFounder")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastPackage")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("LastPeriodKind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal?>("LockedAnnualPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ProUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("TrialStartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FounderNumber")
+                        .IsUnique()
+                        .HasFilter("[FounderNumber] IS NOT NULL");
+
+                    b.ToTable("Subscriptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Subscriptions_FounderNumber", "[FounderNumber] IS NULL OR [FounderNumber] > 0");
+
+                            t.HasCheckConstraint("CK_Subscriptions_LockedAnnualPrice", "[LockedAnnualPrice] IS NULL OR [LockedAnnualPrice] > 0");
+
+                            t.HasCheckConstraint("CK_Subscriptions_ProUntil", "[ProUntil] > [TrialStartedAt]");
+                        });
+                });
+
+            modelBuilder.Entity("Local133.Domain.Subscriptions.SubscriptionPeriod", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MerchantId", "EndsAt");
+
+                    b.ToTable("SubscriptionPeriods", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SubscriptionPeriods_Range", "[EndsAt] > [StartsAt]");
                         });
                 });
 
@@ -769,6 +930,25 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Local133.Domain.Subscriptions.Subscription", b =>
+                {
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithOne()
+                        .HasForeignKey("Local133.Domain.Subscriptions.Subscription", "MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Local133.Domain.Subscriptions.SubscriptionPeriod", b =>
+                {
+                    b.HasOne("Local133.Domain.Subscriptions.Subscription", null)
+                        .WithMany("Periods")
+                        .HasForeignKey("MerchantId")
+                        .HasPrincipalKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -823,6 +1003,11 @@ namespace Local133.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Local133.Domain.Sales.Sale", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Local133.Domain.Subscriptions.Subscription", b =>
+                {
+                    b.Navigation("Periods");
                 });
 #pragma warning restore 612, 618
         }

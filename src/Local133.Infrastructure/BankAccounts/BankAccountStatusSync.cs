@@ -4,6 +4,7 @@ using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
 using Local133.Infrastructure.Persistence;
+using Local133.Infrastructure.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -107,12 +108,21 @@ internal sealed class BankAccountStatusSync(
             : account.UpdateStatus(codiStatus, errorMessage, now);
         var merchantChanged = merchant.ApplyBankAccountStatus(codiStatus);
         var changed = accountChanged || merchantChanged;
+        // La prueba de Pro empieza al activarse, en el mismo guardado que el cambio de estatus.
+        var trial = merchantChanged && merchant.Status == MerchantStatus.Active
+            ? await TrialStarter.EnsureTrialAsync(db, merchant.Id, now, cancellationToken)
+            : null;
         await db.SaveChangesAsync(cancellationToken);
 
         if (changed)
         {
             logger.LogInformation("Cuenta {Clabe} ({PeyBankAccountId}) del vendedor {MerchantId} ({Source}): {Previous} → {Current}; vendedor {MerchantStatus}",
                 Clabe.Mask(account.Clabe), account.PeyBankAccountId, merchant.Id, source, previous, account.CodiStatus, merchant.Status);
+        }
+
+        if (trial is not null)
+        {
+            logger.LogInformation("Vendedor {MerchantId}: empezó su prueba de Pro, hasta {ProUntil}", merchant.Id, trial.ProUntil);
         }
 
         if (merchantChanged && merchant.Status == MerchantStatus.Active)

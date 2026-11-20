@@ -4,6 +4,7 @@ using Local133.Application.Payments;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Infrastructure.Persistence;
+using Local133.Infrastructure.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -103,6 +104,12 @@ internal sealed class BankAccountRegistration(
         if (string.IsNullOrWhiteSpace(merchant.BusinessName))
         {
             merchant.BusinessName = alias;
+        }
+
+        // Pey la activó en el alta: la prueba de Pro empieza ya, en el mismo guardado.
+        if (activated)
+        {
+            await TrialStarter.EnsureTrialAsync(db, merchant.Id, now, cancellationToken);
         }
 
         try

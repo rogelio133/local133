@@ -31,7 +31,7 @@ dotnet user-secrets set "Seed:Admin:Password" "<contraseña de 8+ caracteres con
 
 El seed del admin es idempotente: si el usuario ya existe no cambia su contraseña (cámbiala en `/Identity/Account/Manage`), y nunca convierte en admin el correo de un vendedor. En producción usa las variables de entorno `Seed__Admin__Email` y `Seed__Admin__Password`. Sin ellas no se siembra nada.
 
-Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM SystemSettings"` devuelve la fila semilla (IVA 16 %, 5 días de gracia, QR de 600 s), y `SELECT Name FROM AspNetRoles` los roles `Merchant` y `Admin` (migración `Identity`).
+Comprobar: `sqlcmd -S localhost\SQLEXPRESS -E -d Local133 -Q "SELECT * FROM SystemSettings"` devuelve la fila semilla (IVA 16 %, 5 días de gracia, QR de 600 s y, desde la 5.3, Pro a $199/mes o $1,990/año, 30 días de prueba y los límites del gratuito), y `SELECT Name FROM AspNetRoles` los roles `Merchant` y `Admin` (migración `Identity`).
 
 ## Desarrollo diario
 

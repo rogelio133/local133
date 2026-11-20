@@ -1,4 +1,5 @@
 using Local133.Application.Auth;
+using Local133.Application.Subscriptions;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
 using Local133.Infrastructure.Persistence;
@@ -15,12 +16,14 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class HomeController(AppDbContext db, TimeProvider clock) : Controller
+public class HomeController(AppDbContext db, IPlanAccess plans, TimeProvider clock) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var now = clock.GetUtcNow();
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         // Si Pey rechazó la cuenta, el Inicio muestra el motivo junto al paso de la CLABE.
         var rejection = await db.BankAccounts
             .Where(b => b.MerchantId == merchant.Id && b.CodiStatus == PeyCodiStatus.Error)
@@ -29,11 +32,12 @@ public class HomeController(AppDbContext db, TimeProvider clock) : Controller
 
         // Resumen del día: solo cuando ya pudo cobrar (en el onboarding aún no hay ventas).
         var summary = merchant.Status is MerchantStatus.Active or MerchantStatus.Suspended or MerchantStatus.Disabled
-            ? await DaySummaryQuery.BuildAsync(db, merchant.Id, clock.GetUtcNow(), cancellationToken)
+            ? await DaySummaryQuery.BuildAsync(db, merchant.Id, now, cancellationToken)
             : null;
 
         return View(MerchantHomeViewModel.From(merchant, User.Identity?.Name,
-            rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection, summary));
+            rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection, summary,
+            PlanSummaryViewModel.From(plan.Status, now), plan.TrialDays));
     }
 
     [HttpGet("mas")]

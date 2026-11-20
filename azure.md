@@ -142,3 +142,13 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Logo de los correos**: `wwwroot/img/email/local133-email-logo.png` debe servirse por HTTPS, público y sin autenticación (los archivos estáticos ya lo son). Gmail y Outlook lo descargan con su proxy desde `App__PublicBaseUrl`: un dominio interno o `localhost` no les sirve.
 - **Migración `MerchantActivationEmail`** (agrega `Merchants.ActivationEmailSentAt`, nula, no destructiva). Se aplica sola al arrancar.
 - Sin recursos ni secretos nuevos. El envío sigue por Resend (`Resend__ApiKey`).
+
+### Fase 5.3 — Planes y vigencia
+- **Migración `Subscriptions`** (no destructiva). Hace tres cosas:
+  - agrega 15 columnas a `SystemSettings`, con los precios, la prueba, los límites del gratuito y los referidos, y llena sus valores por defecto;
+  - crea `Subscriptions` y `SubscriptionPeriods`;
+  - da una **prueba de 30 días desde el momento en que se aplica** a los vendedores de la base que ya pasaron el onboarding (`Active`, `Suspended` y `Disabled`).
+
+  Se aplica sola al arrancar. En la base de pruebas de Azure, la prueba de esos vendedores cuenta desde el día del despliegue.
+- Los precios y parámetros viven en la base (`SystemSettings`), no en App Settings. Para cambiarlos antes de la Fase 6 (admin), se hace un `UPDATE` en la fila 1. Cada cargo guardará su propio monto (5.6).
+- Sin recursos, App Settings, secretos ni jobs nuevos.

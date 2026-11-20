@@ -5,6 +5,7 @@ using Local133.Domain.Payments;
 using Local133.Domain.Products;
 using Local133.Domain.Sales;
 using Local133.Domain.Settings;
+using Local133.Domain.Subscriptions;
 using Local133.Domain.Webhooks;
 using Local133.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -38,6 +39,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
     /// <summary>Catálogo del vendedor; la baja lógica no va en el filtro global (consultar con <c>!IsDeleted</c>).</summary>
     public DbSet<Product> Products => Set<Product>();
 
+    /// <summary>Suscripción del vendedor (una por vendedor; nace con la prueba).</summary>
+    public DbSet<Subscription> Subscriptions => Set<Subscription>();
+
+    /// <summary>Días de Pro del vendedor (prueba, pagados, premios y regalos).</summary>
+    public DbSet<SubscriptionPeriod> SubscriptionPeriods => Set<SubscriptionPeriod>();
+
     /// <summary>Bitácora de webhooks de Pey (sin filtro: no es de un vendedor).</summary>
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
@@ -58,5 +65,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<SaleItem>().HasQueryFilter(i => !IsMerchantScoped || i.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Payment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Product>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<Subscription>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<SubscriptionPeriod>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
     }
 }

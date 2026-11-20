@@ -81,6 +81,7 @@ Consecuencias:
 - Comprar el anual a mitad de un mes pagado no pierde días ni necesita prorrateo: el año empieza al terminar el mes.
 - La gracia solo sigue a un periodo pagado. Al terminar la prueba o un premio, el vendedor baja directo al gratuito (con aviso 3 días antes).
 - Los meses se cuentan en hora de México: del 31 de enero, un mes llega al último día de febrero.
+- Los periodos van **al instante exacto** (confirmado el 2026-11-19). La prueba que empieza el 19/11 a las 15:00 termina el 19/12 a las 15:00, y en pantalla solo se muestra la fecha.
 - El paquete del último pago (mensual o anual) define el link de renovación y los recordatorios.
 
 **Vendedores existentes** (base local y base de pruebas en Azure): la migración les crea la prueba de 30 días desde el día de la migración si ya están activos. Los demás la reciben al activarse.
@@ -202,6 +203,11 @@ Los pasos, archivo por archivo, están en la [subfase 5.1 del plan](../PLAN_DESA
 | `SystemSettings` | Nuevos: `MonthlyPrice` (199), `AnnualPrice` (1990), `FounderMonthlyPrice` (149), `FounderAnnualPrice` (1490), `FounderSlots` (100), `TrialDays` (30), `FreeMonthlyPaidLimit` (100), `FreeCourtesyCharges` (5), `FreeMonthlyGeneratedLimit` (300), `FreeHistoryDays` (30), `ProFairUseMonthlyPaid` (5000), `ReferralRewardDays` (10), `ReferralRewardsPerYear` (12), `ReferralWelcomeDiscountRate` (0.30), `ReferenceTerminalFeeRate` (0.035). `GraceDays` pasa a 5 | Cambios auditados (Fase 6) |
 
 - Las tablas con `MerchantId` llevan el filtro global de EF Core (`OnModelCreating`). El webhook y los jobs leen sin alcance (`SystemTenantContext`).
+- Orden de creación:
+  - la 5.3 creó `Subscriptions`, `SubscriptionPeriods` (sin `SubscriptionChargeId` ni `ReferralId`) y todos los campos nuevos de `SystemSettings`. `TrialStartedAt` no es nula, porque la suscripción nace con la prueba;
+  - `SubscriptionCharges`, `SubscriptionPayments` y `SubscriptionPeriods.SubscriptionChargeId` llegan en la 5.6;
+  - `Referrals`, `SubscriptionPeriods.ReferralId` y los campos de afiliados de `Merchants` llegan en la 5.8;
+  - `Notifications` llega en la 5.4.
 - Los importes van en `decimal(18,2)` y las tasas en `decimal(5,4)`, como hoy.
 
 ## 10. Detalle de las subfases
