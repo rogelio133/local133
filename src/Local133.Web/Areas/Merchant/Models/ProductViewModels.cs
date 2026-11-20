@@ -78,8 +78,19 @@ public sealed class ProductListViewModel
     /// <summary>Búsqueda aplicada (ya sin espacios en los extremos); <c>null</c> = sin búsqueda.</summary>
     public string? Query { get; init; }
 
-    /// <summary>Puede dar de alta y editar (no está dado de baja).</summary>
+    /// <summary>Puede dar de alta y editar: no está dado de baja y su plan no deja el catálogo en solo lectura.</summary>
     public bool CanManage { get; init; }
+
+    /// <summary>Por qué es de solo lectura (<c>null</c> si <see cref="CanManage"/>).</summary>
+    public CatalogReadOnlyReason? ReadOnlyReason { get; init; }
+
+    /// <summary>«Tu catálogo de 63 productos te espera.» (gratuito, 5.5); <c>null</c> sin productos.</summary>
+    public static string? WaitingCatalogText(int count) => count switch
+    {
+        <= 0 => null,
+        1 => "Tu catálogo de 1 producto te espera.",
+        _ => $"Tu catálogo de {count.ToString("#,0", CultureInfo.GetCultureInfo("es-MX"))} productos te espera.",
+    };
 
     /// <summary>Ruta de la página que muestra la lista (paginación y «Ver todos»): la de productos o la del carrito.</summary>
     public string ListPath { get; init; } = ProductUrls.List;
@@ -133,4 +144,14 @@ public static class ProductUrls
 
     /// <summary>Último segmento de la llave (el guid de la foto).</summary>
     private static string Version(string photoKey) => photoKey[(photoKey.LastIndexOf('/') + 1)..];
+}
+
+/// <summary>Por qué el catálogo es de solo lectura.</summary>
+public enum CatalogReadOnlyReason
+{
+    /// <summary>El vendedor está dado de baja.</summary>
+    Disabled,
+
+    /// <summary>El plan gratuito deja el catálogo en solo lectura (5.5).</summary>
+    Plan,
 }

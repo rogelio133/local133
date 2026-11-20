@@ -21,7 +21,6 @@ public class SystemSettings : Entity
     public const int DefaultFounderSlots = 100;
     public const int DefaultTrialDays = 30;
     public const int DefaultFreeMonthlyPaidLimit = 100;
-    public const int DefaultFreeCourtesyCharges = 5;
     public const int DefaultFreeMonthlyGeneratedLimit = 300;
     public const int DefaultFreeHistoryDays = 30;
     public const int DefaultProFairUseMonthlyPaid = 5000;
@@ -57,11 +56,11 @@ public class SystemSettings : Entity
     /// <summary>Días de la prueba de Pro, que empieza cuando la cuenta bancaria queda activa.</summary>
     public int TrialDays { get; set; } = DefaultTrialDays;
 
-    /// <summary>Cobros concretados al mes en el gratuito (mes calendario en hora de México).</summary>
+    /// <summary>
+    /// Cobros concretados al mes en el gratuito (mes calendario en hora de México). Al llegar a este número ya no se
+    /// generan cobros nuevos: no hay cobros de cortesía (se quitaron el 2026-11-20).
+    /// </summary>
     public int FreeMonthlyPaidLimit { get; set; } = DefaultFreeMonthlyPaidLimit;
-
-    /// <summary>Cobros de cortesía después de llegar a <see cref="FreeMonthlyPaidLimit"/>.</summary>
-    public int FreeCourtesyCharges { get; set; } = DefaultFreeCourtesyCharges;
 
     /// <summary>Tope técnico de cobros generados (pagados o no) al mes en el gratuito.</summary>
     public int FreeMonthlyGeneratedLimit { get; set; } = DefaultFreeMonthlyGeneratedLimit;

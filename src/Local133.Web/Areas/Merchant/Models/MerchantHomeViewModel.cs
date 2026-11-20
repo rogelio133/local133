@@ -5,7 +5,8 @@ namespace Local133.Web.Areas.Merchant.Models;
 /// <summary>Inicio del vendedor (/app): saludo, estatus y checklist de activación.</summary>
 public sealed record MerchantHomeViewModel(
     string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null,
-    DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0)
+    DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0,
+    ChargeUsageViewModel? Usage = null)
 {
     public const string DefaultRejection = "Banxico no pudo registrarla para CoDi.";
 

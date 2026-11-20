@@ -1,6 +1,7 @@
 using FluentValidation;
 using Local133.Application.Products;
 using Local133.Application.Storage;
+using Local133.Application.Subscriptions;
 using Local133.Domain.Products;
 using Local133.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ internal sealed class ProductCatalog(
     IFileStorage storage,
     IProductPhotoProcessor photoProcessor,
     IValidator<SaveProductCommand> validator,
+    IPlanAccess plans,
     TimeProvider clock,
     ILogger<ProductCatalog> logger) : IProductCatalog
 {
@@ -34,6 +36,11 @@ internal sealed class ProductCatalog(
         if (!merchant.CanManageProducts)
         {
             return new SaveProductResult.NotAllowed();
+        }
+
+        if (!await CanEditCatalogAsync(merchant.Id, cancellationToken))
+        {
+            return new SaveProductResult.PlanRequired();
         }
 
         Product? product = null;
@@ -120,6 +127,11 @@ internal sealed class ProductCatalog(
             return new DeleteProductResult.NotAllowed();
         }
 
+        if (!await CanEditCatalogAsync(merchant.Id, cancellationToken))
+        {
+            return new DeleteProductResult.PlanRequired();
+        }
+
         var product = await FindAsync(merchant.Id, command.ProductId, cancellationToken);
         if (product is null)
         {
@@ -132,6 +144,10 @@ internal sealed class ProductCatalog(
         logger.LogInformation("Producto {ProductId} del vendedor {MerchantId} dado de baja", product.Id, merchant.Id);
         return new DeleteProductResult.Deleted();
     }
+
+    /// <summary>El gratuito deja el catálogo en solo lectura (dado de baja ya se revisó antes: el estatus manda).</summary>
+    private async Task<bool> CanEditCatalogAsync(int merchantId, CancellationToken cancellationToken) =>
+        (await plans.GetForMerchantAsync(merchantId, cancellationToken)).Entitlements.CanEditCatalog;
 
     /// <summary>Producto vigente del vendedor, con <c>MerchantId</c> explícito (no depende del claim de la sesión).</summary>
     private Task<Product?> FindAsync(int merchantId, int productId, CancellationToken cancellationToken) =>

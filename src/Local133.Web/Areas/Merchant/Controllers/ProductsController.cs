@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Local133.Application.Auth;
 using Local133.Application.Products;
 using Local133.Application.Storage;
+using Local133.Application.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Areas.Merchant.Services;
@@ -20,7 +21,7 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app/productos")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileStorage storage) : Controller
+public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileStorage storage, IPlanAccess plans) : Controller
 {
     /// <summary>Mensaje de éxito (PRG) que muestra la lista.</summary>
     public const string NoticeKey = "ProductNotice";
@@ -53,18 +54,38 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
     [HttpGet("nuevo")]
     public async Task<IActionResult> New(CancellationToken cancellationToken)
     {
-        if (!(await db.GetCurrentMerchantAsync(User, cancellationToken)).CanManageProducts)
+        if (await ReadOnlyRedirectAsync(cancellationToken) is { } readOnly)
         {
-            return NotAllowed();
+            return readOnly;
         }
 
         return View("Form", new ProductFormViewModel());
     }
 
     /// <summary>Lista paginada con la búsqueda por nombre (recortada a <see cref="ProductListViewModel.QueryMaxLength"/>).</summary>
-    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken) =>
-        await ProductListQuery.BuildAsync(
-            db, await db.GetCurrentMerchantAsync(User, cancellationToken), q, page, Url, ProductUrls.List, cancellationToken);
+    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken)
+    {
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
+        return await ProductListQuery.BuildAsync(
+            db, merchant, q, page, Url, ProductUrls.List, merchant.CanManageProducts && plan.Entitlements.CanEditCatalog,
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Formularios de alta y edición: un vendedor dado de baja o en el plan gratuito (catálogo de solo lectura) vuelve a
+    /// la lista con el aviso. El caso de uso lo valida de nuevo al guardar.
+    /// </summary>
+    private async Task<IActionResult?> ReadOnlyRedirectAsync(CancellationToken cancellationToken)
+    {
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        if (!merchant.CanManageProducts)
+        {
+            return NotAllowed();
+        }
+
+        return (await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements.CanEditCatalog ? null : PlanRequired();
+    }
 
     [HttpPost("nuevo")]
     [ValidateAntiForgeryToken]
@@ -76,9 +97,9 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
     [HttpGet("{id:int}/editar")]
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
-        if (!(await db.GetCurrentMerchantAsync(User, cancellationToken)).CanManageProducts)
+        if (await ReadOnlyRedirectAsync(cancellationToken) is { } readOnly)
         {
-            return NotAllowed();
+            return readOnly;
         }
 
         var product = await db.Products.AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
@@ -120,6 +141,8 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
                 return NotFound();
             case DeleteProductResult.NotAllowed:
                 return NotAllowed();
+            case DeleteProductResult.PlanRequired:
+                return PlanRequired();
             default:
                 TempData[NoticeKey] = $"Eliminamos «{name}» de tus productos.";
                 return RedirectToAction(nameof(Index));
@@ -162,6 +185,9 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
 
                     case SaveProductResult.NotAllowed:
                         return NotAllowed();
+
+                    case SaveProductResult.PlanRequired:
+                        return PlanRequired();
 
                     case SaveProductResult.Invalid invalid:
                         foreach (var (field, messages) in invalid.Errors)
@@ -235,6 +261,13 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
     private RedirectToActionResult NotAllowed()
     {
         TempData[WarningKey] = ProductMessages.NotAllowed;
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>Plan gratuito (catálogo de solo lectura): vuelve a la lista con el aviso.</summary>
+    private RedirectToActionResult PlanRequired()
+    {
+        TempData[WarningKey] = ProductMessages.PlanRequired;
         return RedirectToAction(nameof(Index));
     }
 }

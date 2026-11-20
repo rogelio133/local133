@@ -174,28 +174,6 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         return await GetHomeAsync(Email);
     }
 
-    /// <summary>Suscripción con los periodos indicados (sin las reglas de encadenamiento: es el estado a probar).</summary>
-    private async Task SeedPlanAsync(string email, params (SubscriptionPeriodKind Kind, DateTimeOffset Start, DateTimeOffset End)[] periods)
-    {
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
-        var merchantId = await db.Merchants.Where(m => m.UserId == userId).Select(m => m.Id).SingleAsync();
-        var last = periods.MaxBy(p => p.End);
-        db.Subscriptions.Add(new Subscription
-        {
-            MerchantId = merchantId,
-            TrialStartedAt = periods[0].Start,
-            ProUntil = last.End,
-            LastPeriodKind = last.Kind,
-            Periods = periods.Select(p => new SubscriptionPeriod
-            {
-                MerchantId = merchantId, Kind = p.Kind, StartsAt = p.Start, EndsAt = p.End, CreatedAt = p.Start,
-            }).ToList(),
-        });
-        await db.SaveChangesAsync();
-    }
-
     private async Task<string> HomeAsync(string email, MerchantStatus? status = null)
     {
         await CreateMerchantAsync(email);

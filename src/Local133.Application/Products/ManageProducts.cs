@@ -83,6 +83,9 @@ public static class ProductMessages
     public const string PhotoTooManyPixels = "La imagen es demasiado grande. Usa una foto de menos de 50 megapíxeles.";
 
     public const string NotAllowed = "Tu cuenta está dada de baja: no puedes modificar tus productos.";
+
+    public const string PlanRequired =
+        "Con el plan gratuito tu catálogo es de solo lectura. Con Pro puedes agregar, editar y cobrar tus productos.";
 }
 
 /// <summary>Resultado de guardar un producto.</summary>
@@ -102,6 +105,9 @@ public abstract record SaveProductResult
 
     /// <summary>El vendedor no puede modificar su catálogo (dado de baja).</summary>
     public sealed record NotAllowed : SaveProductResult;
+
+    /// <summary>El plan gratuito deja el catálogo en solo lectura.</summary>
+    public sealed record PlanRequired : SaveProductResult;
 }
 
 /// <summary>Resultado de dar de baja un producto.</summary>
@@ -116,6 +122,8 @@ public abstract record DeleteProductResult
     public sealed record NotFound : DeleteProductResult;
 
     public sealed record NotAllowed : DeleteProductResult;
+
+    public sealed record PlanRequired : DeleteProductResult;
 }
 
 /// <summary>Catálogo del vendedor (implementado en Infrastructure: EF Core + <see cref="Storage.IFileStorage"/>).</summary>

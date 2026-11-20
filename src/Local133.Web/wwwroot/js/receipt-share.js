@@ -26,6 +26,12 @@
             }
         }
 
+        // Plan gratuito: la liga va en un campo de solo lectura; al tocarlo se selecciona completa para copiarla.
+        var urlField = root.querySelector('[data-receipt-url-field]');
+        if (urlField) {
+            urlField.addEventListener('focus', function () { urlField.select(); });
+        }
+
         var url = root.getAttribute('data-receipt-url');
         var message = root.getAttribute('data-receipt-message') || url;
         var copyButton = root.querySelector('[data-receipt-copy]');

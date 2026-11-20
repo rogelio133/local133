@@ -2,12 +2,18 @@
 @model SaleDetailViewModel
 @{
     ViewData["Title"] = $"Venta {Model.Folio}";
+    var notice = TempData[Local133.Web.Areas.Merchant.Controllers.SalesController.NoticeKey] as string;
 }
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-sale-detail="@Model.Id" data-status="@Model.Status">
         <a class="d-inline-block mb-3" href="@Url.Content("~" + SalesUrls.List)" data-back-to-sales>
             <i class="bi bi-chevron-left" aria-hidden="true"></i> Ventas
         </a>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-info" role="status" data-sale-notice><i class="bi bi-info-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
 
         <div class="card mb-3">
             <div class="card-body">

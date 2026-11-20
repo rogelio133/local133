@@ -13,12 +13,28 @@
 
         @* El panel envuelve el catálogo y la venta. Sin overflow: la columna de la venta es sticky en escritorio. *@
         <div class="charge-mode-panel">
+        @if (Model.Usage is { } usage)
+        {
+            <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
+        }
         @if (Model.Blocked is { } blocked)
         {
             <div data-charge-blocked>
                 <h2 class="h5"><i class="bi bi-lock-fill text-body-secondary me-1" aria-hidden="true"></i> @blocked.Title</h2>
                 <p class="text-body-secondary">@blocked.Message</p>
                 <a class="btn btn-primary btn-lg w-100" href="@Url.Content(blocked.LinkHref)">@blocked.LinkText</a>
+            </div>
+        }
+        else if (Model.ProRequired is { } proRequired)
+        {
+            @* Plan gratuito (5.5): el carrito es de Pro; el cobro por monto sigue disponible. *@
+            <div class="row justify-content-center" data-cart-pro-required>
+                <div class="col-md-10 col-lg-7">
+                    <partial name="_ProRequired" model="proRequired" />
+                    <a class="btn btn-outline-primary w-100 mt-3" href="@Url.Content("~" + ChargeUrls.Amount)" data-charge-by-amount>
+                        <i class="bi bi-cash-coin me-1" aria-hidden="true"></i> Cobrar por monto
+                    </a>
+                </div>
             </div>
         }
         else if (catalog is null || catalog.IsCatalogEmpty)

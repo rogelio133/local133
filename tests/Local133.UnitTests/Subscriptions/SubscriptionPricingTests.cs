@@ -82,7 +82,6 @@ public class SubscriptionPricingTests
         Assert.Equal(30, Settings.TrialDays);
         Assert.Equal(5, Settings.GraceDays);
         Assert.Equal(100, Settings.FreeMonthlyPaidLimit);
-        Assert.Equal(5, Settings.FreeCourtesyCharges);
         Assert.Equal(0.30m, Settings.ReferralWelcomeDiscountRate);
     }
 }

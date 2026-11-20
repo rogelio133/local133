@@ -1,11 +1,22 @@
+using Local133.Domain.Common;
 using Local133.Domain.Subscriptions;
 
 namespace Local133.Application.Subscriptions;
 
 /// <summary>Plan de un vendedor en este momento: estado y lo que permite.</summary>
-public sealed record MerchantPlan(PlanStatus Status, PlanEntitlements Entitlements, int TrialDays)
+/// <param name="FreeHistoryDays">Días de historial que ve el gratuito (<c>SystemSettings.FreeHistoryDays</c>).</param>
+public sealed record MerchantPlan(PlanStatus Status, PlanEntitlements Entitlements, int TrialDays, int FreeHistoryDays = 30)
 {
     public PlanTier Tier => Status.Tier;
+
+    /// <summary>
+    /// Desde cuándo ve el historial: <c>null</c> con historial completo; en el gratuito, la medianoche (México) de
+    /// hace <see cref="FreeHistoryDays"/> días contando hoy. Lo anterior se oculta, no se borra.
+    /// </summary>
+    public DateTimeOffset? HistoryStartUtc(DateTimeOffset now) =>
+        Entitlements.HasFullHistory
+            ? null
+            : MexicoTime.DayRange(MexicoTime.Today(now).AddDays(-(Math.Max(FreeHistoryDays, 1) - 1))).StartUtc;
 }
 
 /// <summary>

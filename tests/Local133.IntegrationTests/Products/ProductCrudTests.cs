@@ -479,6 +479,50 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
     }
 
     [Fact]
+    public async Task Plan_gratuito_deja_el_catalogo_en_solo_lectura()
+    {
+        var client = await MerchantClientAsync(Email);
+        var id = (await SeedProductsAsync(Email, ["Gringa", "Taco"]))[0];
+        await SeedFreePlanAsync(Email);
+
+        var list = WebUtility.HtmlDecode(await GetHtmlAsync(client, ListUrl));
+        var newPage = await client.GetAsync(NewUrl);
+        var editPage = await client.GetAsync(EditUrl(id));
+        var create = await PostMultipartAsync(client, TokenPage, ProductFields("Pozole", "10"), postUrl: NewUrl);
+        var update = await PostMultipartAsync(client, TokenPage, ProductFields("Gringa grande", "60"), postUrl: EditUrl(id));
+        var delete = await PostFormAsync(client, TokenPage, new Dictionary<string, string>(), DeleteUrl(id));
+
+        Assert.Contains("data-products-readonly-plan", list);
+        Assert.Contains("data-pro-required", list);
+        Assert.Contains("Tu catálogo de 2 productos te espera", list);
+        Assert.DoesNotContain("Tu cuenta está dada de baja", list);
+        Assert.DoesNotContain(EditUrl(id), list);
+        Assert.DoesNotContain("data-new-product", list);
+        foreach (var response in new[] { newPage, editPage, create, update, delete })
+        {
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            Assert.Equal(ListUrl, Location(response));
+        }
+
+        Assert.Equal(["Gringa", "Taco"], (await ProductsAsync()).Select(p => p.Name).Order());
+        Assert.False((await ProductAsync(id)).IsDeleted);
+        Assert.Contains(ProductMessages.PlanRequired, WebUtility.HtmlDecode(await GetHtmlAsync(client, ListUrl)));
+    }
+
+    [Fact]
+    public async Task En_la_prueba_el_catalogo_se_edita()
+    {
+        var client = await MerchantClientAsync(Email);
+        await SeedTrialAsync(Email);
+
+        var response = await PostProductAsync(client, NewUrl, "Pozole", "80");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal(["Pozole"], (await ProductsAsync()).Select(p => p.Name));
+        Assert.DoesNotContain("data-products-readonly", await GetHtmlAsync(client, ListUrl));
+    }
+
+    [Fact]
     public async Task Admin_no_entra_a_productos()
     {
         await CreateConfirmedUserAsync("admin@prueba.mx", Application.Auth.Roles.Admin);

@@ -171,7 +171,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 7. **QR fijo del puesto**: generación única, vista imprimible (PDF/imagen con logo); cada pago recibido crea venta `OpenAmount`. Es función de Pro y no hace falta para lanzar las suscripciones: mientras no exista se muestra como «Próximamente». Si el vendedor baja al gratuito, el QR impreso sigue cobrando (Pey no lo anula): esos pagos se registran y cuentan para el límite. *(2026-11-18)*
 8. **Historial de ventas** + resumen del día; **recibo compartible** (URL pública por token, botón WhatsApp). ✅ *(hecho 2026-11-14, junto con la 3.3)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 9. Job de conciliación (`GET /transaction/codi/qr/{idc}`) para ventas pendientes. ✅ *(hecho 2026-11-18; también cobros por celular con `GET /transaction/{id}`)* — [bitácora](log_plan/fase-2.9-conciliacion.md)
-10. Bloqueo: solo vendedores `Active` pueden generar cobros.
+10. Bloqueo: solo vendedores `Active` pueden generar cobros. ✅ *(hecho con la 2.4: `Merchant.CanCharge`; la 5.5 suma los límites del plan)* — [bitácora](log_plan/fase-2.4-venta-monto-directo.md)
 
 ### Fase 3 — Productos y carrito (≈1.5 semanas)
 1. CRUD de productos con baja lógica, foto. ✅ *(hecho 2026-11-14; búsqueda asíncrona el mismo día)* — [bitácora](log_plan/fase-3.1-productos.md)
@@ -191,10 +191,10 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
 5. **Límites del gratuito**, validados en el servidor:
    - catálogo de solo lectura, carrito bloqueado, recibo sin WhatsApp e historial de 30 días;
-   - 100 cobros concretados al mes, más 5 de cortesía, con contador visible y avisos al 80 % y al 100 %;
+   - 100 cobros concretados al mes, sin cortesía, con contador visible y avisos al 80 % y al 100 %;
    - tope de cobros generados.
 
-   — [detalle](actualizaciones/suscripciones_2026_11_18.md#55-límites-del-gratuito)
+   ✅ *(hecho 2026-11-19; los 5 cobros de cortesía se quitaron el 2026-11-20; los avisos de 80 y 100 solo van al log hasta la 5.4, y «Mi plan» es provisional hasta la 5.6)* — [bitácora](log_plan/fase-5.5-limites-del-gratuito.md)
 6. **Mi plan y pago con link de Pey**:
    - paquetes de 1, 3 y 6 meses y anual, con precio de fundador y anual congelado;
    - un link por cargo;
@@ -267,6 +267,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
 - [Correo con Resend](log_plan/mantenimiento-resend.md): restringir la llave a `notificaciones.local133.com.mx` en el panel de Resend (la API no cambia permisos), crear la de producción para Key Vault (ver `azure.md`) y repetir el correo real en un buzón propio con remitente `hola@` y liga que no sea `localhost` (túnel o producción); el primero llegó a spam. Decidir el buzón de las respuestas a `hola@` (el dominio no tiene MX).
 - [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
+- [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

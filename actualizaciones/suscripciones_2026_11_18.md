@@ -13,7 +13,7 @@ Sale de la propuesta del usuario, de la revisión que hizo con Claude en la app 
 | Prueba | 30 días de Pro completo, una sola vez por vendedor. Al terminar baja al gratuito. Sustituye las pruebas sueltas del gratuito (5 productos, carrito y WhatsApp el primer mes). |
 | Inicio de la prueba | Cuando la cuenta bancaria queda activa, que es cuando ya puede cobrar. Mientras Banxico la revisa, el vendedor puede armar su catálogo. |
 | Catálogo en el gratuito | Solo lectura: se conserva completo, pero no se agrega, edita ni cobra con él. |
-| Límite del gratuito | 100 cobros concretados por mes calendario (desde el día 1, hora de México). Avisos al 80 % y al 100 %, y 5 cobros de cortesía. Después no genera cobros nuevos hasta el día 1 o hasta que pague. |
+| Límite del gratuito | 100 cobros concretados por mes calendario (desde el día 1, hora de México). Avisos al 80 % y al 100 %. Al llegar a 100 no genera cobros nuevos hasta el día 1 o hasta que pague (sin cobros de cortesía: se quitaron el 2026-11-20). |
 | Precios | Pro: $199 al mes o $1,990 al año (2 meses de regalo), **IVA incluido**. |
 | Pago adelantado | Paquetes de 1, 3 y 6 meses, y anual. |
 | Factura (CFDI) | Fuera de esta implementación. Mientras tanto se factura fuera del sistema (factura global y las que se pidan). |
@@ -32,7 +32,7 @@ Sale de la propuesta del usuario, de la revisión que hizo con Claude en la app 
 | Función | Gratuito | Prueba y Pro |
 |---|---|---|
 | Cobro por monto con QR o por celular | ✓ | ✓ |
-| Cobros concretados al mes | 100, más 5 de cortesía | Ilimitados, con uso justo (§5) |
+| Cobros concretados al mes | 100 | Ilimitados, con uso justo (§5) |
 | Catálogo de productos | Solo lectura | ✓ |
 | Cobro con carrito (QR o celular) | — | ✓ |
 | Recibo | Liga para copiar, con «Cobrado con Local133» | Botones de WhatsApp y compartir, con el logo del negocio |
@@ -144,9 +144,8 @@ El job crea el link de renovación con el primer aviso (3 días antes, o 15 en e
 - **Contador visible** en Inicio, en Cobrar y en «Mi plan»: «82 de 100 cobros este mes».
 - **Avisos**:
   - en 80, aviso en el sitio y correo;
-  - en 100, «Te quedan 5 cobros de cortesía»;
-  - en 105, «Ya no puedes generar cobros hasta el 1 de diciembre o hasta que pagues».
-- **Bloqueo**: con 105 concretados no se generan cobros nuevos, ni por QR ni por celular. Un QR o un push que ya se generó se puede pagar y se registra, porque el dinero va directo a su CLABE.
+  - en 100, «Ya no puedes generar cobros hasta el 1 de diciembre o hasta que pagues».
+- **Bloqueo**: con 100 concretados no se generan cobros nuevos (no hay cobros de cortesía; se quitaron el 2026-11-20), ni por QR ni por celular. Un QR o un push que ya se generó se puede pagar y se registra, porque el dinero va directo a su CLABE.
 - **Tope técnico**: 300 cobros generados al mes en el gratuito, aunque no se paguen, para frenar abusos.
 - **Uso justo de Pro**: 5,000 cobros concretados al mes. Al pasarlos se alerta al admin, sin bloquear. El número va en los Términos.
 - **Catálogo**: solo lectura. Se combina `Merchant.CanManageProducts` con el plan. Se muestra «Tu catálogo de 63 productos te espera».
@@ -200,7 +199,7 @@ Los pasos, archivo por archivo, están en la [subfase 5.1 del plan](../PLAN_DESA
 | `Notifications` | `MerchantId`, `Type`, `Title`, `Body`, `Url`, `CreatedAt`, `ReadAt`, `DedupKey` (único por vendedor) | Avisos en el sitio. `DedupKey` hace idempotente al job |
 | `Merchants` | Nuevos: `ReferralCode` (único), `PublicSlug` (único, opcional), `PublicCatalogEnabled` | |
 | `BankAccounts` | Índice único filtrado de `Clabe` (`CodiStatus <> 'Error'`) | 5.2 |
-| `SystemSettings` | Nuevos: `MonthlyPrice` (199), `AnnualPrice` (1990), `FounderMonthlyPrice` (149), `FounderAnnualPrice` (1490), `FounderSlots` (100), `TrialDays` (30), `FreeMonthlyPaidLimit` (100), `FreeCourtesyCharges` (5), `FreeMonthlyGeneratedLimit` (300), `FreeHistoryDays` (30), `ProFairUseMonthlyPaid` (5000), `ReferralRewardDays` (10), `ReferralRewardsPerYear` (12), `ReferralWelcomeDiscountRate` (0.30), `ReferenceTerminalFeeRate` (0.035). `GraceDays` pasa a 5 | Cambios auditados (Fase 6) |
+| `SystemSettings` | Nuevos: `MonthlyPrice` (199), `AnnualPrice` (1990), `FounderMonthlyPrice` (149), `FounderAnnualPrice` (1490), `FounderSlots` (100), `TrialDays` (30), `FreeMonthlyPaidLimit` (100), `FreeMonthlyGeneratedLimit` (300), `FreeHistoryDays` (30), `ProFairUseMonthlyPaid` (5000), `ReferralRewardDays` (10), `ReferralRewardsPerYear` (12), `ReferralWelcomeDiscountRate` (0.30), `ReferenceTerminalFeeRate` (0.035). `GraceDays` pasa a 5 | Cambios auditados (Fase 6) |
 
 - Las tablas con `MerchantId` llevan el filtro global de EF Core (`OnModelCreating`). El webhook y los jobs leen sin alcance (`SystemTenantContext`).
 - Orden de creación:
@@ -250,7 +249,7 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
   - `ProductCatalog` respeta la solo lectura;
   - `SalesHistoryQuery` recorta a 30 días y cuenta las ventas ocultas;
   - el detalle de venta y `_ReceiptShare` se ajustan al plan.
-- Contador del mes en Inicio y en Cobrar. Los avisos de 80, 100 y 105 se disparan después de registrar el pago (`PaymentRecorder`); si el aviso falla, el pago ya quedó guardado.
+- Contador del mes en Inicio y en Cobrar. Los avisos de 80 y 100 se disparan después de registrar el pago (`PaymentRecorder`); si el aviso falla, el pago ya quedó guardado.
 - Componentes reutilizables «Disponible con Pro» y «Próximamente».
 - **Pruebas de integración** de cada bloqueo y de los bordes de mes.
 
@@ -354,7 +353,7 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - **Unitarias**:
   - vigencia: prueba, gracia, periodos encadenados, fin de mes y zona horaria;
   - precios: paquetes, fundador, congelado y descuento;
-  - límite mensual: bordes de mes y cortesía;
+  - límite mensual: bordes de mes y aviso al 80 %;
   - tope de premios;
   - lo que permite cada estado.
 - **Integración**:

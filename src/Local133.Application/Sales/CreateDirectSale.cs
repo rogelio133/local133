@@ -112,6 +112,18 @@ public abstract record CreateSaleResult
     /// <summary>El vendedor no puede cobrar (no está activo o su cuenta bancaria no está activa).</summary>
     public sealed record NotAllowed : CreateSaleResult;
 
+    /// <summary>La función es de Pro y el vendedor está en el gratuito (cobro con carrito).</summary>
+    public sealed record PlanRequired : CreateSaleResult;
+
+    /// <summary>
+    /// Gratuito: ya concretó el límite del mes. No genera cobros hasta <see cref="ResetsOn"/> o hasta
+    /// que pague Pro.
+    /// </summary>
+    public sealed record MonthlyLimitReached(DateOnly ResetsOn) : CreateSaleResult;
+
+    /// <summary>Gratuito: llegó al tope técnico de cobros generados en el mes (aunque no se hayan pagado).</summary>
+    public sealed record GenerationLimitReached(DateOnly ResetsOn) : CreateSaleResult;
+
     /// <summary>
     /// Falla de la pasarela; <see cref="Message"/> se puede mostrar al vendedor. <see cref="SaleId"/> viene solo cuando
     /// la venta se conservó (cancelada) porque el resultado es incierto: un push sin respuesta de Pey pudo llegarle al

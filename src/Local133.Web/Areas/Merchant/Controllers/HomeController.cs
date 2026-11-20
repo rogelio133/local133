@@ -1,5 +1,6 @@
 using Local133.Application.Auth;
 using Local133.Application.Subscriptions;
+using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
 using Local133.Infrastructure.Persistence;
@@ -16,7 +17,7 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [Authorize(Roles = Roles.Merchant)]
 [Route("app")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class HomeController(AppDbContext db, IPlanAccess plans, TimeProvider clock) : Controller
+public class HomeController(AppDbContext db, IPlanAccess plans, IChargeUsage usage, TimeProvider clock) : Controller
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
@@ -35,9 +36,14 @@ public class HomeController(AppDbContext db, IPlanAccess plans, TimeProvider clo
             ? await DaySummaryQuery.BuildAsync(db, merchant.Id, now, cancellationToken)
             : null;
 
+        // Contador del mes del gratuito (5.5): solo si ya cobra (activo) y su plan tiene límite.
+        var usageModel = merchant.Status == MerchantStatus.Active && plan.Entitlements.HasMonthlyChargeLimit
+            ? ChargeUsageViewModel.From(await usage.GetMonthAsync(merchant.Id, cancellationToken), MexicoTime.Today(now))
+            : null;
+
         return View(MerchantHomeViewModel.From(merchant, User.Identity?.Name,
             rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection, summary,
-            PlanSummaryViewModel.From(plan.Status, now), plan.TrialDays));
+            PlanSummaryViewModel.From(plan.Status, now), plan.TrialDays) with { Usage = usageModel });
     }
 
     [HttpGet("mas")]
