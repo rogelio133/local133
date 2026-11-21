@@ -67,6 +67,42 @@ public class PlanStatusTests
     }
 
     [Fact]
+    public void Con_un_pago_abonado_durante_la_prueba_ya_es_Pro_y_dice_cuando_termina_la_prueba()
+    {
+        var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
+        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 11, 20, 17), GraceDays);
+        var now = Mx(2026, 11, 20, 17, 30);
+
+        var status = subscription.StatusAt(now, GraceDays);
+
+        Assert.Equal(PlanTier.Pro, status.Tier);
+        Assert.Equal(Mx(2027, 1, 19, 15), status.ProUntil);
+        Assert.Equal(Mx(2026, 12, 19, 15), status.TrialEndsAt);
+        Assert.Equal(new DateOnly(2026, 12, 19), status.LastTrialDay);
+        Assert.Equal(new DateOnly(2027, 1, 19), status.LastProDay);
+        Assert.Equal(60, status.DaysLeft(now));
+
+        // Ya terminada la prueba sigue Pro, sin fecha de prueba.
+        var afterTrial = subscription.StatusAt(Mx(2026, 12, 25, 10), GraceDays);
+        Assert.Equal(PlanTier.Pro, afterTrial.Tier);
+        Assert.Null(afterTrial.TrialEndsAt);
+    }
+
+    [Theory]
+    [InlineData(SubscriptionPeriodKind.ReferralReward)]
+    [InlineData(SubscriptionPeriodKind.AdminGrant)]
+    public void Un_premio_o_regalo_despues_de_la_prueba_no_la_vuelve_Pro(SubscriptionPeriodKind kind)
+    {
+        var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
+        subscription.AddDaysPeriod(kind, 10, Mx(2026, 11, 25, 10), GraceDays);
+
+        var status = subscription.StatusAt(Mx(2026, 11, 25, 11), GraceDays);
+
+        Assert.Equal(PlanTier.Trial, status.Tier);
+        Assert.Equal(Mx(2026, 12, 19, 15), status.TrialEndsAt);
+    }
+
+    [Fact]
     public void La_gracia_dura_cinco_dias_despues_de_un_periodo_pagado()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);

@@ -27,10 +27,10 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `Seed__Admin__Email` / `Seed__Admin__Password` | Siembra idempotente del admin al arrancar | Fase 1.5 |
 | `Pey__ApiKey` | Referencia a Key Vault. Sin ella el sitio arranca, pero fallan las llamadas a Pey | Fase 2.1 |
 | `Pey__WebhookSecret` | `whsec_…`. Sin él el webhook responde 500 | Fase 2.3 |
-| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto) | Fase 2.3 / 2.5 / 2.9 |
+| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto, conciliación de links de la suscripción cada 10 min) | Fase 2.3 / 2.5 / 2.9 / 5.6 |
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
-| `App__PublicBaseUrl` | Dominio público, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale | Fase 2.8 · Correo de cuenta activa 2026-11-18 |
+| `App__PublicBaseUrl` | Dominio público **con HTTPS**, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale. Desde la 5.6 también arma las URLs de regreso de los links de Pey, que deben ser HTTPS | Fase 2.8 · Correo de cuenta activa 2026-11-18 · Fase 5.6 |
 | `Resend__ApiKey` | Referencia a Key Vault. Llave de **solo envío** restringida al dominio de envío. Sin ella los correos se guardan en disco y **no salen** | Mantenimiento 2026-11-17 |
 | `Email__From` | Opcional: `appsettings.json` ya trae `Local133 <hola@notificaciones.local133.com.mx>`. Si se cambia, debe ser de un dominio verificado en Resend | Mantenimiento 2026-11-17 |
 
@@ -116,8 +116,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Sin recursos ni secretos nuevos.
 
 ### PoC 2026-11-18 — Link de pago de Pey
-- Sin cambios para Azure: la prueba de concepto (`/app/link-de-pago`) responde 404 fuera de Development y no tiene liga en el menú.
-- Si el link de pago se implementa de verdad, `successUrl`/`backUrl` exigen HTTPS: fijar `App__PublicBaseUrl` con el dominio público. Antes hay que resolver con Pey cómo dirigir el dinero a la cuenta del vendedor, porque el link no acepta `bankAccountId`.
+- Sin cambios para Azure. La prueba de concepto se borró en la 5.6, que usa el link de pago para cobrar la suscripción (ver «Fase 5.6»).
 
 ### Fase 5.1 — Retiro del modelo de comisión
 - **Migración `RemoveCommission` destructiva**: borra `Merchants.CommissionRateOverride`, `Payments.CommissionRate`, `Payments.CommissionAmount`, `Payments.StatementId` y `SystemSettings.CommissionRate` (con sus check constraints) y pone `SystemSettings.GraceDays` en 5. Se aplica sola al arrancar (ver «Migraciones al arrancar»). Antes de publicar, confirmar que hay un punto de restauración reciente de Azure SQL (la restauración a un punto en el tiempo viene activa en todos los tiers). Solo se pierde la comisión calculada de los pagos de prueba, que nunca se cobró.
@@ -164,3 +163,14 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Migración `RemoveFreeCourtesyCharges`** (destructiva, solo un parámetro): quita la columna `SystemSettings.FreeCourtesyCharges` y vuelve a crear `CK_SystemSettings_Limits` sin ella. Se aplica sola al arrancar; no hay datos que rescatar.
 - El gratuito bloquea al llegar a `FreeMonthlyPaidLimit` (100) cobros concretados.
 - Sin recursos, App Settings, secretos ni jobs nuevos.
+
+### Fase 5.6 — «Mi plan» y pago con link de Pey
+- **Migración `SubscriptionCharges`** (no destructiva): crea `SubscriptionCharges` y `SubscriptionPayments` y agrega `SubscriptionPeriods.SubscriptionChargeId`. Se aplica sola al arrancar.
+- **`App__PublicBaseUrl` con HTTPS es obligatoria para cobrar la suscripción**: de ella salen `successUrl` (`/app/plan/pago/{id}`) y `backUrl` (`/app/plan`) del link, y Pey rechaza URLs que no sean HTTPS. Sin ella se usa el host de la petición (detrás del front-end de App Service también es HTTPS si `ForwardedHeaders` está bien configurado). El correo «Recibimos tu pago» usa la misma base.
+- **Webhook**: es el mismo `POST /api/webhooks/pey` registrado en portal.mipey.mx (Pey manda un solo webhook por API key). Desde la 5.6 procesa `payment_link.status_updated`, que antes se marcaba `Ignored`. No hay que registrar nada nuevo.
+- **Job nuevo `conciliar-links`** (Hangfire, cada 10 min, hora de México): consulta `GET /payment-link/{id}` de los cargos sin abonar. Va con `Jobs__Enabled`. No hay barrido nocturno de `GET /transaction/api-key` (pospuesto).
+- **El dinero de la suscripción cae en la cuenta de Pey de la plataforma** (la de la API key), no en la de un vendedor.
+- **Prueba real en la base de pruebas de Azure**: poner `MonthlyPrice`/`FounderMonthlyPrice` en 0.01 con un `UPDATE` en la fila 1 de `SystemSettings`, pagar con CoDi y regresar los precios. Mientras el precio esté en 0.01, cualquier vendedor de esa base paga $0.01.
+- Correo: cada pago abonado manda un correo con Resend. Revisar el plan de Resend antes del piloto (5.7 sumará recordatorios).
+- Sin recursos ni secretos nuevos.
+- Ajuste 5.6 (pagar en la prueba se ve como Pro): sin cambios para Azure.

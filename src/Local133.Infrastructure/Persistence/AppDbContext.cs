@@ -45,6 +45,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
     /// <summary>Días de Pro del vendedor (prueba, pagados, premios y regalos).</summary>
     public DbSet<SubscriptionPeriod> SubscriptionPeriods => Set<SubscriptionPeriod>();
 
+    /// <summary>Cargos de la suscripción (un link de pago de Pey por cargo).</summary>
+    public DbSet<SubscriptionCharge> SubscriptionCharges => Set<SubscriptionCharge>();
+
+    /// <summary>Transacciones que Pey reportó en los links de la suscripción.</summary>
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
+
     /// <summary>Bitácora de webhooks de Pey (sin filtro: no es de un vendedor).</summary>
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
@@ -67,5 +73,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<Product>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Subscription>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionPeriod>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<SubscriptionCharge>().HasQueryFilter(c => !IsMerchantScoped || c.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<SubscriptionPayment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
     }
 }

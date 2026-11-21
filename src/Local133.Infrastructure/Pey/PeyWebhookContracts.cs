@@ -53,6 +53,30 @@ internal sealed record PeyBankAccountUpdated(
     string? Clabe,
     PeyEntity? Entity);
 
+/// <summary>
+/// <c>payment_link.status_updated</c> (docs.pey.mx/docs/webhooks/payment-link/status-update, revisado el 2026-11-20):
+/// plano, con <c>status</c> en minúsculas (<c>pending|processing|paid</c>; <c>partial</c> solo en el GET) y las
+/// transacciones del link. La metadata que enviamos vuelve en <c>transactions[].metadata.externalMetadata</c>.
+/// </summary>
+internal sealed record PeyPaymentLinkStatusUpdated(
+    string? Type,
+    string? ApiKeyId,
+    string? PaymentLinkId,
+    string? Status,
+    string? ClientReferenceId,
+    List<PeyPaymentLinkWebhookTransaction>? Transactions);
+
+/// <param name="DatePaid">Segundos Unix.</param>
+/// <param name="Amount">Total pagado (base + propina + comisión al pagador).</param>
+internal sealed record PeyPaymentLinkWebhookTransaction(
+    string? TransactionId,
+    string? PaymentMethod,
+    long? DatePaid,
+    decimal? Amount,
+    PeyAmountBreakdown? AmountBreakdown,
+    decimal? ApplicationFee,
+    PeyTransactionMetadata? Metadata);
+
 internal static class PeyWebhookJson
 {
     public static T? Deserialize<T>(string body) => JsonSerializer.Deserialize<T>(body, PeyJson.Options);

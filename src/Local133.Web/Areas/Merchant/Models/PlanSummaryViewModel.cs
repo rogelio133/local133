@@ -16,7 +16,9 @@ public sealed record PlanSummaryViewModel(PlanTier Tier, string Title, string De
             PlanTier.Onboarding => null,
             PlanTier.Trial => new(status.Tier, TrialTitle(status.DaysLeft(now)!.Value),
                 $"Tienes todo Pro hasta el {Date(status.LastProDay)}.", "bi-stars"),
-            PlanTier.Pro => new(status.Tier, "Plan Pro", $"Vigente hasta el {Date(status.LastProDay)}.", "bi-stars"),
+            PlanTier.Pro => new(status.Tier, "Plan Pro", status.LastTrialDay is { } trialDay
+                    ? $"Vigente hasta el {Date(status.LastProDay)}. Lo que pagaste empieza al terminar tu prueba, el {Date(trialDay)}."
+                    : $"Vigente hasta el {Date(status.LastProDay)}.", "bi-stars"),
             PlanTier.Grace => new(status.Tier, $"Tu plan venció el {Date(status.LastProDay)}",
                 $"Tienes hasta el {Date(status.LastGraceDay)} para pagar sin perder Pro.", "bi-hourglass-split"),
             PlanTier.Free => new(status.Tier, "Plan gratuito", "Cobra por monto o por celular sin costo.", "bi-gift"),

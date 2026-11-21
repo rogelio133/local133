@@ -42,7 +42,9 @@ public class SubscriptionPeriodChainTests
         Assert.Equal(paid.EndsAt, subscription.ProUntil);
         Assert.Equal(SubscriptionPeriodKind.Paid, subscription.LastPeriodKind);
         Assert.Equal(SubscriptionPackage.OneMonth, subscription.LastPackage);
-        Assert.Equal(PlanTier.Trial, subscription.StatusAt(Mx(2026, 11, 25, 10), GraceDays).Tier);
+        var status = subscription.StatusAt(Mx(2026, 11, 25, 10), GraceDays);
+        Assert.Equal(PlanTier.Pro, status.Tier);
+        Assert.Equal(Mx(2026, 12, 19, 15), status.TrialEndsAt);
     }
 
     [Fact]

@@ -65,8 +65,8 @@ Lo marcado «Próximamente» aparece con esa etiqueta en la página de precios y
 | Estado | Cuándo | Qué tiene |
 |---|---|---|
 | `Onboarding` | Aún no tiene la cuenta bancaria activa | Catálogo editable, como hoy. No puede cobrar |
-| `Trial` | Los 30 días desde que la cuenta quedó activa | Todo Pro |
-| `Pro` | Dentro de un periodo pagado o regalado (referido, admin) | Todo Pro |
+| `Trial` | Los 30 días desde que la cuenta quedó activa, mientras no haya pagado | Todo Pro |
+| `Pro` | Dentro de un periodo pagado o regalado (referido, admin), o en la prueba con un pago ya abonado (2026-11-20) | Todo Pro |
 | `Grace` | Hasta 5 días después de que vence un periodo **pagado** | Todo Pro, con aviso y el link de pago |
 | `Free` | Ninguno de los anteriores | Gratuito |
 
@@ -77,7 +77,7 @@ Lo marcado «Próximamente» aparece con esa etiqueta en la página de precios y
 - **en ese momento**, si ya estaba en el gratuito. Ejemplo: paga el 20 ⇒ Pro desde el 20.
 
 Consecuencias:
-- Pagar durante la prueba no la acorta: el periodo pagado empieza cuando termina la prueba.
+- Pagar durante la prueba no la acorta: el periodo pagado empieza cuando termina la prueba. Desde que se abona, el vendedor ya ve «Plan Pro» (vigente hasta el fin de lo pagado, con la nota de cuándo empieza), no «Prueba» (ajuste del 2026-11-20, tras la prueba real).
 - Comprar el anual a mitad de un mes pagado no pierde días ni necesita prorrateo: el año empieza al terminar el mes.
 - La gracia solo sigue a un periodo pagado. Al terminar la prueba o un premio, el vendedor baja directo al gratuito (con aviso 3 días antes).
 - Los meses se cuentan en hora de México: del 31 de enero, un mes llega al último día de febrero.
@@ -124,8 +124,8 @@ Consecuencias:
 - Prueba real: en desarrollo se pone el precio en $0.01 en `SystemSettings` y se paga con CoDi. El dinero llega a la cuenta de la plataforma.
 
 **Respaldo del webhook**
-- Job `conciliar-links`: consulta `GET /payment-link/{id}` de los cargos pendientes, con un calendario como el de las ventas: cada 10 min durante 2 h, cada hora hasta 3 días y diario hasta 30 días después del fin de la gracia.
-- Barrido nocturno con `GET /transaction/api-key` (80 por página, recientes primero) hasta la fecha del barrido anterior. Las transacciones `PAYMENT_LINK` que falten pasan por el mismo `ISubscriptionPaymentRecorder`.
+- Job `conciliar-links`: consulta `GET /payment-link/{id}` de los cargos pendientes, con un calendario como el de las ventas: cada 10 min durante 2 h, cada hora hasta 3 días y diario hasta 60 días desde que se creó el cargo. *(5.6: el diseño decía «30 días después del fin de la gracia», que no tiene una fecha clara para un cargo pagado por adelantado.)* La pantalla de confirmación y su API también consultan, con un freno de 15 s.
+- ~~Barrido nocturno con `GET /transaction/api-key`~~ **pospuesto** (decisión del usuario, 2026-11-20): esa consulta trae todas las transacciones de la API key, incluidas las ventas de todos los vendedores. Lo que no cubren el webhook y la conciliación (un link de más de 60 días pagado con el webhook perdido) se abona a mano desde el admin (Fase 6).
 
 **Recordatorios** (correo y aviso en el sitio, con el link; job diario a las 9:00, hora de México)
 
@@ -258,8 +258,9 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - `/app/plan` con paquetes y precios, `/app/plan/pago/{id}` con la confirmación, y `GET /api/subscription-charges/{id}` para la consulta cada 3 s.
 - `ISubscriptionCheckout` crea o reutiliza el cargo y el link. `ISubscriptionPaymentRecorder` registra los pagos de forma idempotente y abona el periodo.
 - El webhook deja de marcar `payment_link.status_updated` como `Ignored`. Su contrato va en `PeyWebhookContracts`.
-- Fundador: con el primer pago, si quedan lugares, se le asigna su número dentro de una transacción, para no pasar de 100.
-- Jobs `conciliar-links` y `barrido-links`.
+- Fundador: con el primer pago, si quedan lugares, se le asigna su número dentro de una transacción, para no pasar de 100. *(5.6, confirmado por el usuario: el cargo sale a precio de fundador si quedan lugares al crear el link; si al pagar ya no hay lugar, se abona igual sin número.)*
+- Job `conciliar-links`. *(El `barrido-links` se pospuso el 2026-11-20.)*
+- *(5.6)* Solo paga quien ya empezó la prueba (tiene suscripción) y no está dado de baja. Al abonar se manda el correo «Recibimos tu pago»; el aviso en el sitio llega con la 5.4. Detalle en la [bitácora](../log_plan/fase-5.6-mi-plan-y-pago.md).
 - **Pruebas**:
   - WireMock (ya están las de la PoC);
   - webhook firmado: `paid`, `processing`, `partial`, repetido, link viejo, dos links pagados y monto menor;
@@ -342,7 +343,7 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 ## 13. Azure
 - `App__PublicBaseUrl`: obligatoria y con HTTPS, porque la usan los links de Pey y las ligas de los correos de los jobs.
 - El webhook es el mismo; ahora también procesa `payment_link.status_updated`.
-- Jobs nuevos: `conciliar-links`, `barrido-links` (nocturno) y `suscripciones-diario` (9:00, hora de México).
+- Jobs nuevos: `conciliar-links` (5.6) y `suscripciones-diario` (9:00, hora de México). El `barrido-links` nocturno se pospuso.
 - Migraciones:
   - retiro de la comisión: borra columnas;
   - CLABE única: depurar antes las repetidas;

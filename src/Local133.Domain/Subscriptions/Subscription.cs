@@ -1,4 +1,5 @@
 using Local133.Domain.Common;
+using Local133.Domain.Settings;
 
 namespace Local133.Domain.Subscriptions;
 
@@ -52,12 +53,51 @@ public class Subscription : Entity
     public PlanStatus StatusAt(DateTimeOffset now, int graceDays) => PlanStatus.For(Periods, now, graceDays);
 
     /// <summary>Periodo pagado con un paquete; empieza según <see cref="PlanStatus.NextPeriodStart"/>.</summary>
-    public SubscriptionPeriod AddPaidPeriod(SubscriptionPackage package, DateTimeOffset now, int graceDays)
+    /// <param name="subscriptionChargeId">Cargo que lo pagó (5.6).</param>
+    public SubscriptionPeriod AddPaidPeriod(
+        SubscriptionPackage package, DateTimeOffset now, int graceDays, int? subscriptionChargeId = null)
     {
         var start = PlanStatus.NextPeriodStart(Periods, now, graceDays);
         var period = Add(SubscriptionPeriodKind.Paid, start, MexicoTime.AddMonths(start, package.Months()), now);
+        period.SubscriptionChargeId = subscriptionChargeId;
         LastPackage = package;
         return period;
+    }
+
+    /// <summary>
+    /// Precio de un paquete para este vendedor (§2 y §7 del diseño): de fundador si ya lo es o si
+    /// <paramref name="founderSlotAvailable"/>, y el anual congelado solo si no ha bajado al gratuito (sigue en prueba,
+    /// Pro o gracia). Sin descuento de bienvenida hasta la 5.8.
+    /// </summary>
+    /// <returns>La cotización y si salió con precio de fundador.</returns>
+    public (SubscriptionQuote Quote, bool IsFounderPrice) QuoteFor(
+        SubscriptionPackage package, SystemSettings settings, PlanStatus status, bool founderSlotAvailable)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(status);
+        var founder = IsFounder || founderSlotAvailable;
+        var locked = status.IsProLike ? LockedAnnualPrice : null;
+        return (SubscriptionPricing.Quote(package, settings, founder, locked), founder);
+    }
+
+    /// <summary>Lugar de fundador (precio de fundador de por vida). Una sola vez.</summary>
+    public void AssignFounder(int number)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(number);
+        if (IsFounder)
+        {
+            throw new InvalidOperationException("El vendedor ya es fundador.");
+        }
+
+        IsFounder = true;
+        FounderNumber = number;
+    }
+
+    /// <summary>Precio del anual que acaba de pagar: se respeta al renovar sin bajar al gratuito.</summary>
+    public void LockAnnualPrice(decimal price)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(price);
+        LockedAnnualPrice = price;
     }
 
     /// <summary>

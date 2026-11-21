@@ -59,5 +59,6 @@ public static class JobsSetup
         jobs.AddOrUpdate<BankAccountPollingJob>(BankAccountPollingJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), BankAccountPollingJob.Cron, options);
         jobs.AddOrUpdate<SaleExpirationJob>(SaleExpirationJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), SaleExpirationJob.Cron, options);
         jobs.AddOrUpdate<PaymentReconciliationJob>(PaymentReconciliationJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), PaymentReconciliationJob.Cron, options);
+        jobs.AddOrUpdate<PaymentLinkReconciliationJob>(PaymentLinkReconciliationJob.RecurringJobId, j => j.RunAsync(CancellationToken.None), PaymentLinkReconciliationJob.Cron, options);
     }
 }
