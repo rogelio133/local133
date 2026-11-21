@@ -44,6 +44,9 @@ public class SubscriptionPeriodConfiguration : IEntityTypeConfiguration<Subscrip
 
         builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(30);
 
+        // Periodo pagado ⇒ el cargo que lo pagó (Restrict: el historial no se borra en cascada).
+        builder.HasOne<SubscriptionCharge>().WithMany().HasForeignKey(p => p.SubscriptionChargeId).OnDelete(DeleteBehavior.Restrict);
+
         // Estado del plan y jobs: periodos del vendedor por fin.
         builder.HasIndex(p => new { p.MerchantId, p.EndsAt });
     }

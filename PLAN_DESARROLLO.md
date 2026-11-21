@@ -84,7 +84,7 @@ enum SubscriptionChargeStatus { Pending, Processing, Paid, Partial, Failed }
 | Confirmar pago | Webhooks `codi.qr.payment_received` (match por `codiQrId`) y `codi.pn.payment_received` (sin `codiQrId`: match por el `transactionId` que devolvió `POST /codi/pn`, guardado en `Sales.PeyTransactionId`) |
 | Respaldo si se pierde webhook | `GET /transaction/codi/qr/{idc}` para ventas pendientes; nocturno `GET /transaction/bank-account/{id}` |
 | Pago de la suscripción | `POST /payment-link/create` `{amount, successUrl, backUrl, hasTip:false, clientReferenceId:"sub-{id}", metadata:{kind:"subscription", merchantId, subscriptionChargeId}}` (sin `bankAccountId`: cae en la cuenta de la plataforma) |
-| Confirmar pago de la suscripción | Webhook `payment_link.status_updated` (`paid`) ⇒ periodo Pro. Respaldo: `GET /payment-link/{id}` de los cargos pendientes y barrido nocturno de `GET /transaction/api-key` (`payableType` `PAYMENT_LINK`) |
+| Confirmar pago de la suscripción | Webhook `payment_link.status_updated` (`paid`) ⇒ periodo Pro. Respaldo: `GET /payment-link/{id}` de los cargos pendientes (job `conciliar-links` y la pantalla de confirmación). El barrido nocturno de `GET /transaction/api-key` (`payableType` `PAYMENT_LINK`) se pospuso (2026-11-20) |
 | Detalle / soporte en admin | `GET /transaction/{id}`, `GET /transaction/api-key` |
 
 ---
@@ -132,7 +132,7 @@ tests/
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba, baja al gratuito y resumen mensual) · conciliación de links de pago. *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
+- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba, baja al gratuito y resumen mensual) · conciliación de links de pago (`conciliar-links`, cada 10 min, 5.6). *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con SkiaSharp. *(Cambio 2026-11-14: antes ImageSharp; ver 3.1.)*
 - **Secretos**: API key y secreto de webhook de Pey en user-secrets / variables de entorno. CLABE enmascarada en UI.
 
@@ -201,7 +201,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
    - se abona solo con el webhook `payment_link.status_updated` o con una consulta a Pey, y hay conciliación;
    - reutiliza el backend de la [PoC](log_plan/poc-link-de-pago.md) y borra su pantalla.
 
-   — [detalle](actualizaciones/suscripciones_2026_11_18.md#56-mi-plan-y-pago-con-link-de-pey)
+   ✅ *(hecho 2026-11-20; sin el barrido nocturno de links, que se pospuso)* — [bitácora](log_plan/fase-5.6-mi-plan-y-pago.md)
 7. **Recordatorios, gracia y baja al gratuito**: job diario con links de renovación, avisos 15 (anual) y 3 días antes, el día del vencimiento y el día 3 de la gracia, fin de prueba y baja al gratuito. — [detalle](actualizaciones/suscripciones_2026_11_18.md#57-recordatorios-gracia-y-baja-al-gratuito)
 8. **Afiliados**:
    - código y liga por vendedor, capturados en el registro;
@@ -244,7 +244,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS. La venta 24 ya se concilió en la [2.9](log_plan/fase-2.9-conciliacion.md#conciliación-real-contra-pey-2026-11-18-confirmada-por-el-usuario).
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
-- [PoC link de pago](log_plan/poc-link-de-pago.md): generar un link real (perfil `https` o túnel) y ver la página de Pey. El dinero cae en la cuenta de la plataforma.
+- [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
 **Confirmar con soporte de Pey** (ver también §6):
 - [2.4](log_plan/fase-2.4-venta-monto-directo.md): límite del `concept` y que `qrString` sea solo ASCII.
@@ -268,6 +268,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [Correo con Resend](log_plan/mantenimiento-resend.md): restringir la llave a `notificaciones.local133.com.mx` en el panel de Resend (la API no cambia permisos), crear la de producción para Key Vault (ver `azure.md`) y repetir el correo real en un buzón propio con remitente `hola@` y liga que no sea `localhost` (túnel o producción); el primero llegó a spam. Decidir el buzón de las respuestas a `hola@` (el dominio no tiene MX).
 - [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
 - [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
+- [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

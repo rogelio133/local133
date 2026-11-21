@@ -80,6 +80,11 @@ public static class DependencyInjection
         services.AddScoped<IChargeLimitAlerts, ChargeLimitAlerts>();
         // 5.4: avisos en el sitio y correos. Por ahora, solo el log.
         services.TryAddSingleton<IChargeLimitNotifier, LoggingChargeLimitNotifier>();
+        // Pago de la suscripción con link de Pey (5.6): checkout, abono (webhook y conciliación) y correo.
+        services.AddScoped<ISubscriptionCheckout, SubscriptionCheckout>();
+        services.AddScoped<ISubscriptionPaymentRecorder, SubscriptionPaymentRecorder>();
+        services.AddScoped<ISubscriptionPaymentReconciliation, SubscriptionPaymentReconciliation>();
+        services.AddScoped<ISubscriptionPaymentNotifier, SubscriptionPaymentEmailNotifier>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 
@@ -87,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<BankAccountPollingJob>();
         services.AddScoped<SaleExpirationJob>();
         services.AddScoped<PaymentReconciliationJob>();
+        services.AddScoped<PaymentLinkReconciliationJob>();
 
         return services;
     }

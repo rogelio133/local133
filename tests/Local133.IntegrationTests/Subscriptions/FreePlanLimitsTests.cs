@@ -392,7 +392,7 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
         Assert.Contains("<td>100</td>", html);
         Assert.DoesNotContain("cortesía", html);
         Assert.Contains("data-coming-soon", html);
-        Assert.Contains("Fase 5.6", html);
+        Assert.Contains("data-plan-offers", html);
         Assert.Contains("data-more-plan", more);
         Assert.Contains("data-more-static-qr", more);
     }

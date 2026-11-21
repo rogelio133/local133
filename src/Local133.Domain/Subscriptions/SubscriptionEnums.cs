@@ -75,4 +75,14 @@ public static class SubscriptionPackageExtensions
         SubscriptionPackage.Annual => 12,
         _ => throw new ArgumentOutOfRangeException(nameof(package), package, "Paquete desconocido."),
     };
+
+    /// <summary>Nombre en pantalla y en correos: «1 mes», «3 meses», «6 meses», «Anual».</summary>
+    public static string Label(this SubscriptionPackage package) => package switch
+    {
+        SubscriptionPackage.OneMonth => "1 mes",
+        SubscriptionPackage.ThreeMonths => "3 meses",
+        SubscriptionPackage.SixMonths => "6 meses",
+        SubscriptionPackage.Annual => "Anual",
+        _ => throw new ArgumentOutOfRangeException(nameof(package), package, "Paquete desconocido."),
+    };
 }

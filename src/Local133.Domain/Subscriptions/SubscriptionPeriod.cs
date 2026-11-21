@@ -4,7 +4,7 @@ namespace Local133.Domain.Subscriptions;
 
 /// <summary>
 /// Un tramo de Pro del vendedor: <c>[StartsAt, EndsAt)</c>, al instante. Los periodos se encadenan (ver
-/// <see cref="Subscription.AddPeriod"/>) y son la historia de la que sale el estado del plan.
+/// <see cref="Subscription.AddPaidPeriod"/> y <see cref="Subscription.AddDaysPeriod"/>) y son la historia de la que sale el estado del plan.
 /// </summary>
 public class SubscriptionPeriod : Entity
 {
@@ -19,6 +19,9 @@ public class SubscriptionPeriod : Entity
     public DateTimeOffset EndsAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Cargo que lo pagó (solo en periodos <see cref="SubscriptionPeriodKind.Paid"/>).</summary>
+    public int? SubscriptionChargeId { get; set; }
 
     /// <summary>El periodo cubre ese instante.</summary>
     public bool Covers(DateTimeOffset instant) => StartsAt <= instant && instant < EndsAt;

@@ -147,15 +147,11 @@ internal sealed class PeyClient(HttpClient http, IOptions<PeyOptions> options, I
     }
 
     /// <summary>El estatus del link viaja en minúsculas; uno que no conocemos es una respuesta inesperada.</summary>
-    private static PeyPaymentLinkStatus ParsePaymentLinkStatus(string? status) => status?.Trim().ToLowerInvariant() switch
-    {
-        "pending" => PeyPaymentLinkStatus.Pending,
-        "processing" => PeyPaymentLinkStatus.Processing,
-        "paid" => PeyPaymentLinkStatus.Paid,
-        "partial" => PeyPaymentLinkStatus.Partial,
-        null or "" => throw MissingField("status"),
-        _ => throw new PaymentGatewayException($"Respuesta inesperada de Pey: estatus de link desconocido '{status}'."),
-    };
+    private static PeyPaymentLinkStatus ParsePaymentLinkStatus(string? status) =>
+        string.IsNullOrWhiteSpace(status)
+            ? throw MissingField("status")
+            : PeyJson.ParsePaymentLinkStatus(status)
+              ?? throw new PaymentGatewayException($"Respuesta inesperada de Pey: estatus de link desconocido '{status}'.");
 
     private static Dictionary<string, string?> ToTextMap(Dictionary<string, JsonElement>? metadata) =>
         metadata?.ToDictionary(p => p.Key, p => PeyJson.ScalarToString(p.Value)) ?? [];

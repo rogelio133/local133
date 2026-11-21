@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Local133.Application.BankAccounts;
 using Local133.Application.Payments;
+using Local133.Application.Subscriptions;
 using Local133.Application.Webhooks;
 using Local133.Domain.Pey;
 using Local133.Domain.Webhooks;
@@ -21,6 +22,7 @@ internal sealed class PeyWebhookProcessor(
     AppDbContext db,
     IPaymentRecorder payments,
     IBankAccountStatusSync bankAccounts,
+    ISubscriptionPaymentRecorder subscriptionPayments,
     TimeProvider clock,
     ILogger<PeyWebhookProcessor> logger) : IPeyWebhookProcessor
 {
@@ -126,7 +128,7 @@ internal sealed class PeyWebhookProcessor(
                 PeyWebhookEventTypes.CodiQrPaymentReceived => await CodiQrPaymentAsync(body, cancellationToken),
                 PeyWebhookEventTypes.BankAccountUpdated => await BankAccountUpdatedAsync(body, cancellationToken),
                 PeyWebhookEventTypes.CodiPnPaymentReceived => await CodiPnPaymentAsync(body, cancellationToken),
-                PeyWebhookEventTypes.PaymentLinkStatusUpdated => Outcome.Ignore("Links de pago: fuera del MVP."),
+                PeyWebhookEventTypes.PaymentLinkStatusUpdated => await PaymentLinkStatusUpdatedAsync(body, cancellationToken),
                 null => Outcome.Fail("El payload no es JSON o no trae type."),
                 _ => Outcome.Fail($"Tipo de evento desconocido: {type}."),
             };
@@ -182,6 +184,54 @@ internal sealed class PeyWebhookProcessor(
             PaymentRecordResult.Ignored ignored => Outcome.Ignore(ignored.Reason),
             PaymentRecordResult.Unmatched unmatched => Outcome.Fail(unmatched.Reason),
             _ => throw new InvalidOperationException($"Resultado inesperado: {result}"),
+        };
+    }
+
+    /// <summary>Link de pago de la suscripción ⇒ <see cref="ISubscriptionPaymentRecorder"/> (abona si quedó pagado).</summary>
+    private async Task<Outcome> PaymentLinkStatusUpdatedAsync(string body, CancellationToken cancellationToken)
+    {
+        var payload = PeyWebhookJson.Deserialize<PeyPaymentLinkStatusUpdated>(body);
+        if (payload is null || string.IsNullOrWhiteSpace(payload.PaymentLinkId))
+        {
+            return Outcome.Fail("Falta paymentLinkId.");
+        }
+
+        if (PeyJson.ParsePaymentLinkStatus(payload.Status) is not { } status)
+        {
+            return Outcome.Fail($"Estatus de link desconocido: {payload.Status}.");
+        }
+
+        var transactions = payload.Transactions ?? [];
+        var metadata = transactions
+            .Select(t => t.Metadata?.ExternalMetadata)
+            .FirstOrDefault(m => m is { Count: > 0 })
+            ?.ToDictionary(p => p.Key, p => PeyJson.ScalarToString(p.Value))
+            ?? new Dictionary<string, string?>();
+        var update = new PaymentLinkUpdate(
+            payload.PaymentLinkId.Trim(),
+            status,
+            payload.ClientReferenceId,
+            metadata,
+            transactions
+                .Where(t => !string.IsNullOrWhiteSpace(t.TransactionId) && t.Amount is not null)
+                .Select(t => new PaymentLinkUpdateTransaction(
+                    t.TransactionId!.Trim(),
+                    t.PaymentMethod,
+                    t.DatePaid is { } seconds ? DateTimeOffset.FromUnixTimeSeconds(seconds) : null,
+                    t.Amount!.Value,
+                    t.AmountBreakdown?.Base,
+                    t.AmountBreakdown?.Fee,
+                    t.ApplicationFee))
+                .ToList());
+
+        return await subscriptionPayments.RecordAsync(update, cancellationToken) switch
+        {
+            SubscriptionPaymentResult.Credited credited => Outcome.Process(
+                $"Cargo {credited.ChargeId} abonado (periodo {credited.PeriodId})."),
+            SubscriptionPaymentResult.AlreadyCredited already => Outcome.Process($"Cargo {already.ChargeId} ya abonado."),
+            SubscriptionPaymentResult.StatusUpdated updated => Outcome.Process($"Cargo {updated.ChargeId}: {updated.Status}."),
+            SubscriptionPaymentResult.Unmatched unmatched => Outcome.Fail(unmatched.Reason),
+            var other => throw new InvalidOperationException($"Resultado inesperado: {other}"),
         };
     }
 

@@ -27,6 +27,16 @@ internal static class PeyJson
     public static string ToWireName<TEnum>(TEnum value) where TEnum : struct, Enum =>
         JsonNamingPolicy.SnakeCaseUpper.ConvertName(value.ToString());
 
+    /// <summary>Estatus de un link de pago, que viaja en minúsculas; <c>null</c> si falta o no lo conocemos.</summary>
+    public static PeyPaymentLinkStatus? ParsePaymentLinkStatus(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "pending" => PeyPaymentLinkStatus.Pending,
+        "processing" => PeyPaymentLinkStatus.Processing,
+        "paid" => PeyPaymentLinkStatus.Paid,
+        "partial" => PeyPaymentLinkStatus.Partial,
+        _ => null,
+    };
+
     /// <summary>Los valores de <c>externalMetadata</c> vuelven como texto; por si acaso se acepta cualquier escalar.</summary>
     public static string? ScalarToString(JsonElement element) => element.ValueKind switch
     {

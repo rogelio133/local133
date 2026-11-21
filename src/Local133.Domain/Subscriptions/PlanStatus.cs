@@ -7,7 +7,8 @@ namespace Local133.Domain.Subscriptions;
 /// Estado del plan en un instante, calculado con la historia de periodos (§3 del diseño de suscripciones):
 /// <list type="bullet">
 /// <item>sin prueba ⇒ <see cref="PlanTier.Onboarding"/> (la prueba nace al activarse la cuenta bancaria);</item>
-/// <item>un periodo cubre el instante ⇒ <see cref="PlanTier.Trial"/> si es la prueba, <see cref="PlanTier.Pro"/> si no;</item>
+/// <item>un periodo cubre el instante ⇒ <see cref="PlanTier.Trial"/> si es la prueba, <see cref="PlanTier.Pro"/> si no.
+/// La prueba con un periodo pagado ya abonado después cuenta como <see cref="PlanTier.Pro"/>: el vendedor ya pagó;</item>
 /// <item>venció un periodo <b>pagado</b> hace menos de <c>GraceDays</c> ⇒ <see cref="PlanTier.Grace"/>;</item>
 /// <item>si no ⇒ <see cref="PlanTier.Free"/>. Al terminar la prueba o un premio no hay gracia.</item>
 /// </list>
@@ -28,6 +29,15 @@ public sealed record PlanStatus(PlanTier Tier, DateTimeOffset? ProUntil, DateTim
     /// <summary>Último día (en México) de la gracia.</summary>
     public DateOnly? LastGraceDay => GraceEndsAt is { } until ? LastDayBefore(until) : null;
 
+    /// <summary>
+    /// Fin (excluido) de la prueba, solo mientras todavía cubre el instante. Con un pago ya abonado el estado es
+    /// <see cref="PlanTier.Pro"/> y esto dice cuándo empieza lo pagado.
+    /// </summary>
+    public DateTimeOffset? TrialEndsAt { get; init; }
+
+    /// <summary>Último día (en México) de la prueba en curso.</summary>
+    public DateOnly? LastTrialDay => TrialEndsAt is { } until ? LastDayBefore(until) : null;
+
     public static PlanStatus For(IEnumerable<SubscriptionPeriod> periods, DateTimeOffset now, SystemSettings settings) =>
         For(periods, now, settings.GraceDays);
 
@@ -45,10 +55,14 @@ public sealed record PlanStatus(PlanTier Tier, DateTimeOffset? ProUntil, DateTim
         DateTimeOffset? graceEndsAt = last.Kind == SubscriptionPeriodKind.Paid ? MexicoTime.AddDays(last.EndsAt, graceDays) : null;
 
         var covering = list.Where(p => p.Covers(now)).ToList();
+        var trialEndsAt = covering.Where(p => p.Kind == SubscriptionPeriodKind.Trial)
+            .Select(p => (DateTimeOffset?)p.EndsAt).Max();
         PlanTier tier;
         if (covering.Count > 0)
         {
-            tier = covering.All(p => p.Kind == SubscriptionPeriodKind.Trial) ? PlanTier.Trial : PlanTier.Pro;
+            // Con un pago ya abonado (aunque empiece al terminar la prueba) el vendedor ya es Pro.
+            var hasPaidAhead = list.Any(p => p.Kind == SubscriptionPeriodKind.Paid && p.EndsAt > now);
+            tier = covering.All(p => p.Kind == SubscriptionPeriodKind.Trial) && !hasPaidAhead ? PlanTier.Trial : PlanTier.Pro;
         }
         else if (graceEndsAt is { } graceEnd && now >= last.EndsAt && now < graceEnd)
         {
@@ -59,7 +73,7 @@ public sealed record PlanStatus(PlanTier Tier, DateTimeOffset? ProUntil, DateTim
             tier = PlanTier.Free;
         }
 
-        return new PlanStatus(tier, last.EndsAt, graceEndsAt);
+        return new PlanStatus(tier, last.EndsAt, graceEndsAt) { TrialEndsAt = trialEndsAt };
     }
 
     /// <summary>

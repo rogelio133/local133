@@ -119,21 +119,21 @@ public sealed class PeyClientTests : IDisposable
 
         var link = await _pey.Gateway.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(
             Amount: 10.50m,
-            SuccessUrl: new Uri("https://local133.mx/app/link-de-pago/regreso?resultado=pagado"),
-            BackUrl: new Uri("https://local133.mx/app/link-de-pago/regreso?resultado=cancelado"),
-            ClientReferenceId: "2 tacos al pastor",
-            Metadata: new Dictionary<string, string> { ["kind"] = "payment-link-poc", ["concept"] = "2 tacos al pastor" }));
+            SuccessUrl: new Uri("https://local133.mx/app/plan/pago/42"),
+            BackUrl: new Uri("https://local133.mx/app/plan"),
+            ClientReferenceId: "sub-42",
+            Metadata: new Dictionary<string, string> { ["kind"] = "subscription", ["subscriptionChargeId"] = "42" }));
 
         Assert.Equal(new CreatedPaymentLink("01HXYZPL", new Uri("https://pay.pey.mx/01HXYZPL")), link);
         var request = _pey.SingleRequest();
         Assert.Equal($"Bearer {PeyFixture.ApiKey}", request.Headers!["Authorization"].Single());
         var body = PeyFixture.BodyOf(request);
         Assert.Equal(10.50m, body.GetProperty("amount").GetDecimal());
-        Assert.Equal("https://local133.mx/app/link-de-pago/regreso?resultado=pagado", body.GetProperty("successUrl").GetString());
-        Assert.Equal("https://local133.mx/app/link-de-pago/regreso?resultado=cancelado", body.GetProperty("backUrl").GetString());
+        Assert.Equal("https://local133.mx/app/plan/pago/42", body.GetProperty("successUrl").GetString());
+        Assert.Equal("https://local133.mx/app/plan", body.GetProperty("backUrl").GetString());
         Assert.False(body.GetProperty("hasTip").GetBoolean());
-        Assert.Equal("2 tacos al pastor", body.GetProperty("clientReferenceId").GetString());
-        Assert.Equal("2 tacos al pastor", body.GetProperty("metadata").GetProperty("concept").GetString());
+        Assert.Equal("sub-42", body.GetProperty("clientReferenceId").GetString());
+        Assert.Equal("42", body.GetProperty("metadata").GetProperty("subscriptionChargeId").GetString());
         Assert.False(body.TryGetProperty("bankAccountId", out _)); // Pey no lo acepta en links
     }
 

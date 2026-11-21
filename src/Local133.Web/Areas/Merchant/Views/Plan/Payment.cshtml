@@ -1,0 +1,54 @@
+@using Local133.Web.Areas.Merchant.Models
+@model SubscriptionPaymentViewModel
+@{
+    ViewData["Title"] = "Tu pago de Pro";
+}
+@* Regreso de Pey: el navegador no abona nada. subscription-payment.js consulta el estado cada 3 s (el servidor le
+   pregunta a Pey con freno) y alterna los bloques [data-*-only]. *@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 text-center"
+         data-subscription-payment="@Model.Id"
+         data-status="@Model.Status"
+         data-status-url="@Url.Content("~" + PlanUrls.ApiStatus(Model.Id))">
+        <p class="text-body-secondary mb-1">Pro · <span data-payment-package>@Model.PackageText</span></p>
+        <p class="display-6 fw-semibold mb-3" data-payment-amount>@Model.AmountText</p>
+
+        <div class="@(Model.IsWaiting ? null : "d-none")" data-waiting-only>
+            <p class="d-flex align-items-center justify-content-center gap-2 mb-2" role="status" aria-live="polite">
+                <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                <span data-waiting-text>@(Model.IsProcessing ? "Procesando tu pago…" : "Confirmando tu pago…")</span>
+            </p>
+            <p class="small text-body-secondary mb-3">Esto puede tardar unos segundos. No necesitas recargar la página.</p>
+            <p class="small text-body-secondary mb-3 d-none" data-slow-only>
+                Seguimos confirmando tu pago con Pey. Puedes cerrar esta página: te avisaremos por correo cuando quede listo.
+            </p>
+            @if (Model.PayUrl is not null)
+            {
+                <p class="small mb-3" data-pay-again>¿Todavía no pagas? <a href="@Model.PayUrl">Volver a la página de pago</a></p>
+            }
+        </div>
+
+        <div class="@(Model.IsPaid ? null : "d-none")" data-paid-only>
+            <i class="bi bi-check-circle-fill text-success paid-icon" aria-hidden="true"></i>
+            <h1 class="h3 fw-semibold text-success mt-2 mb-1" role="status" aria-live="assertive">¡Pago confirmado!</h1>
+            <p class="mb-3" data-pro-until>@Model.ProUntilText</p>
+            <p class="small text-body-secondary mb-3">Te mandamos la confirmación por correo.</p>
+        </div>
+
+        <div class="alert alert-warning text-start @(Model.IsPartial ? null : "d-none")" role="status" data-partial-only>
+            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+            Pey reportó un pago incompleto. Lo vamos a revisar y te escribiremos; no hace falta que pagues otra vez.
+        </div>
+
+        <div class="alert alert-danger text-start @(Model.IsFailed ? null : "d-none")" role="alert" data-failed-only>
+            <i class="bi bi-x-circle-fill me-1" aria-hidden="true"></i>
+            No pudimos generar este link de pago, así que no se cobró nada. Vuelve a «Mi plan» para intentarlo de nuevo.
+        </div>
+
+        <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + PlanUrls.Plan)" data-back-to-plan>Ir a Mi plan</a>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/subscription-payment.js" asp-append-version="true"></script>
+}

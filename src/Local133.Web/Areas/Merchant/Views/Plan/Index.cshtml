@@ -1,14 +1,20 @@
+@using Local133.Web.Areas.Merchant.Controllers
 @using Local133.Web.Areas.Merchant.Models
 @using Local133.Domain.Subscriptions
 @model MyPlanViewModel
 @{
     ViewData["Title"] = "Mi plan";
+    var notice = TempData[PlanController.NoticeKey] as string;
 }
-@* Provisional (5.5): estado, contador y lo que incluye cada plan. La 5.6 agrega los paquetes y el pago con link de Pey. *@
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-my-plan>
         <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
         <h1 class="h4 mb-3">Mi plan</h1>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-plan-notice>@notice</div>
+        }
 
         @if (Model.Plan is { } plan)
         {
@@ -24,13 +30,122 @@
         {
             <div class="card card-body mb-3" data-plan-onboarding>
                 <span class="fw-bold">Tu prueba de Pro aún no empieza</span>
-                <span class="small text-body-secondary">Al activarse tu cuenta bancaria tendrás @Model.TrialDays días de Pro sin costo.</span>
+                <span class="small text-body-secondary">Al activarse tu cuenta bancaria tendrás @Model.TrialDays días de Pro sin costo. Después podrás pagar Pro desde aquí.</span>
             </div>
         }
 
         @if (Model.Usage is { } usage)
         {
             <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
+        }
+
+        @if (Model.InProgress.Count > 0)
+        {
+            <div class="card mb-3 border-info" data-plan-in-progress>
+                <div class="card-header fw-semibold">Pagos en proceso</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var row in Model.InProgress)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2" data-plan-charge="@row.Id">
+                            <span>
+                                <span class="d-block">@row.PackageText · @row.AmountText</span>
+                                <span class="d-block small text-body-secondary">@row.StatusText · @row.DateText</span>
+                            </span>
+                            <a class="btn btn-outline-primary btn-sm text-nowrap" href="@Url.Content("~" + PlanUrls.PaymentStatus(row.Id))">Ver estado</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (Model.CanPay)
+        {
+            <section class="mb-3" aria-labelledby="plan-offers-title" data-plan-offers>
+                <h2 class="h5 mb-1" id="plan-offers-title">@Model.OffersTitle</h2>
+                @if (Model.OffersNote is not null)
+                {
+                    <p class="small text-body-secondary mb-2" data-plan-offers-note>@Model.OffersNote</p>
+                }
+                @if (Model.FounderNotice is not null)
+                {
+                    <div class="alert alert-info py-2 small d-flex align-items-center gap-2" role="status" data-plan-founder>
+                        <i class="bi bi-award-fill text-primary" aria-hidden="true"></i>
+                        <span>@Model.FounderNotice</span>
+                    </div>
+                }
+                @if (Model.HttpsWarning is not null && notice != Model.HttpsWarning)
+                {
+                    <div class="alert alert-warning small" role="alert" data-plan-https-warning>@Model.HttpsWarning</div>
+                }
+
+                <div class="row row-cols-1 row-cols-sm-2 g-3">
+                    @foreach (var offer in Model.Offers)
+                    {
+                        <div class="col">
+                            <div class="card h-100 plan-offer @(offer.IsRecommended ? "border-primary plan-offer-recommended" : "")" data-plan-offer="@offer.Value">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                        <h3 class="h6 fw-bold mb-0">@offer.Title</h3>
+                                        @if (offer.IsRecommended)
+                                        {
+                                            <span class="badge text-bg-primary">Mejor precio</span>
+                                        }
+                                    </div>
+                                    <p class="mb-0">
+                                        <span class="fs-3 fw-bold" data-plan-offer-price>@offer.PriceText</span>
+                                        @if (offer.PerMonthText is not null)
+                                        {
+                                            <span class="small text-body-secondary">@offer.PerMonthText</span>
+                                        }
+                                    </p>
+                                    @if (offer.IsFounderPrice)
+                                    {
+                                        <p class="small mb-1"><span class="badge text-bg-info" data-plan-offer-founder>Precio de fundador</span></p>
+                                    }
+                                    @if (offer.Highlight is not null)
+                                    {
+                                        <p class="small fw-semibold text-success mb-1" data-plan-offer-highlight>@offer.Highlight</p>
+                                    }
+                                    <p class="small text-body-secondary mb-3" data-plan-offer-until>@offer.ProUntilText</p>
+                                    <form asp-area="Merchant" asp-controller="Plan" asp-action="Pay" method="post" class="mt-auto" data-disable-on-submit>
+                                        <input type="hidden" name="package" value="@offer.Value" />
+                                        <button type="submit" class="btn @(offer.IsRecommended ? "btn-primary" : "btn-outline-primary") w-100" data-plan-pay>
+                                            Pagar @offer.PriceText
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <p class="small text-body-secondary mt-2 mb-0" data-plan-payment-note>
+                    Precios con IVA incluido. Pagas en la página segura de Pey, con CoDi o con tarjeta; con tarjeta, Pey puede
+                    sumar una comisión al precio.
+                </p>
+            </section>
+        }
+        else if (Model.IsDisabled)
+        {
+            <div class="alert alert-secondary" role="status" data-plan-disabled>Tu cuenta está dada de baja: no puedes pagar Pro.</div>
+        }
+
+        @if (Model.Payments.Count > 0)
+        {
+            <div class="card mb-3" data-plan-payments>
+                <div class="card-header fw-semibold">Tus pagos</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var row in Model.Payments)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2" data-plan-payment="@row.Id">
+                            <span>
+                                <span class="d-block">Pro · @row.PackageText</span>
+                                <span class="d-block small text-body-secondary">@row.DateText@(row.MethodText is null ? "" : $" · {row.MethodText}")</span>
+                            </span>
+                            <span class="fw-semibold text-nowrap">@row.AmountText</span>
+                        </li>
+                    }
+                </ul>
+            </div>
         }
 
         <div class="card mb-3">
@@ -63,7 +178,5 @@
                 </table>
             </div>
         </div>
-
-        <partial name="_ComingSoon" model='new ComingSoonViewModel("Pagar Pro", "5.6", "Muy pronto podrás pagar o adelantar tu plan desde aquí, con CoDi.")' />
     </div>
 </div>

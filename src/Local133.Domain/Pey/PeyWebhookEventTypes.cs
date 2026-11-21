@@ -12,6 +12,6 @@ public static class PeyWebhookEventTypes
     /// <summary>Una cuenta bancaria pasó a <c>ACTIVE</c> (solo se envía en esa transición).</summary>
     public const string BankAccountUpdated = "bank.account.updated";
 
-    /// <summary>Cambio de estatus de un link de pago (fuera del MVP).</summary>
+    /// <summary>Cambio de estatus de un link de pago: pago de la suscripción (5.6).</summary>
     public const string PaymentLinkStatusUpdated = "payment_link.status_updated";
 }

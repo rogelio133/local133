@@ -91,11 +91,19 @@ public sealed class FakePaymentGateway : IPaymentGateway
     /// <summary>Links para <c>GET /payment-link/{id}</c>; un id sin entrada responde <c>NOT_FOUND</c>.</summary>
     public ConcurrentDictionary<string, GatewayPaymentLink> PaymentLinks { get; } = new();
 
+    /// <summary>Ids consultados con <c>GET /payment-link/{id}</c>, en orden.</summary>
+    public ConcurrentQueue<string> PaymentLinkLookups { get; } = new();
+
+    /// <summary>Excepción de <c>GET /payment-link/{id}</c> para un id.</summary>
+    public ConcurrentDictionary<string, Exception> PaymentLinkLookupExceptions { get; } = new();
+
     public void Reset()
     {
         PaymentLinkRequests.Clear();
         PaymentLinkException = null;
         PaymentLinks.Clear();
+        PaymentLinkLookups.Clear();
+        PaymentLinkLookupExceptions.Clear();
         CodiQrTransactions.Clear();
         CodiQrPageSize = 20;
         CodiQrTransactionLookups.Clear();
@@ -213,11 +221,29 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.FromResult(new CreatedPaymentLink(id, PaymentLinkUrlFor(id)));
     }
 
-    public Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default) =>
-        PaymentLinks.TryGetValue(paymentLinkId, out var link)
+    public Task<GatewayPaymentLink> GetPaymentLinkAsync(string paymentLinkId, CancellationToken cancellationToken = default)
+    {
+        PaymentLinkLookups.Enqueue(paymentLinkId);
+        if (PaymentLinkLookupExceptions.TryGetValue(paymentLinkId, out var exception))
+        {
+            throw exception;
+        }
+
+        return PaymentLinks.TryGetValue(paymentLinkId, out var link)
             ? Task.FromResult(link)
             : throw new PaymentGatewayNotFoundException(
                 "Pey: link no encontrado.", PeyErrorType.NotFound, 404, "req_fake", "Payment link not found");
+    }
+
+    /// <summary>Link de pago simulado con su estatus y transacciones (montos con base = total, sin comisión).</summary>
+    public static GatewayPaymentLink PaymentLink(
+        string id, decimal amount, PeyPaymentLinkStatus status, string? clientReferenceId = null,
+        IReadOnlyDictionary<string, string?>? metadata = null, params (string TransactionId, decimal Amount)[] transactions) =>
+        new(id, amount, status, null, null, false, ["CODI"], DateTimeOffset.UtcNow, clientReferenceId,
+            metadata ?? new Dictionary<string, string?>(),
+            transactions.Select(t => new GatewayPaymentLinkTransaction(
+                t.TransactionId, "CODI", DateTimeOffset.UtcNow, t.Amount, new GatewayAmountBreakdown(t.Amount, 0, 0), null,
+                new Dictionary<string, string?>())).ToList());
 
     private static NotSupportedException NotConfigured() => new("FakePaymentGateway: operación aún no simulada.");
 }
