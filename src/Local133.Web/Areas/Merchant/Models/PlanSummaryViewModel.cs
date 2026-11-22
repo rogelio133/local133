@@ -35,11 +35,9 @@ public sealed record PlanSummaryViewModel(PlanTier Tier, string Title, string De
     };
 }
 
-/// <summary>Banner de gracia (5.7).</summary>
+/// <summary>Banner de gracia (5.7). Su botón siempre va a «Mi plan»: ahí se elige el paquete y nace el link de pago.</summary>
 /// <param name="LastGraceDayText">Último día para pagar sin perder Pro («hoy» o «24 de diciembre»).</param>
-/// <param name="PayUrl">Página de pago de Pey del link de renovación, o «Mi plan» si no hay link.</param>
-/// <param name="IsPaymentLink"><paramref name="PayUrl"/> es el link de Pey.</param>
-public sealed record GraceBannerViewModel(string LastProDayText, string LastGraceDayText, string PayUrl, bool IsPaymentLink)
+public sealed record GraceBannerViewModel(string LastProDayText, string LastGraceDayText)
 {
     public string DeadlineText => LastGraceDayText == "hoy"
         ? "Hoy es el último día para pagar sin perder Pro."

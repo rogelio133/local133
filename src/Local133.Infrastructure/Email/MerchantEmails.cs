@@ -55,21 +55,18 @@ public static class MerchantEmails
         "Recibiste este correo porque tienes tu negocio en Local133. Los precios incluyen IVA.";
 
     /// <summary>
-    /// Aviso y correo de un recordatorio de la suscripción (5.7). El botón lleva a «Mi plan», donde está el link de
-    /// renovación; el correo nunca trae la liga de pago de Pey.
+    /// Aviso y correo de un recordatorio de la suscripción (5.7). El botón lleva a «Mi plan», donde el vendedor elige
+    /// su paquete y ahí se genera el link de pago: el correo nunca trae una liga de Pey ni el job crea links.
     /// </summary>
-    /// <param name="renewalAmount">Monto del link de renovación ya creado; <c>null</c> si no hay link.</param>
     public static SubscriptionReminderMessage SubscriptionReminder(
-        SubscriptionReminder reminder, string? businessName, decimal? renewalAmount, SystemSettings settings)
+        SubscriptionReminder reminder, string? businessName, SystemSettings settings)
     {
         ArgumentNullException.ThrowIfNull(reminder);
         ArgumentNullException.ThrowIfNull(settings);
         var greeting = string.IsNullOrWhiteSpace(businessName) ? "¡Hola!" : $"¡Hola, {businessName.Trim()}!";
         var lastDay = LongDate(reminder.LastProDay);
         var graceDay = reminder.LastGraceDay is { } g ? LongDate(g) : null;
-        var link = renewalAmount is { } amount && reminder.RenewalPackage is { } package
-            ? $"Tu link de renovación por {Money(amount)} ({package.Label().ToLower(Mexico)}) ya está listo en «Mi plan»."
-            : null;
+        const string choosePackage = "Entra a «Mi plan» y elige tu paquete para renovar.";
         string FreePlan(string intro) =>
             $"{intro} sigues cobrando por monto con QR o por celular, hasta {settings.FreeMonthlyPaidLimit.ToString("N0", Mexico)} cobros al mes. "
             + $"Tu catálogo queda de solo lectura, sin cobro con carrito ni WhatsApp en el recibo, y ves el historial de los últimos {settings.FreeHistoryDays.ToString(Mexico)} días.";
@@ -81,12 +78,11 @@ public static class MerchantEmails
         {
             case SubscriptionReminderStage.AnnualUpcoming:
                 title = $"Tu plan anual vence el {lastDay}";
-                body = $"Renueva Pro antes del {lastDay} para seguir sin interrupciones."
-                    + (link is null ? " Entra a «Mi plan» para renovarlo." : " Tu link de renovación ya está en «Mi plan».");
+                body = $"Renueva Pro antes del {lastDay} para seguir sin interrupciones. {choosePackage}";
                 subject = $"Tu plan anual de Pro vence el {lastDay} · Local133";
                 emailTitle = "Tu plan anual vence pronto";
                 paragraphs.Add($"Tu plan Pro anual vence el {lastDay}, en {reminder.DaysLeft.ToString(Mexico)} días.");
-                paragraphs.Add(link is null ? "Entra a «Mi plan» para renovarlo." : link + " Si renuevas sin dejar vencer tu plan, conservas tu precio.");
+                paragraphs.Add($"{choosePackage} Si renuevas el anual antes de que terminen tus días de gracia, conservas tu precio.");
                 paragraphs.Add(noDaysLost);
                 action = "Renovar mi plan";
                 break;
@@ -97,7 +93,7 @@ public static class MerchantEmails
                 subject = $"Tu plan Pro vence {When(reminder.DaysLeft)} · Local133";
                 emailTitle = "Tu plan Pro vence pronto";
                 paragraphs.Add($"Tu plan Pro vence el {lastDay}.");
-                paragraphs.Add(link ?? "Entra a «Mi plan» para pagar.");
+                paragraphs.Add(choosePackage);
                 paragraphs.Add(noDaysLost);
                 if (graceDay is not null)
                 {
@@ -125,7 +121,7 @@ public static class MerchantEmails
                 emailTitle = "Tus días de Pro terminan pronto";
                 paragraphs.Add($"Tus días de Pro regalados terminan el {lastDay}. Después pasas al plan gratuito.");
                 paragraphs.Add(FreePlan("En el plan gratuito"));
-                paragraphs.Add(link ?? "Paga Pro en «Mi plan» y sigues con todo.");
+                paragraphs.Add("Paga Pro en «Mi plan» y sigues con todo: elige tu paquete y ahí mismo pagas.");
                 paragraphs.Add(noDaysLost);
                 action = "Pagar Pro";
                 break;
@@ -143,7 +139,7 @@ public static class MerchantEmails
                     paragraphs.Add($"Tienes hasta el {graceDay} para pagar sin perder Pro. Lo que pagues cuenta desde hoy: no se pierden días.");
                 }
 
-                paragraphs.Add(link ?? "Entra a «Mi plan» para pagar.");
+                paragraphs.Add(choosePackage);
                 action = "Pagar Pro";
                 break;
 
@@ -158,7 +154,7 @@ public static class MerchantEmails
                 subject = $"{title} · Local133";
                 emailTitle = "No pierdas tu plan Pro";
                 paragraphs.Add($"Tu plan Pro venció el {lastDay} y tienes hasta el {graceDay} para pagar sin perder Pro.");
-                paragraphs.Add(link ?? "Entra a «Mi plan» para pagar.");
+                paragraphs.Add(choosePackage);
                 paragraphs.Add(FreePlan("Si no pagas, pasas al plan gratuito. Ahí"));
                 action = "Pagar Pro";
                 break;
@@ -198,8 +194,6 @@ public static class MerchantEmails
     };
 
     private static string LongDate(DateOnly day) => day.ToString("d 'de' MMMM 'de' yyyy", Mexico);
-
-    private static string Money(decimal amount) => amount.ToString("$#,0.00", Mexico);
 
     public const string BankAccountActiveSubject = "Tu cuenta ya está activa: ya puedes cobrar · Local133";
 

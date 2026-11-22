@@ -46,8 +46,6 @@ public class SubscriptionRemindersTests
 
         Assert.Equal(SubscriptionReminderStage.Upcoming, reminder.Stage);
         Assert.Equal(daysLeft, reminder.DaysLeft);
-        Assert.Equal(SubscriptionPackage.OneMonth, reminder.RenewalPackage);
-        Assert.True(reminder.NeedsRenewalLink);
         Assert.Equal(NotificationType.SubscriptionUpcoming, reminder.NotificationType);
         Assert.Equal(new DateOnly(2026, 12, 20), reminder.LastProDay);
         Assert.Equal(new DateOnly(2026, 12, 25), reminder.LastGraceDay);
@@ -60,7 +58,6 @@ public class SubscriptionRemindersTests
 
         Assert.Equal(SubscriptionReminderStage.DueToday, reminder.Stage);
         Assert.Equal(0, reminder.DaysLeft);
-        Assert.True(reminder.NeedsRenewalLink);
         Assert.Equal(NotificationType.SubscriptionDueToday, reminder.NotificationType);
     }
 
@@ -91,7 +88,6 @@ public class SubscriptionRemindersTests
 
         Assert.Equal(SubscriptionReminderStage.Grace, reminder.Stage);
         Assert.Equal(daysLeft, reminder.DaysLeft);
-        Assert.Equal(SubscriptionPackage.OneMonth, reminder.RenewalPackage);
         Assert.Equal(NotificationType.SubscriptionGrace, reminder.NotificationType);
     }
 
@@ -103,8 +99,6 @@ public class SubscriptionRemindersTests
         var reminder = Monthly(12, day)!;
 
         Assert.Equal(SubscriptionReminderStage.Downgraded, reminder.Stage);
-        Assert.Null(reminder.RenewalPackage);
-        Assert.False(reminder.NeedsRenewalLink);
         Assert.Equal(NotificationType.DowngradedToFree, reminder.NotificationType);
     }
 
@@ -128,7 +122,6 @@ public class SubscriptionRemindersTests
         if (reminder is not null)
         {
             Assert.Equal(20 - day, reminder.DaysLeft);
-            Assert.Equal(SubscriptionPackage.Annual, reminder.RenewalPackage);
         }
     }
 
@@ -146,7 +139,6 @@ public class SubscriptionRemindersTests
         if (reminder is not null)
         {
             Assert.Equal(daysLeft, reminder.DaysLeft);
-            Assert.False(reminder.NeedsRenewalLink);
             Assert.Null(reminder.LastGraceDay);
             Assert.Equal(
                 expected == SubscriptionReminderStage.Upcoming ? NotificationType.TrialEnding : NotificationType.DowngradedToFree,
@@ -174,7 +166,6 @@ public class SubscriptionRemindersTests
 
         Assert.Equal(SubscriptionReminderStage.Upcoming, upcoming.Stage);
         Assert.Equal(NotificationType.ProDaysEnding, upcoming.NotificationType);
-        Assert.Equal(SubscriptionPackage.OneMonth, upcoming.RenewalPackage); // ya había pagado: link del mismo paquete
         Assert.Equal(SubscriptionReminderStage.Downgraded, downgraded.Stage);
     }
 
@@ -206,6 +197,44 @@ public class SubscriptionRemindersTests
         Assert.Equal(SubscriptionReminderStage.Upcoming, renewed.Stage);
         Assert.NotEqual(upcoming.DedupKey, renewed.DedupKey);
         Assert.Equal(Monthly(12, 18)!.DedupKey, upcoming.DedupKey); // misma etapa, mismo ciclo: un solo aviso
+    }
+
+    // --- Aviso de «Mi plan» --------------------------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData(21)] // día 1 de la gracia: el correo todavía no sale, el aviso sí
+    [InlineData(22)] // día 2
+    [InlineData(25)] // último día de la gracia
+    public void El_aviso_de_Mi_plan_cubre_toda_la_gracia(int day)
+    {
+        var notice = Notice(Mx(2026, 12, day, 9));
+
+        Assert.NotNull(notice);
+        Assert.Equal(SubscriptionReminderStage.Grace, notice.Stage);
+        Assert.Equal(new DateOnly(2026, 12, 25), notice.LastGraceDay);
+    }
+
+    [Fact]
+    public void El_aviso_de_Mi_plan_sigue_las_ventanas_antes_de_vencer()
+    {
+        Assert.Null(Notice(Mx(2026, 12, 16, 9)));                                       // 4 días antes
+        Assert.Equal(SubscriptionReminderStage.Upcoming, Notice(Mx(2026, 12, 17, 9))!.Stage);
+        Assert.Equal(SubscriptionReminderStage.DueToday, Notice(Mx(2026, 12, 20, 9))!.Stage);
+    }
+
+    [Fact]
+    public void Despues_de_la_baja_no_hay_aviso_de_renovar()
+    {
+        Assert.NotNull(Monthly(12, 26)); // el correo de la baja sí sale
+        Assert.Null(Notice(Mx(2026, 12, 26, 9)));
+    }
+
+    private static SubscriptionReminder? Notice(DateTimeOffset now)
+    {
+        var list = new[] { Trial, PaidMonth }
+            .Select(p => new SubscriptionPeriod { MerchantId = 1, Kind = p.Item1, StartsAt = p.Item2, EndsAt = p.Item3 }).ToList();
+        return SubscriptionReminders.RenewalNoticeFor(
+            PlanStatus.For(list, now, GraceDays), SubscriptionPeriodKind.Paid, SubscriptionPackage.OneMonth, now);
     }
 
     private static SubscriptionReminder? At(

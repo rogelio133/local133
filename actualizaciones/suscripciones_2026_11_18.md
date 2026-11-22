@@ -127,7 +127,7 @@ Consecuencias:
 - Job `conciliar-links`: consulta `GET /payment-link/{id}` de los cargos pendientes, con un calendario como el de las ventas: cada 10 min durante 2 h, cada hora hasta 3 días y diario hasta 60 días desde que se creó el cargo. *(5.6: el diseño decía «30 días después del fin de la gracia», que no tiene una fecha clara para un cargo pagado por adelantado.)* La pantalla de confirmación y su API también consultan, con un freno de 15 s.
 - ~~Barrido nocturno con `GET /transaction/api-key`~~ **pospuesto** (decisión del usuario, 2026-11-20): esa consulta trae todas las transacciones de la API key, incluidas las ventas de todos los vendedores. Lo que no cubren el webhook y la conciliación (un link de más de 60 días pagado con el webhook perdido) se abona a mano desde el admin (Fase 6).
 
-**Recordatorios** (correo y aviso en el sitio, con el link; job diario a las 9:00, hora de México)
+**Recordatorios** (correo y aviso en el sitio, con la liga a «Mi plan»; job diario a las 9:00, hora de México)
 
 | Momento | Mensual | Anual | Prueba |
 |---|---|---|---|
@@ -137,7 +137,7 @@ Consecuencias:
 | Día 3 de la gracia | ✓ | ✓ | — |
 | Al bajar al gratuito | ✓ | ✓ | ✓ |
 
-El job crea el link de renovación con el primer aviso (3 días antes, o 15 en el anual) y con el mismo paquete del último pago.
+~~El job crea el link de renovación con el primer aviso (3 días antes, o 15 en el anual) y con el mismo paquete del último pago.~~ *(Cambio 2026-11-21: el job **no** crea links. El correo lleva a «Mi plan», que avisa que toca renovar y marca el paquete del último pago. El link de Pey se genera solo cuando el vendedor elige un paquete, para no crear links en vano si no renueva. Un link pendiente del mismo paquete y monto se reutiliza solo si tiene a lo más `GraceDays` días. Un link generado y sin pagar no se muestra como «pago pendiente».)*
 
 ## 5. Límites del gratuito
 - **Cobros concretados**: ventas con `PaidAt` dentro del mes calendario, en hora de México. En el QR fijo cuenta cada pago, porque cada uno crea su venta.
@@ -281,7 +281,7 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - *(5.7, hecho 2026-11-21)*:
   - cada recordatorio es una **ventana** de días y no un día exacto: si el job no corre, sale al día siguiente con los días reales, y pasada la ventana no se manda;
   - la llave es `sub:{etapa}:{ProUntil}`, así que un pago empieza otro ciclo;
-  - el link de renovación se asegura cada día de la ventana (reutiliza el pendiente) y el correo lleva a «Mi plan», no a Pey;
+  - el correo lleva a «Mi plan», no a Pey. Ajuste del mismo día: el job no crea links, y el banner de gracia y «Mi plan» no muestran links pendientes (ver §4);
   - se adelantó la base de la 5.4 (tabla `Notifications` e `INotificationService`), sin la campana ni la lista.
 
   Detalle en la [bitácora](../log_plan/fase-5.7-recordatorios-y-gracia.md).

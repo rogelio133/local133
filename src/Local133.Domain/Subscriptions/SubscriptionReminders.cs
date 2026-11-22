@@ -31,7 +31,6 @@ public enum SubscriptionReminderStage
 /// <param name="LastGraceDay">Último día de la gracia, solo si el último periodo es pagado.</param>
 /// <param name="DaysLeft">Días que faltan para <paramref name="LastProDay"/> (o, en la gracia, para
 /// <paramref name="LastGraceDay"/>); 0 el último día.</param>
-/// <param name="RenewalPackage">Paquete del link de renovación; <c>null</c> si no lleva link.</param>
 /// <param name="DedupKey">Llave del aviso: una por etapa y por ciclo (<c>ProUntil</c>).</param>
 public sealed record SubscriptionReminder(
     SubscriptionReminderStage Stage,
@@ -39,11 +38,8 @@ public sealed record SubscriptionReminder(
     DateOnly LastProDay,
     DateOnly? LastGraceDay,
     int DaysLeft,
-    SubscriptionPackage? RenewalPackage,
     string DedupKey)
 {
-    public bool NeedsRenewalLink => RenewalPackage is not null;
-
     public NotificationType NotificationType => Stage switch
     {
         SubscriptionReminderStage.AnnualUpcoming => NotificationType.SubscriptionUpcoming,
@@ -91,10 +87,24 @@ public static class SubscriptionReminders
     public const string DedupKeyPrefix = "sub:";
 
     /// <param name="lastKind">Origen del último periodo (<c>Subscription.LastPeriodKind</c>).</param>
-    /// <param name="lastPackage">Paquete del último pago (<c>Subscription.LastPackage</c>): el del link de renovación.</param>
+    /// <param name="lastPackage">Paquete del último pago (<c>Subscription.LastPackage</c>): solo el anual tiene aviso de 15 días.</param>
     /// <returns>El recordatorio de hoy, o <c>null</c> si hoy no toca ninguno.</returns>
     public static SubscriptionReminder? For(
-        PlanStatus status, SubscriptionPeriodKind lastKind, SubscriptionPackage? lastPackage, DateTimeOffset now)
+        PlanStatus status, SubscriptionPeriodKind lastKind, SubscriptionPackage? lastPackage, DateTimeOffset now) =>
+        Compute(status, lastKind, lastPackage, now, wholeGrace: false);
+
+    /// <summary>
+    /// Aviso de «Mi plan» de que toca renovar: la misma etapa que el recordatorio de hoy, salvo la baja (el plan ya
+    /// lo dice), y en toda la gracia (el correo sale desde el día <see cref="GraceNoticeDay"/>, el aviso desde el 1).
+    /// </summary>
+    public static SubscriptionReminder? RenewalNoticeFor(
+        PlanStatus status, SubscriptionPeriodKind lastKind, SubscriptionPackage? lastPackage, DateTimeOffset now) =>
+        Compute(status, lastKind, lastPackage, now, wholeGrace: true) is { Stage: not SubscriptionReminderStage.Downgraded } notice
+            ? notice
+            : null;
+
+    private static SubscriptionReminder? Compute(
+        PlanStatus status, SubscriptionPeriodKind lastKind, SubscriptionPackage? lastPackage, DateTimeOffset now, bool wholeGrace)
     {
         ArgumentNullException.ThrowIfNull(status);
         if (status.Tier == PlanTier.Onboarding || status.ProUntil is not { } proUntil || status.LastProDay is not { } lastDay)
@@ -105,9 +115,8 @@ public static class SubscriptionReminders
         var today = MexicoTime.Today(now);
         var daysToEnd = lastDay.DayNumber - today.DayNumber;
 
-        SubscriptionReminder Make(SubscriptionReminderStage stage, int daysLeft, bool withLink) => new(
-            stage, lastKind, lastDay, status.LastGraceDay, Math.Max(0, daysLeft),
-            withLink ? lastPackage : null, DedupKeyFor(stage, proUntil));
+        SubscriptionReminder Make(SubscriptionReminderStage stage, int daysLeft) => new(
+            stage, lastKind, lastDay, status.LastGraceDay, Math.Max(0, daysLeft), DedupKeyFor(stage, proUntil));
 
         switch (status.Tier)
         {
@@ -116,7 +125,7 @@ public static class SubscriptionReminders
                 var dropDay = MexicoTime.DateOf(status.GraceEndsAt ?? proUntil);
                 var sinceDrop = today.DayNumber - dropDay.DayNumber;
                 return sinceDrop is >= 0 and < DowngradeNoticeWindowDays
-                    ? Make(SubscriptionReminderStage.Downgraded, 0, withLink: false)
+                    ? Make(SubscriptionReminderStage.Downgraded, 0)
                     : null;
             }
 
@@ -125,12 +134,12 @@ public static class SubscriptionReminders
                 // Venció hoy antes de las 9:00: ya está en la gracia, pero el aviso es el del día del vencimiento.
                 if (daysToEnd == 0)
                 {
-                    return Make(SubscriptionReminderStage.DueToday, 0, withLink: true);
+                    return Make(SubscriptionReminderStage.DueToday, 0);
                 }
 
                 var graceLeft = status.LastGraceDay is { } graceDay ? graceDay.DayNumber - today.DayNumber : 0;
-                return -daysToEnd >= GraceNoticeDay
-                    ? Make(SubscriptionReminderStage.Grace, graceLeft, withLink: true)
+                return wholeGrace || -daysToEnd >= GraceNoticeDay
+                    ? Make(SubscriptionReminderStage.Grace, graceLeft)
                     : null;
             }
 
@@ -139,17 +148,17 @@ public static class SubscriptionReminders
                 var paid = lastKind == SubscriptionPeriodKind.Paid;
                 if (paid && daysToEnd == 0)
                 {
-                    return Make(SubscriptionReminderStage.DueToday, 0, withLink: true);
+                    return Make(SubscriptionReminderStage.DueToday, 0);
                 }
 
                 if (daysToEnd is >= 0 and <= UpcomingDays)
                 {
-                    return Make(SubscriptionReminderStage.Upcoming, daysToEnd, withLink: true);
+                    return Make(SubscriptionReminderStage.Upcoming, daysToEnd);
                 }
 
                 if (paid && lastPackage == SubscriptionPackage.Annual && daysToEnd is > UpcomingDays and <= AnnualNoticeDays)
                 {
-                    return Make(SubscriptionReminderStage.AnnualUpcoming, daysToEnd, withLink: true);
+                    return Make(SubscriptionReminderStage.AnnualUpcoming, daysToEnd);
                 }
 
                 return null;

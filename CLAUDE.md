@@ -120,23 +120,24 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
     - `Grace`: desde el día 3 de la gracia;
     - `Downgraded`: los 3 días desde la baja.
 
-    Son **ventanas**: si el job falla un día, sale al siguiente; pasada la ventana, nada. `DedupKey` = `sub:{etapa}:{ProUntil UTC}`: un pago empieza otro ciclo. `RenewalPackage` = `LastPackage` salvo en la baja.
-  - **Job** `Infrastructure/Jobs/SubscriptionDailyJob` (`suscripciones-diario`, 9:00 México). Prefiltra por `ProUntil` (índice) y vendedor no `Disabled`, con un scope por vendedor:
-    1. asegura el link de renovación con `ISubscriptionCheckout.StartAsync(..., Origin: Renewal)`, que reutiliza el pendiente del mismo paquete y monto. Solo con `SiteUrlOptions` HTTPS; sin ella no hay link y el aviso sale igual;
-    2. avisa con `INotificationService`.
+    Son **ventanas**: si el job falla un día, sale al siguiente; pasada la ventana, nada. `DedupKey` = `sub:{etapa}:{ProUntil UTC}`: un pago empieza otro ciclo.
+  - **Job** `Infrastructure/Jobs/SubscriptionDailyJob` (`suscripciones-diario`, 9:00 México). Prefiltra por `ProUntil` (índice) y vendedor no `Disabled`; un scope por vendedor; avisa con `INotificationService`. **No crea links de Pey** (decisión del usuario, 2026-11-21): si el vendedor no renueva, no se genera un link en vano. El link nace solo cuando el vendedor elige un paquete en «Mi plan».
 
     El día 1 llama a `IMonthlySummaryNotifier` (hoy `LoggingMonthlySummaryNotifier`; contenido en la 5.10). Textos de cada etapa en `MerchantEmails.SubscriptionReminder`; el botón siempre va a `/app/plan`, nunca a Pey.
+  - **Reutilizar un link al pagar**: `SubscriptionCheckout` reutiliza un cargo `Pending` del mismo paquete y monto solo si se creó hace a lo más `GraceDays` días (`SubscriptionCharge.CanBeReusedFor(quote, now, maxAgeDays)` / `ReusableSince`). Si es más viejo, crea otro.
   - **Avisos** (base de la 5.4): `Domain/Notifications/Notification`, tabla `Notifications` con índice único `(MerchantId, DedupKey)` y filtro multi-tenant. `INotificationService.NotifyAsync(NotificationRequest)` (Application/Notifications; Infrastructure/Notifications/NotificationService):
     - idempotente por llave: con una llave repetida regresa `AlreadyExists`;
     - el correo (`NotificationEmail` con `ActionPath` relativo, que se vuelve absoluto con `SiteUrlOptions`) sale a lo más una vez después de guardar, y sella `EmailSentAt`; si falla, no lanza.
 
     La campana y `/app/avisos` son de la 5.4.
-  - **Banner de gracia**: `Areas/Merchant/ViewComponents/GraceBannerViewComponent`, en `_MerchantLayout`, salvo en el controlador `Plan` (`data-grace-banner`, `data-grace-pay`). «Pagar ahora» va al link pendiente del paquete del último pago (`Areas/Merchant/Services/RenewalLinkQuery`); si no hay, a «Mi plan».
-  - **«Mi plan»** muestra ese link (`RenewalLinkViewModel`, `data-renewal-link`) mientras el estado es prueba, Pro o gracia.
+  - **Banner de gracia**: `Areas/Merchant/ViewComponents/GraceBannerViewComponent`, en `_MerchantLayout`, salvo en el controlador `Plan` (`data-grace-banner`, `data-grace-pay`). «Renovar ahora» siempre va a «Mi plan».
+  - **«Mi plan»**:
+    - nunca muestra un link pendiente: uno que el vendedor generó y no pagó no aparece como «pago pendiente»;
+    - muestra el aviso de renovar (`RenewalNoticeViewModel`, `data-renewal-notice`, botón «Elegir paquete» a `#plan-offers-title`) con `SubscriptionReminders.RenewalNoticeFor`: las ventanas del recordatorio salvo la baja, y toda la gracia desde el día 1;
+    - marca el paquete del último pago con la insignia «Tu paquete» (`data-plan-offer-current`).
   - **En pruebas**:
     - `Local133WebFactory.Clock` (`TestClock`, reemplaza `TimeProvider`; `FreezeAtMexicoNine()`, se restablece entre pruebas);
-    - `Factory.MonthlySummaries`;
-    - para el link, el job con base HTTPS: `ActivatorUtilities.CreateInstance<SubscriptionDailyJob>(sp, Options.Create(new SiteUrlOptions { PublicBaseUrl = "https://…" }))`.
+    - `Factory.MonthlySummaries`.
 - **Recibo público** (`GET /recibo/{token}`, `Web/Controllers/ReceiptsController`, anónimo):
   - `Sale.ReceiptToken` (32 hex, `RandomNumberGenerator`) se genera al crear la venta (toda venta nueva debe traerlo; la 2.7 también). Solo hay recibo si la venta está pagada (`Sale.HasReceipt`); si no, 404.
   - Busca con `IgnoreQueryFilters()` (quien abre la liga puede tener sesión de otro vendedor). Encabezados `noindex`, `no-referrer`, `no-store`; `ViewData["NoIndex"]` en `_Head`.
@@ -180,7 +181,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
 - Jobs (Hangfire 1.8, `Web/Jobs/JobsSetup`):
   - almacenamiento en la misma base, esquema `HangFire` (lo crea Hangfire, no EF), sin reintentos automáticos;
   - jobs recurrentes en `America/Mexico_City`: `sondeo-cuentas-bancarias` (`*/30 * * * *`), `expirar-ventas` (cada minuto), `conciliar-pagos` (cada minuto), `conciliar-links` (`*/10 * * * *`, links de la suscripción) y `suscripciones-diario` (`0 9 * * *`, recordatorios de la suscripción, 5.7). Las clases van en `Infrastructure/Jobs` y se registran en DI;
-  - `Jobs:Enabled` vale `true` por defecto. Las pruebas lo apagan con `UseSetting` y llaman a los jobs directo. **Ojo**: con el sitio arriba, el sondeo llama a Pey real (`GET /bank-account/{id}`) para las cuentas en revisión de la base de desarrollo, y la conciliación también lo hace (`GET /transaction/…`) para las ventas sin pagar de las últimas 24 h, igual que `conciliar-links` (`GET /payment-link/{id}`) para los cargos de la suscripción sin abonar de los últimos 60 días. `suscripciones-diario` crea links reales (`POST /payment-link/create`) solo si `App:PublicBaseUrl` es HTTPS. Para revisar en navegador sin Pey: `Jobs__Enabled=false` y `Pey__ApiKey=` vacío.
+  - `Jobs:Enabled` vale `true` por defecto. Las pruebas lo apagan con `UseSetting` y llaman a los jobs directo. **Ojo**: con el sitio arriba, el sondeo llama a Pey real (`GET /bank-account/{id}`) para las cuentas en revisión de la base de desarrollo, y la conciliación también lo hace (`GET /transaction/…`) para las ventas sin pagar de las últimas 24 h, igual que `conciliar-links` (`GET /payment-link/{id}`) para los cargos de la suscripción sin abonar de los últimos 60 días. `suscripciones-diario` no llama a Pey. Para revisar en navegador sin Pey: `Jobs__Enabled=false` y `Pey__ApiKey=` vacío.
 - **Conciliación de pagos** (respaldo del webhook, `Infrastructure/Jobs/PaymentReconciliationJob`):
   - Calendario en `Domain/Sales/PaymentReconciliationSchedule.DueAt(now)`, una expresión que EF traduce (`IsDue` es para las pruebas). Se consulta una venta no pagada (también vencida o cancelada) con QR dinámico + `PeyQrId` o con push + `PeyTransactionId`:
     - la primera vez 2 min después de crearse;
@@ -234,7 +235,7 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - `bank.account.updated` solo llega al pasar a `ACTIVE`; `ERROR` se detecta con **polling** (job cada 30 min a `GET /bank-account/{id}`).
 - **PeyClient** (`Infrastructure/Pey`, registrado con `AddPeyGateway`; contratos del OpenAPI `https://docs.pey.mx/openapi.json`): `HttpClient` tipado + `AddStandardResilienceHandler` (Polly v8), mapea `error.type` a las excepciones de `Application/Payments` (`PaymentGatewayValidationException`, `InvalidClabeException`, `…NotFound…`, `…Authentication…`, `…State…`, `…Unavailable…`) y loguea `requestId` (nunca bodies ni la API key). **Reintentos por método**: GET en cualquier falla transitoria; POST **solo en 503/429**: Pey no tiene llave de idempotencia y reintentar tras un 500 o un timeout podría duplicar un QR o un push. Reglas de Pey (`Domain/Pey/PeyLimits`) se validan antes de llamar (`ArgumentException`). Pruebas contra WireMock en `tests/Local133.IntegrationTests/Pey` (sin SQL Server, corren en CI).
 - Solo vendedores `Active` pueden generar cobros. Tiempo real por SignalR (grupo por vendedor, evento `PaymentReceived`) con respaldo de polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}` y `GET /transaction/{id}` para push), suscripciones (diario 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba y baja al gratuito tras `GraceDays`; la falta de pago **no suspende**) y conciliación de links de pago.
+- Jobs Hangfire: sondeo de cuentas, expirar ventas, conciliación (`GET /transaction/codi/qr/{idc}` y `GET /transaction/{id}` para push), suscripciones (diario 9:00 `America/Mexico_City`: recordatorios, fin de prueba y baja al gratuito tras `GraceDays`, sin crear links; la falta de pago **no suspende**) y conciliación de links de pago.
 - Archivos vía `IFileStorage` (disco en dev, blob en prod). CLABE enmascarada en UI. Cambios de precios, planes o estatus quedan en `AuditLogs`.
 
 ## Flujo de trabajo obligatorio

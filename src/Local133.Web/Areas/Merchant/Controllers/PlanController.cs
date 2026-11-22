@@ -6,7 +6,6 @@ using Local133.Domain.Settings;
 using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
-using Local133.Web.Areas.Merchant.Services;
 using Local133.Web.Hosting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -68,8 +67,14 @@ public class PlanController(
             .ThenByDescending(c => c.Id)
             .ToListAsync(cancellationToken);
 
-        var renewal = plan.Status.IsProLike && merchant.Status != MerchantStatus.Disabled
-            ? await RenewalLinkQuery.FindAsync(db, merchant.Id, cancellationToken)
+        // Aviso de que toca renovar (5.7). Sin link: el vendedor elige su paquete y ahí se genera.
+        var last = await db.Subscriptions.AsNoTracking()
+            .Where(s => s.MerchantId == merchant.Id)
+            .Select(s => new { s.LastPeriodKind, s.LastPackage })
+            .SingleOrDefaultAsync(cancellationToken);
+        var renewal = last is not null && offers.CanPay
+            ? RenewalNoticeViewModel.From(
+                SubscriptionReminders.RenewalNoticeFor(plan.Status, last.LastPeriodKind, last.LastPackage, now), today)
             : null;
 
         return View(new MyPlanViewModel(
@@ -79,13 +84,13 @@ public class PlanController(
             MyPlanViewModel.FeaturesFor(settings),
             offers.CanPay,
             merchant.Status == MerchantStatus.Disabled,
-            offers.Offers.Select(o => PlanOfferViewModel.From(o, today)).ToList(),
+            offers.Offers.Select(o => PlanOfferViewModel.From(o, today, last?.LastPackage)).ToList(),
             FounderNoticeFor(offers, settings),
             charges.Where(c => c.Status != SubscriptionChargeStatus.Paid).Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
             charges.Where(c => c.Status == SubscriptionChargeStatus.Paid).Take(PaymentHistorySize)
                 .Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
             offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null,
-            renewal is null ? null : RenewalLinkViewModel.From(renewal)));
+            renewal));
     }
 
     /// <summary>Crea (o reutiliza) el link del paquete y manda a la página de pago de Pey.</summary>

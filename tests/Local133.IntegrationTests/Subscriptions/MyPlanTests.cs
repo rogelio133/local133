@@ -149,6 +149,40 @@ public class MyPlanTests(Local133WebFactory factory) : SubscriptionPaymentTestBa
     }
 
     [Fact]
+    public async Task Un_link_pendiente_mas_viejo_que_los_dias_de_gracia_no_se_reutiliza()
+    {
+        var client = await TrialMerchantAsync(Email);
+        var old = await CreateChargeAsync(client);
+        await WithDbAsync(async db =>
+        {
+            var charge = await db.SubscriptionCharges.IgnoreQueryFilters().SingleAsync(c => c.Id == old.Id);
+            charge.CreatedAt = DateTimeOffset.UtcNow.AddDays(-6); // GraceDays = 5
+            await db.SaveChangesAsync();
+        });
+
+        var response = await PayAsync(client, SubscriptionPackage.OneMonth);
+
+        var charges = await ChargesAsync();
+        Assert.Equal(2, charges.Count);
+        Assert.Equal(2, Factory.Gateway.PaymentLinkRequests.Count);
+        var fresh = Assert.Single(charges, c => c.Id != old.Id);
+        Assert.Equal(FakePaymentGateway.PaymentLinkUrlFor(fresh.PeyPaymentLinkId!), response.Headers.Location);
+    }
+
+    [Fact]
+    public async Task Un_link_generado_y_sin_pagar_no_se_muestra_como_pago_pendiente()
+    {
+        var client = await TrialMerchantAsync(Email);
+        var charge = await CreateChargeAsync(client);
+
+        var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, PlanUrl));
+
+        Assert.DoesNotContain(charge.Url!, html);
+        Assert.DoesNotContain("pago pendiente", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain($"data-plan-charge=\"{charge.Id}\"", html);
+    }
+
+    [Fact]
     public async Task Si_cambia_el_precio_crea_otro_link()
     {
         var client = await TrialMerchantAsync(Email);

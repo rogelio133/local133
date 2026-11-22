@@ -9,7 +9,7 @@ public enum SubscriptionChargeOrigin
     /// <summary>El vendedor eligió un paquete en «Mi plan».</summary>
     Merchant,
 
-    /// <summary>Link de renovación que crea el job diario (5.7).</summary>
+    /// <summary>Reservado: el job diario ya no crea links (5.7, el link se genera cuando el vendedor elige paquete).</summary>
     Renewal,
 }
 
@@ -67,10 +67,17 @@ public class SubscriptionCharge : Entity
 
     public string ClientReferenceId => ClientReferenceFor(Id);
 
-    /// <summary>Se puede reutilizar el link: pendiente, con link y del mismo paquete y monto.</summary>
-    public bool CanBeReusedFor(SubscriptionQuote quote) =>
+    /// <summary>
+    /// Se puede reutilizar el link: pendiente, con link, del mismo paquete y monto, y creado hace a lo más
+    /// <paramref name="maxAgeDays"/> días (los días de gracia, 5.7). Uno más viejo se abandona y se crea otro.
+    /// </summary>
+    public bool CanBeReusedFor(SubscriptionQuote quote, DateTimeOffset now, int maxAgeDays) =>
         Status == SubscriptionChargeStatus.Pending && PeyPaymentLinkId is not null && Url is not null
-        && Package == quote.Package && Amount == quote.Amount;
+        && Package == quote.Package && Amount == quote.Amount
+        && CreatedAt >= ReusableSince(now, maxAgeDays);
+
+    /// <summary>Fecha de creación más vieja que todavía se reutiliza.</summary>
+    public static DateTimeOffset ReusableSince(DateTimeOffset now, int maxAgeDays) => now.AddDays(-Math.Max(0, maxAgeDays));
 
     public static SubscriptionCharge Create(
         int merchantId, SubscriptionQuote quote, bool isFounderPrice, SubscriptionChargeOrigin origin, DateTimeOffset now)

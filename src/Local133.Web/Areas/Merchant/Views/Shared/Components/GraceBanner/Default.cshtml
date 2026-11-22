@@ -9,9 +9,7 @@
                 <span class="d-block fw-bold">Tu plan Pro venció el @Model.LastProDayText</span>
                 <span class="d-block small">@Model.DeadlineText</span>
             </span>
-            <a class="btn btn-primary text-nowrap" href="@Model.PayUrl" rel="@(Model.IsPaymentLink ? "noopener" : null)" data-grace-pay>
-                @(Model.IsPaymentLink ? "Pagar ahora" : "Ver mi plan")
-            </a>
+            <a class="btn btn-primary text-nowrap" href="@Url.Content("~" + PlanUrls.Plan)" data-grace-pay>Renovar ahora</a>
         </div>
     </div>
 </div>

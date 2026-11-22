@@ -1,32 +1,28 @@
-using Local133.Application.Payments;
+using Local133.Application.Notifications;
 using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Notifications;
 using Local133.Domain.Subscriptions;
-using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Jobs;
 using Local133.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Local133.IntegrationTests.Subscriptions;
 
 /// <summary>
-/// 5.7: job <c>suscripciones-diario</c> con el reloj congelado a las 9:00 de México: links de renovación, recordatorios
-/// idempotentes, fin de la prueba, baja al gratuito y resumen del día 1.
+/// 5.7: job <c>suscripciones-diario</c> con el reloj congelado a las 9:00 de México: recordatorios idempotentes, fin de
+/// la prueba, baja al gratuito y resumen del día 1. El job <b>nunca</b> crea links de Pey: el link nace cuando el
+/// vendedor elige su paquete en «Mi plan».
 /// </summary>
 public class SubscriptionDailyJobTests(Local133WebFactory factory) : SubscriptionPaymentTestBase(factory)
 {
-    /// <summary>Base HTTPS para los links de renovación (en pruebas, App:PublicBaseUrl está vacío).</summary>
-    private const string PublicBase = "https://app.local133.test";
-
     private const string ThirdEmail = "tercero@prueba.mx";
 
     private DateTimeOffset _now;
 
     [Fact]
-    public async Task El_anual_15_dias_antes_crea_el_link_de_renovacion_y_avisa_una_sola_vez()
+    public async Task El_anual_15_dias_antes_avisa_una_sola_vez_sin_crear_links()
     {
         await ActiveMerchantAsync(Email);
         Freeze();
@@ -34,14 +30,9 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
 
         var first = await RunJobAsync();
 
-        Assert.Equal(new SubscriptionDailyRunResult(1, 1, 1, false), first);
-        var charge = Assert.Single(await ChargesAsync());
-        Assert.Equal(SubscriptionChargeOrigin.Renewal, charge.Origin);
-        Assert.Equal(SubscriptionPackage.Annual, charge.Package);
-        Assert.Equal(1200m, charge.Amount); // precio congelado del anual
-        Assert.Equal(SubscriptionChargeStatus.Pending, charge.Status);
-        var request = Assert.Single(Factory.Gateway.PaymentLinkRequests);
-        Assert.StartsWith(PublicBase + "/app/plan/pago/", request.SuccessUrl.AbsoluteUri, StringComparison.Ordinal);
+        Assert.Equal(new SubscriptionDailyRunResult(1, 1, false), first);
+        AssertNoPey();
+        Assert.Empty(await ChargesAsync());
 
         var notification = Assert.Single(await NotificationsAsync());
         Assert.Equal(NotificationType.SubscriptionUpcoming, notification.Type);
@@ -51,20 +42,18 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         var email = Assert.Single(EmailsTo(Email));
         Assert.Contains("anual", email.Subject, StringComparison.Ordinal);
         Assert.Equal("http://localhost:5231/app/plan", email.Link); // el correo lleva a «Mi plan», nunca a Pey
-        Assert.Contains("$1,200.00", email.Html, StringComparison.Ordinal);
-        Assert.DoesNotContain("pay.example.test", email.Html, StringComparison.Ordinal);
+        Assert.Contains("elige tu paquete", email.Html, StringComparison.Ordinal);
 
         var second = await RunJobAsync();
 
-        Assert.Equal(new SubscriptionDailyRunResult(1, 0, 1, false), second); // el link se reutiliza
-        Assert.Single(Factory.Gateway.PaymentLinkRequests);
-        Assert.Single(await ChargesAsync());
+        Assert.Equal(new SubscriptionDailyRunResult(1, 0, false), second);
         Assert.Single(await NotificationsAsync());
         Assert.Single(EmailsTo(Email));
+        AssertNoPey();
     }
 
     [Fact]
-    public async Task El_mensual_avisa_3_dias_antes_el_dia_del_vencimiento_y_en_la_gracia_con_un_solo_link()
+    public async Task El_mensual_avisa_3_dias_antes_el_dia_del_vencimiento_y_en_la_gracia_sin_crear_links()
     {
         await ActiveMerchantAsync(Email);
         var today = MexicoTime.Today(Freeze());
@@ -81,14 +70,12 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
             [NotificationType.SubscriptionUpcoming, NotificationType.SubscriptionDueToday, NotificationType.SubscriptionGrace],
             (await NotificationsAsync()).Select(n => n.Type));
         Assert.Equal(3, EmailsTo(Email).Count);
-        Assert.Single(Factory.Gateway.PaymentLinkRequests);
-        var charge = Assert.Single(await ChargesAsync());
-        Assert.Equal(SubscriptionChargeOrigin.Renewal, charge.Origin);
-        Assert.Equal(SubscriptionPackage.OneMonth, charge.Package);
+        AssertNoPey();
+        Assert.Empty(await ChargesAsync());
     }
 
     [Fact]
-    public async Task Fuera_de_las_ventanas_no_avisa_ni_crea_links()
+    public async Task Fuera_de_las_ventanas_no_avisa()
     {
         await ActiveMerchantAsync(Email);
         Freeze();
@@ -98,13 +85,13 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
 
         var result = await RunJobAsync();
 
-        Assert.Equal(new SubscriptionDailyRunResult(2, 0, 0, false), result);
+        Assert.Equal(new SubscriptionDailyRunResult(2, 0, false), result);
         Assert.Empty(await NotificationsAsync());
-        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
+        AssertNoPey();
     }
 
     [Fact]
-    public async Task La_prueba_avisa_3_dias_antes_sin_link_y_al_bajar_al_gratuito()
+    public async Task La_prueba_avisa_3_dias_antes_y_al_bajar_al_gratuito()
     {
         await CreateMerchantAsync(Email);
         var today = MexicoTime.Today(Freeze());
@@ -114,7 +101,7 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         await RunAtAsync(today.AddDays(4)); // terminó ayer a las 15:00: sin gracia
 
         Assert.Equal([NotificationType.TrialEnding, NotificationType.DowngradedToFree], (await NotificationsAsync()).Select(n => n.Type));
-        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
+        AssertNoPey();
         Assert.Empty(await ChargesAsync());
         var emails = EmailsTo(Email);
         Assert.Contains("prueba", emails[0].Subject, StringComparison.Ordinal);
@@ -135,45 +122,7 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         var result = await RunJobAsync();
 
         Assert.Equal(0, result.Notified);
-        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
-    }
-
-    [Fact]
-    public async Task Si_Pey_falla_el_aviso_sale_y_el_link_se_reintenta_al_dia_siguiente()
-    {
-        await ActiveMerchantAsync(Email);
-        var today = MexicoTime.Today(Freeze());
-        await SeedPaidAsync(Email, SubscriptionPackage.OneMonth, endsInDays: 3);
-        Factory.Gateway.PaymentLinkException = new PaymentGatewayUnavailableException("timeout");
-
-        var first = await RunJobAsync();
-
-        Assert.Equal(new SubscriptionDailyRunResult(1, 1, 0, false), first);
-        Assert.Equal(SubscriptionChargeStatus.Failed, Assert.Single(await ChargesAsync()).Status);
-        Assert.DoesNotContain("link de renovación", Assert.Single(EmailsTo(Email)).Html, StringComparison.Ordinal);
-
-        Factory.Gateway.PaymentLinkException = null;
-        var second = await RunAtAsync(today.AddDays(1));
-
-        Assert.Equal(new SubscriptionDailyRunResult(1, 0, 1, false), second); // mismo aviso: no se repite
-        Assert.Equal(
-            [SubscriptionChargeStatus.Failed, SubscriptionChargeStatus.Pending],
-            (await ChargesAsync()).Select(c => c.Status));
-        Assert.Single(await NotificationsAsync());
-    }
-
-    [Fact]
-    public async Task Sin_HTTPS_avisa_sin_crear_el_link()
-    {
-        await ActiveMerchantAsync(Email);
-        Freeze();
-        await SeedPaidAsync(Email, SubscriptionPackage.OneMonth, endsInDays: 3);
-
-        var result = await RunJobAsync(https: false);
-
-        Assert.Equal(new SubscriptionDailyRunResult(1, 1, 0, false), result);
-        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
-        Assert.Empty(await ChargesAsync());
+        AssertNoPey();
     }
 
     [Fact]
@@ -187,9 +136,8 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
 
         var result = await RunJobAsync();
 
-        Assert.Equal(new SubscriptionDailyRunResult(0, 0, 0, false), result);
+        Assert.Equal(new SubscriptionDailyRunResult(0, 0, false), result);
         Assert.Empty(await NotificationsAsync());
-        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
     }
 
     [Fact]
@@ -200,11 +148,16 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         await SeedPaidAsync(Email, SubscriptionPackage.OneMonth, endsInDays: 3);
         await CreateMerchantAsync(ThirdEmail);
         await SeedTrialEndingAsync(ThirdEmail, endsInDays: 3);
-        // Una falla inesperada (no es de Pey) al crear el link del primero.
-        Factory.Gateway.PaymentLinkException = new HttpRequestException("conexión rota");
+        var failingId = await MerchantIdAsync(Email);
 
-        var result = await RunJobAsync();
+        // Una falla inesperada al avisar al primero (el servicio real nunca lanza por el correo).
+        var scopes = new OverridingScopeFactory(Factory.Services.GetRequiredService<IServiceScopeFactory>(),
+            inner => new FailingNotificationService(inner, failingId));
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var job = ActivatorUtilities.CreateInstance<SubscriptionDailyJob>(scope.ServiceProvider, (IServiceScopeFactory)scopes);
+        var result = await job.RunAsync(CancellationToken.None);
 
+        Assert.Equal(2, result.Checked);
         Assert.Equal(1, result.Notified);
         var notification = Assert.Single(await NotificationsAsync());
         Assert.Equal(await MerchantIdAsync(ThirdEmail), notification.MerchantId);
@@ -266,15 +219,17 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         return RunJobAsync();
     }
 
-    /// <param name="https">Con la base HTTPS que exige Pey; sin ella, la del respaldo de desarrollo (http).</param>
-    private async Task<SubscriptionDailyRunResult> RunJobAsync(bool https = true)
+    private async Task<SubscriptionDailyRunResult> RunJobAsync()
     {
         await using var scope = Factory.Services.CreateAsyncScope();
-        var job = https
-            ? ActivatorUtilities.CreateInstance<SubscriptionDailyJob>(
-                scope.ServiceProvider, Options.Create(new SiteUrlOptions { PublicBaseUrl = PublicBase }))
-            : scope.ServiceProvider.GetRequiredService<SubscriptionDailyJob>();
-        return await job.RunAsync(CancellationToken.None);
+        return await scope.ServiceProvider.GetRequiredService<SubscriptionDailyJob>().RunAsync(CancellationToken.None);
+    }
+
+    /// <summary>El job no crea ni consulta links de Pey.</summary>
+    private void AssertNoPey()
+    {
+        Assert.Empty(Factory.Gateway.PaymentLinkRequests);
+        Assert.Empty(Factory.Gateway.PaymentLinkLookups);
     }
 
     private Task<List<Notification>> NotificationsAsync() =>
@@ -282,4 +237,34 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
 
     private List<SentEmail> EmailsTo(string email) =>
         Factory.Emails.Sent.Where(e => string.Equals(e.To, email, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    /// <summary>Avisos reales, salvo para un vendedor, al que le falla.</summary>
+    private sealed class FailingNotificationService(INotificationService inner, int failingMerchantId) : INotificationService
+    {
+        public Task<NotificationResult> NotifyAsync(NotificationRequest request, CancellationToken cancellationToken = default) =>
+            request.MerchantId == failingMerchantId
+                ? throw new InvalidOperationException("falla simulada")
+                : inner.NotifyAsync(request, cancellationToken);
+    }
+
+    /// <summary>Scopes reales con <see cref="INotificationService"/> reemplazado.</summary>
+    private sealed class OverridingScopeFactory(
+        IServiceScopeFactory inner, Func<INotificationService, INotificationService> wrap) : IServiceScopeFactory
+    {
+        public IServiceScope CreateScope() => new Scope(inner.CreateScope(), wrap);
+
+        private sealed class Scope(IServiceScope scope, Func<INotificationService, INotificationService> wrap)
+            : IServiceScope, IServiceProvider, IAsyncDisposable
+        {
+            public IServiceProvider ServiceProvider => this;
+
+            public object? GetService(Type serviceType) => serviceType == typeof(INotificationService)
+                ? wrap(scope.ServiceProvider.GetRequiredService<INotificationService>())
+                : scope.ServiceProvider.GetService(serviceType);
+
+            public void Dispose() => scope.Dispose();
+
+            public ValueTask DisposeAsync() => scope is IAsyncDisposable a ? a.DisposeAsync() : ValueTask.CompletedTask;
+        }
+    }
 }

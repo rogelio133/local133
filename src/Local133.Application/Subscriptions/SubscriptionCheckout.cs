@@ -27,12 +27,7 @@ public interface ISubscriptionCheckout
 }
 
 /// <param name="BaseUrl">Base pública del sitio para las URLs de regreso; Pey exige HTTPS.</param>
-/// <param name="Origin">Quién pide el link: el vendedor en «Mi plan» o el job diario (renovación, 5.7).</param>
-public sealed record StartCheckoutCommand(
-    int MerchantId,
-    SubscriptionPackage Package,
-    Uri BaseUrl,
-    SubscriptionChargeOrigin Origin = SubscriptionChargeOrigin.Merchant);
+public sealed record StartCheckoutCommand(int MerchantId, SubscriptionPackage Package, Uri BaseUrl);
 
 /// <param name="CanPay">Ya tiene suscripción (la prueba empezó) y no está dado de baja.</param>
 /// <param name="FounderSlotsLeft">Lugares de fundador que quedan (0 si ya no hay o si ya es fundador).</param>
