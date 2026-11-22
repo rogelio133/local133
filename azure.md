@@ -27,10 +27,10 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `Seed__Admin__Email` / `Seed__Admin__Password` | Siembra idempotente del admin al arrancar | Fase 1.5 |
 | `Pey__ApiKey` | Referencia a Key Vault. Sin ella el sitio arranca, pero fallan las llamadas a Pey | Fase 2.1 |
 | `Pey__WebhookSecret` | `whsec_…`. Sin él el webhook responde 500 | Fase 2.3 |
-| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto, conciliación de links de la suscripción cada 10 min) | Fase 2.3 / 2.5 / 2.9 / 5.6 |
+| `Jobs__Enabled` | `true` por defecto (sondeo de cuentas cada 30 min, expiración de ventas y conciliación de pagos cada minuto, conciliación de links de la suscripción cada 10 min, recordatorios de la suscripción a diario a las 9:00) | Fase 2.3 / 2.5 / 2.9 / 5.6 / 5.7 |
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
-| `App__PublicBaseUrl` | Dominio público **con HTTPS**, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale. Desde la 5.6 también arma las URLs de regreso de los links de Pey, que deben ser HTTPS | Fase 2.8 · Correo de cuenta activa 2026-11-18 · Fase 5.6 |
+| `App__PublicBaseUrl` | Dominio público **con HTTPS**, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale. Desde la 5.6 también arma las URLs de regreso de los links de Pey, que deben ser HTTPS. Desde la 5.7 el job diario la usa para los links de renovación y las ligas de los recordatorios: sin ella (o sin HTTPS) no hay link de renovación y, fuera de Development, los recordatorios no mandan correo | Fase 2.8 · Correo de cuenta activa 2026-11-18 · Fase 5.6 · Fase 5.7 |
 | `Resend__ApiKey` | Referencia a Key Vault. Llave de **solo envío** restringida al dominio de envío. Sin ella los correos se guardan en disco y **no salen** | Mantenimiento 2026-11-17 |
 | `Email__From` | Opcional: `appsettings.json` ya trae `Local133 <hola@notificaciones.local133.com.mx>`. Si se cambia, debe ser de un dominio verificado en Resend | Mantenimiento 2026-11-17 |
 
@@ -174,3 +174,11 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Correo: cada pago abonado manda un correo con Resend. Revisar el plan de Resend antes del piloto (5.7 sumará recordatorios).
 - Sin recursos ni secretos nuevos.
 - Ajuste 5.6 (pagar en la prueba se ve como Pro): sin cambios para Azure.
+
+### Fase 5.7 — Recordatorios, gracia y baja al gratuito
+- **Migración `Notifications`** (no destructiva): crea la tabla `Notifications` (avisos en el sitio, únicos por vendedor y `DedupKey`) y el índice `IX_Subscriptions_ProUntil`. Se aplica sola al arrancar.
+- **Job nuevo `suscripciones-diario`** (Hangfire, `0 9 * * *` en hora de México): crea los links de renovación (llama a Pey `POST /payment-link/create`, una vez por ciclo; reutiliza el pendiente) y manda los recordatorios (15 días antes del anual, 3 días antes, el día del vencimiento, día 3 de la gracia, fin de la prueba y baja al gratuito). El día 1 llama al resumen mensual (por ahora solo un log; contenido en la 5.10). Va con `Jobs__Enabled`. Es idempotente: si Hangfire lo repite, no duplica avisos, correos ni links.
+- **`App__PublicBaseUrl` con HTTPS es obligatoria** también para el job (ver la tabla de App Settings). El job no tiene petición HTTP de la cual sacar el host.
+- **Resend**: más envíos (hasta 5 recordatorios por ciclo de cada vendedor). Revisar los límites diarios y mensuales del plan de Resend antes del piloto.
+- En la base de pruebas de Azure, con el sitio arriba y `Jobs__Enabled=true`, el job puede crear links reales en Pey para los vendedores cuyo plan vence pronto (no cobra nada hasta que alguien los pague).
+- Sin recursos ni secretos nuevos.

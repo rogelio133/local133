@@ -98,6 +98,7 @@ public static class PlanBlockedNotices
 /// <param name="Offers">Paquetes; vacío si todavía no puede pagar (onboarding) o está dado de baja.</param>
 /// <param name="FounderNotice">«Eres fundador…» o «Quedan N lugares de fundador»; <c>null</c> si ya no hay.</param>
 /// <param name="HttpsWarning">Solo en Development: el sitio corre por http y Pey rechazaría las URLs de regreso.</param>
+/// <param name="RenewalLink">Link de pago pendiente del paquete del último pago (5.7), mientras sirve (prueba, Pro o gracia).</param>
 public sealed record MyPlanViewModel(
     PlanSummaryViewModel? Plan,
     ChargeUsageViewModel? Usage,
@@ -109,7 +110,8 @@ public sealed record MyPlanViewModel(
     string? FounderNotice,
     IReadOnlyList<SubscriptionChargeRow> InProgress,
     IReadOnlyList<SubscriptionChargeRow> Payments,
-    string? HttpsWarning)
+    string? HttpsWarning,
+    RenewalLinkViewModel? RenewalLink = null)
 {
     /// <summary>Título de la sección de paquetes según el estado: pagar, renovar o agregar tiempo.</summary>
     public string OffersTitle => Plan?.Tier switch
@@ -149,6 +151,21 @@ public sealed record MyPlanViewModel(
 }
 
 public sealed record PlanFeatureRow(string Feature, string Free, string Pro, bool ComingSoon = false);
+
+/// <summary>
+/// Link de pago pendiente en «Mi plan» (5.7): el de renovación que creó el job diario o uno que el vendedor generó y no
+/// pagó, del paquete de su último pago. Se oculta al bajar al gratuito (§4: los links se muestran mientras sirven).
+/// </summary>
+/// <param name="Url">Página de pago de Pey.</param>
+public sealed record RenewalLinkViewModel(int ChargeId, string Title, string PackageText, string AmountText, string Url)
+{
+    public static RenewalLinkViewModel From(SubscriptionCharge charge) => new(
+        charge.Id,
+        charge.Origin == SubscriptionChargeOrigin.Renewal ? "Tu link de renovación" : "Tienes un pago pendiente",
+        charge.Package.Label(),
+        SaleQrViewModel.FormatAmount(charge.Amount),
+        charge.Url!);
+}
 
 /// <summary>Un paquete en «Mi plan», con sus textos ya armados.</summary>
 /// <param name="Value">Valor del formulario (nombre del enum).</param>

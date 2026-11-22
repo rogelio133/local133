@@ -278,6 +278,13 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - La baja al gratuito es un cálculo: el job solo avisa, no cambia ningún estatus.
 - Banner de gracia con el link y la fecha límite.
 - **Pruebas** con reloj falso (`TimeProvider`) en cada borde.
+- *(5.7, hecho 2026-11-21)*:
+  - cada recordatorio es una **ventana** de días y no un día exacto: si el job no corre, sale al día siguiente con los días reales, y pasada la ventana no se manda;
+  - la llave es `sub:{etapa}:{ProUntil}`, así que un pago empieza otro ciclo;
+  - el link de renovación se asegura cada día de la ventana (reutiliza el pendiente) y el correo lleva a «Mi plan», no a Pey;
+  - se adelantó la base de la 5.4 (tabla `Notifications` e `INotificationService`), sin la campana ni la lista.
+
+  Detalle en la [bitácora](../log_plan/fase-5.7-recordatorios-y-gracia.md).
 
 ### 5.8 Afiliados
 - Aplicar §6:

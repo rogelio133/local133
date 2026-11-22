@@ -6,6 +6,7 @@ using Local133.Domain.Settings;
 using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
+using Local133.Web.Areas.Merchant.Services;
 using Local133.Web.Hosting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,6 +68,10 @@ public class PlanController(
             .ThenByDescending(c => c.Id)
             .ToListAsync(cancellationToken);
 
+        var renewal = plan.Status.IsProLike && merchant.Status != MerchantStatus.Disabled
+            ? await RenewalLinkQuery.FindAsync(db, merchant.Id, cancellationToken)
+            : null;
+
         return View(new MyPlanViewModel(
             PlanSummaryViewModel.From(plan.Status, now),
             usageModel,
@@ -79,7 +84,8 @@ public class PlanController(
             charges.Where(c => c.Status != SubscriptionChargeStatus.Paid).Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
             charges.Where(c => c.Status == SubscriptionChargeStatus.Paid).Take(PaymentHistorySize)
                 .Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
-            offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null));
+            offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null,
+            renewal is null ? null : RenewalLinkViewModel.From(renewal)));
     }
 
     /// <summary>Crea (o reutiliza) el link del paquete y manda a la página de pago de Pey.</summary>

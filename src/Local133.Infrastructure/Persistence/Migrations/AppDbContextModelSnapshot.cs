@@ -126,6 +126,61 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.ToTable("Merchants", (string)null);
                 });
 
+            modelBuilder.Entity("Local133.Domain.Notifications.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DedupKey")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<DateTimeOffset?>("EmailSentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MerchantId", "CreatedAt");
+
+                    b.HasIndex("MerchantId", "DedupKey")
+                        .IsUnique();
+
+                    b.ToTable("Notifications", (string)null);
+                });
+
             modelBuilder.Entity("Local133.Domain.Payments.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -534,6 +589,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasIndex("FounderNumber")
                         .IsUnique()
                         .HasFilter("[FounderNumber] IS NOT NULL");
+
+                    b.HasIndex("ProUntil");
 
                     b.ToTable("Subscriptions", null, t =>
                         {
@@ -1029,6 +1086,15 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasOne("Local133.Infrastructure.Identity.ApplicationUser", null)
                         .WithOne()
                         .HasForeignKey("Local133.Domain.Merchants.Merchant", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Local133.Domain.Notifications.Notification", b =>
+                {
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

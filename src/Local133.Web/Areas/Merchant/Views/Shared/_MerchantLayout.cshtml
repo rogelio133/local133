@@ -40,6 +40,11 @@
     </nav>
 
     <main class="container app-main pt-3">
+        @if (ViewContext.RouteData.Values["controller"] as string != "Plan")
+        {
+            @* Gracia (5.7): en «Mi plan» no hace falta, la tarjeta del plan ya lo dice. *@
+            @await Component.InvokeAsync("GraceBanner")
+        }
         @RenderBody()
     </main>
 

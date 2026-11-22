@@ -99,7 +99,7 @@ internal sealed class SubscriptionCheckout(
             return new CheckoutResult.HttpsRequired();
         }
 
-        var charge = SubscriptionCharge.Create(command.MerchantId, quote, isFounderPrice, SubscriptionChargeOrigin.Merchant, now);
+        var charge = SubscriptionCharge.Create(command.MerchantId, quote, isFounderPrice, command.Origin, now);
         db.SubscriptionCharges.Add(charge);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -145,8 +145,8 @@ internal sealed class SubscriptionCheckout(
         charge.AttachLink(link.Id, link.Url.AbsoluteUri);
         await db.SaveChangesAsync(CancellationToken.None); // el link ya existe en Pey: no se abandona el guardado
 
-        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Package}, {Amount}, fundador {IsFounderPrice}) con el link {PaymentLinkId}",
-            command.MerchantId, charge.Id, charge.Package, charge.Amount, charge.IsFounderPrice, link.Id);
+        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Origin}, {Package}, {Amount}, fundador {IsFounderPrice}) con el link {PaymentLinkId}",
+            command.MerchantId, charge.Id, charge.Origin, charge.Package, charge.Amount, charge.IsFounderPrice, link.Id);
         return new CheckoutResult.Redirect(charge.Id, link.Url, Reused: false);
     }
 

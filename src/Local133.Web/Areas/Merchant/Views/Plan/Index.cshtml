@@ -39,6 +39,17 @@
             <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
         }
 
+        @if (Model.RenewalLink is { } renewal)
+        {
+            <div class="card card-body mb-3 border-primary d-flex flex-column flex-sm-row align-items-sm-center gap-2" data-renewal-link="@renewal.ChargeId">
+                <span class="flex-grow-1">
+                    <span class="d-block fw-bold">@renewal.Title</span>
+                    <span class="d-block small text-body-secondary">Pro · @renewal.PackageText · @renewal.AmountText, con IVA incluido</span>
+                </span>
+                <a class="btn btn-primary text-nowrap" href="@renewal.Url" rel="noopener" data-renewal-pay>Pagar ahora</a>
+            </div>
+        }
+
         @if (Model.InProgress.Count > 0)
         {
             <div class="card mb-3 border-info" data-plan-in-progress>
