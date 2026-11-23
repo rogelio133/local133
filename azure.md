@@ -186,6 +186,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Migración `MerchantOwnerName`** (no destructiva): agrega la columna nula `Merchants.OwnerName` (`nvarchar(100)`). Se aplica sola al arrancar; los vendedores existentes quedan sin nombre y conservan el saludo anterior.
 - Sin recursos, App Settings ni secretos nuevos. Los correos de confirmación, cuenta activa, pago de Pro y recordatorios ahora saludan con el nombre (mismos envíos de Resend).
 
+### Fase 6.1 — Clientes en el admin
+- Sin cambios para Azure: sin migraciones, recursos, App Settings ni secretos nuevos. Solo pantallas de lectura en `/admin/clientes` (rol `Admin`) y un JS estático (`wwwroot/js/admin-customer-search.js`) que se publica con el sitio.
 ### Fase 4.1 — Mi información
 - **Migración `MerchantProfile`** (no destructiva): agrega a `Merchants` las columnas nulas `Address` (`nvarchar(200)`), `LogoKey` y `ShopPhotoKey` (`varchar(100)`). Se aplica sola al arrancar.
 - **Archivos nuevos en `IFileStorage`**: el logo (`merchants/{id}/logo-{guid}.png`) y la foto del local (`merchants/{id}/local-{guid}.jpg`), en la misma carpeta `Storage__LocalDirectory` que las fotos de productos. En App Service el disco local no se comparte entre instancias ni sobrevive a todos los despliegues: igual que con los productos, en producción hace falta la implementación para Blob Storage (Fase 7).

@@ -220,7 +220,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. — [detalle](actualizaciones/suscripciones_2026_11_18.md#511-precios-y-textos-legales)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
-1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan.
+1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan. ✅ *(hecho 2026-11-23; solo lectura, la pestaña Plan con el resumen)* — [bitácora](log_plan/fase-6.1-clientes.md)
 2. **Plan por cliente**: periodos, cargos y pagos de la suscripción, y referidos. Acciones: regalar días, registrar un pago manual y anular un premio. **Parámetros globales**: precios y fundador, días de prueba y de gracia, límites del gratuito, uso justo, premios de referidos, IVA y expiración del QR. Todo con auditoría.
 3. Cobranza: cargos `partial` o con monto menor, links pagados sin abonar, CLABE en disputa (ver quién la tiene y liberarla), suspender/reactivar.
 4. Tablero (GMV, ingresos por suscripción, vendedores por plan, conversión de prueba a pago, lugares de fundador), transacciones globales, bitácora de webhooks con reproceso.

@@ -1,12 +1,14 @@
 @{
     // Portal administrador: menú en Offcanvas en móvil; en ≥lg el mismo Offcanvas se muestra como sidebar fijo.
-    var current = ViewContext.RouteData.Values["action"] as string;
-    var links = new (string Action, string Href, string Label, string Icon)[]
+    // Activo por controlador y, en Home, por acción (Clientes queda activo en todo CustomersController).
+    var currentController = ViewContext.RouteData.Values["controller"] as string;
+    var currentAction = ViewContext.RouteData.Values["action"] as string;
+    var links = new (string Controller, string? Action, string Href, string Label, string Icon)[]
     {
-        ("Index", "~/admin", "Tablero", "bi-speedometer2"),
-        ("Customers", "~/admin/clientes", "Clientes", "bi-people"),
-        ("Transactions", "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
-        ("Settings", "~/admin/parametros", "Parámetros", "bi-sliders"),
+        ("Home", "Index", "~/admin", "Tablero", "bi-speedometer2"),
+        ("Customers", null, "~/admin/clientes", "Clientes", "bi-people"),
+        ("Home", "Transactions", "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
+        ("Home", "Settings", "~/admin/parametros", "Parámetros", "bi-sliders"),
     };
 }
 <!DOCTYPE html>
@@ -40,7 +42,7 @@
                 <nav class="nav nav-pills flex-column w-100">
                     @foreach (var link in links)
                     {
-                        var active = link.Action == current;
+                        var active = link.Controller == currentController && (link.Action is null || link.Action == currentAction);
                         <a class="nav-link @(active ? "active" : null)" href="@Url.Content(link.Href)" aria-current="@(active ? "page" : null)">
                             <i class="bi @link.Icon me-2" aria-hidden="true"></i>@link.Label
                         </a>

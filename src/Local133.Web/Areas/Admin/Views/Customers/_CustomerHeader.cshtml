@@ -1,0 +1,38 @@
+@model CustomerHeaderViewModel
+@* Encabezado y pestañas del detalle de un cliente (cada pestaña es su propia ruta). *@
+@{
+    var tabs = new (CustomerTab Tab, string Label, string Icon)[]
+    {
+        (CustomerTab.General, "General", "bi-person"),
+        (CustomerTab.Account, "Cuenta", "bi-bank"),
+        (CustomerTab.Sales, "Ventas", "bi-receipt"),
+        (CustomerTab.Plan, "Plan", "bi-star"),
+    };
+}
+<nav aria-label="Ruta" class="mb-2">
+    <a class="small" href="@Url.Content("~" + CustomerUrls.List)"><i class="bi bi-chevron-left" aria-hidden="true"></i> Clientes</a>
+</nav>
+<header class="mb-3" data-customer-header="@Model.Id">
+    <h1 class="h4 mb-1 text-break">@Model.Name <span class="small text-body-secondary fw-normal">#@Model.Id</span></h1>
+    @if (Model.BusinessName is { } business)
+    {
+        <div class="text-break">@business</div>
+    }
+    <div class="small text-body-secondary text-break mb-2">@Model.Email</div>
+    <span class="badge @AdminLabels.StatusBadge(Model.Status)" data-customer-status="@Model.Status">@AdminLabels.Status(Model.Status)</span>
+    <span class="badge @AdminLabels.PlanBadge(Model.Tier)" data-customer-plan="@Model.Tier">@AdminLabels.Plan(Model.Tier)</span>
+</header>
+
+<ul class="nav nav-tabs mb-3 flex-nowrap overflow-x-auto overflow-y-hidden" data-customer-tabs>
+    @foreach (var tab in tabs)
+    {
+        var active = tab.Tab == Model.Tab;
+        <li class="nav-item">
+            <a class="nav-link text-nowrap @(active ? "active" : null)" href="@Url.Content("~" + CustomerUrls.Tab(Model.Id, tab.Tab))"
+               aria-current="@(active ? "page" : null)" data-customer-tab="@tab.Tab">
+                @* Sin ícono en < sm: así caben las cuatro pestañas a 375 px. *@
+                <i class="bi @tab.Icon me-1 d-none d-sm-inline" aria-hidden="true"></i>@tab.Label
+            </a>
+        </li>
+    }
+</ul>
