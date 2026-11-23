@@ -121,7 +121,7 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
                     s.Id,
                     s.Folio,
                     SaleFormats.DateTime(s.CreatedAt, today),
-                    Sale.ConceptTextOf(s.Concept, businessName),
+                    Sale.ConceptTextOf(s.Concept),
                     SaleQrViewModel.FormatAmount(s.Amount),
                     s.Status == SaleStatus.Pending && s.ExpiresAt is { } expiresAt && now >= expiresAt ? SaleStatus.Expired : s.Status,
                     s.Method,
