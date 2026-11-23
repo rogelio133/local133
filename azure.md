@@ -13,7 +13,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | App Service (.NET 10) | Sitio MVC, API `/api`, webhook de Pey, hub SignalR y jobs de Hangfire (en el mismo proceso) | Fase 0.1 / 1.1 |
 | Azure SQL Database | Base `Local133` (EF Core) y el esquema `HangFire` (lo crea Hangfire, no EF). Tier: ver «Mantenimiento 2026-11-18» | Fase 0.2 / 2.3 |
 | Key Vault (recomendado) | API key y secreto del webhook de Pey, secretos OAuth, contraseña del admin sembrado | Fase 1.3 / 1.5 / 2.1 |
-| Blob Storage | Fotos de productos. Hoy es `LocalDiskFileStorage`; falta la implementación para blob (Fase 7) | Fase 3.1 |
+| Blob Storage | Fotos de productos, y logo y foto del local del vendedor. Hoy es `LocalDiskFileStorage`; falta la implementación para blob (Fase 7) | Fase 3.1 / 4.1 |
 | Azure SignalR Service (opcional) | Solo si hay más de una instancia | Fase 2.5 |
 | App Service de la portada (.NET 10) | `Local133.LandingPage` en `local133.com.mx`: sin base, sin secretos, sin jobs. Puede compartir el App Service Plan del portal | Portada 2026-11-18 |
 
@@ -185,3 +185,9 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Fase 4.0 — Nombre en el registro
 - **Migración `MerchantOwnerName`** (no destructiva): agrega la columna nula `Merchants.OwnerName` (`nvarchar(100)`). Se aplica sola al arrancar; los vendedores existentes quedan sin nombre y conservan el saludo anterior.
 - Sin recursos, App Settings ni secretos nuevos. Los correos de confirmación, cuenta activa, pago de Pro y recordatorios ahora saludan con el nombre (mismos envíos de Resend).
+
+### Fase 4.1 — Mi información
+- **Migración `MerchantProfile`** (no destructiva): agrega a `Merchants` las columnas nulas `Address` (`nvarchar(200)`), `LogoKey` y `ShopPhotoKey` (`varchar(100)`). Se aplica sola al arrancar.
+- **Archivos nuevos en `IFileStorage`**: el logo (`merchants/{id}/logo-{guid}.png`) y la foto del local (`merchants/{id}/local-{guid}.jpg`), en la misma carpeta `Storage__LocalDirectory` que las fotos de productos. En App Service el disco local no se comparte entre instancias ni sobrevive a todos los despliegues: igual que con los productos, en producción hace falta la implementación para Blob Storage (Fase 7).
+- Subidas de hasta 12 MB por petición (`[RequestSizeLimit]` en el controlador): si se pone un proxy o Front Door delante, permitir ese tamaño de cuerpo.
+- Sin recursos, App Settings ni secretos nuevos.

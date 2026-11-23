@@ -6,8 +6,13 @@ namespace Local133.Web.Areas.Merchant.Models;
 public sealed record MerchantHomeViewModel(
     string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null,
     DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0,
-    ChargeUsageViewModel? Usage = null)
+    ChargeUsageViewModel? Usage = null, bool ProfileIncomplete = false)
 {
+    /// <summary>Paso opcional de Inicio (4.1): falta el nombre del negocio o el teléfono en «Mi información».</summary>
+    public const string ProfileStepTitle = "Completa tu información";
+
+    public const string ProfileStepDescription = "Agrega el nombre de tu negocio y tu teléfono.";
+
     public const string DefaultRejection = "Banxico no pudo registrarla para CoDi.";
 
     /// <param name="bankAccountRejection">Motivo del rechazo de su cuenta bancaria, si Pey la rechazó.</param>

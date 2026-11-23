@@ -56,17 +56,20 @@ public class SaleReceiptTests
     }
 
     [Theory]
-    [InlineData("Tacos Don Ramón · 2 tacos al pastor", "Tacos Don Ramón", "2 tacos al pastor")]
-    [InlineData("Tacos Don Ramón · 2 tacos al pastor", " Tacos Don Ramón ", "2 tacos al pastor")]
-    [InlineData("2 tacos al pastor", null, "2 tacos al pastor")]
-    [InlineData("2 tacos al pastor", "Tacos Don Ramón", "2 tacos al pastor")]
-    [InlineData("Taquería Vieja · 2 tacos", "Tacos Don Ramón", "Taquería Vieja · 2 tacos")] // cambió de nombre
-    [InlineData("Tacos Don Ramón · ", "Tacos Don Ramón", "Tacos Don Ramón · ")]
-    [InlineData(null, "Tacos Don Ramón", null)]
-    public void ConceptTextOf_quita_el_nombre_del_negocio(string? concept, string? business, string? expected) =>
-        Assert.Equal(expected, Sale.ConceptTextOf(concept, business));
+    [InlineData("Tacos Don Ramón · 2 tacos al pastor", "2 tacos al pastor")]
+    [InlineData("2 tacos al pastor", "2 tacos al pastor")]
+    [InlineData("Taquería Vieja · 2 tacos", "2 tacos")] // 4.1: el negocio cambió de nombre en «Mi información»
+    [InlineData("Tacos · Don Ramón · 2 tacos", "2 tacos")] // un nombre viejo con el separador (antes no se validaba)
+    [InlineData("Tacos Don Ramón · ", "Tacos Don Ramón · ")]
+    [InlineData(" · 2 tacos", " · 2 tacos")]
+    [InlineData(null, null)]
+    public void ConceptTextOf_quita_el_nombre_del_negocio(string? concept, string? expected) =>
+        Assert.Equal(expected, Sale.ConceptTextOf(concept));
 
     [Fact]
-    public void ConceptTextOf_es_el_inverso_de_BuildConcept() =>
-        Assert.Equal("Refresco", Sale.ConceptTextOf(Sale.BuildConcept("Tacos Don Ramón", "Refresco"), "Tacos Don Ramón"));
+    public void ConceptTextOf_es_el_inverso_de_BuildConcept()
+    {
+        Assert.Equal("Refresco", Sale.ConceptTextOf(Sale.BuildConcept("Tacos Don Ramón", "Refresco")));
+        Assert.Equal("Refresco", Sale.ConceptTextOf(Sale.BuildConcept(null, "Refresco")));
+    }
 }

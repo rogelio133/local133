@@ -26,6 +26,17 @@ public class Merchant : Entity
     /// </summary>
     public string? OwnerName { get; set; }
 
+    /// <summary>Dirección o ubicación del puesto (<see cref="MerchantAddress"/>), opcional; renglones con <c>\n</c>.</summary>
+    public string? Address { get; set; }
+
+    /// <summary>Llave base del logo en el almacenamiento (PNG; ver <c>MerchantImageRules</c>), o <c>null</c>.</summary>
+    public string? LogoKey { get; set; }
+
+    /// <summary>Llave base de la foto del local en el almacenamiento (JPEG), o <c>null</c>.</summary>
+    public string? ShopPhotoKey { get; set; }
+
+    public const int ImageKeyMaxLength = 100;
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
@@ -80,6 +91,59 @@ public class Merchant : Entity
     /// revisión de su cuenta ya puede armar su catálogo, y la suspensión (por cobranza) solo frena los cobros.
     /// </summary>
     public bool CanManageProducts => Status != MerchantStatus.Disabled;
+
+    /// <summary>Puede editar «Mi información» (4.1): cualquier vendedor salvo uno dado de baja, en cualquier plan.</summary>
+    public bool CanEditProfile => Status != MerchantStatus.Disabled;
+
+    /// <summary>
+    /// Guarda los datos generales de «Mi información», normalizados. La dirección vacía se guarda como <c>null</c>.
+    /// </summary>
+    /// <exception cref="ArgumentException">Algún dato no cumple <see cref="PersonName"/>, <see cref="Merchants.BusinessName"/> o <see cref="MerchantAddress"/>.</exception>
+    public void UpdateProfile(string ownerName, string businessName, string? address)
+    {
+        if (!PersonName.IsValid(ownerName))
+        {
+            throw new ArgumentException("El nombre de la persona no es válido.", nameof(ownerName));
+        }
+
+        if (!Merchants.BusinessName.IsValid(businessName))
+        {
+            throw new ArgumentException("El nombre del negocio no es válido.", nameof(businessName));
+        }
+
+        if (!MerchantAddress.IsValid(address))
+        {
+            throw new ArgumentException("La dirección no es válida.", nameof(address));
+        }
+
+        OwnerName = PersonName.Normalize(ownerName);
+        BusinessName = Merchants.BusinessName.Normalize(businessName);
+        var normalizedAddress = MerchantAddress.Normalize(address);
+        Address = normalizedAddress.Length == 0 ? null : normalizedAddress;
+    }
+
+    /// <summary>Cambia el logo (o lo quita con <c>null</c>) y devuelve la llave anterior, para borrar sus archivos.</summary>
+    public string? ReplaceLogo(string? key)
+    {
+        var previous = LogoKey;
+        LogoKey = key;
+        return previous;
+    }
+
+    /// <summary>Cambia la foto del local (o la quita con <c>null</c>) y devuelve la llave anterior.</summary>
+    public string? ReplaceShopPhoto(string? key)
+    {
+        var previous = ShopPhotoKey;
+        ShopPhotoKey = key;
+        return previous;
+    }
+
+    /// <summary>
+    /// «Mi información» completa para el paso opcional de Inicio: el negocio tiene nombre y hay un teléfono válido
+    /// (el celular de la cuenta de Identity).
+    /// </summary>
+    public bool HasCompleteProfile(string? phoneNumber) =>
+        !string.IsNullOrWhiteSpace(BusinessName) && Sales.PhoneNumber.IsValid(phoneNumber);
 
     /// <summary>
     /// Transición por el estatus CoDi de su cuenta (alta, webhook <c>bank.account.updated</c> o sondeo). Solo aplica

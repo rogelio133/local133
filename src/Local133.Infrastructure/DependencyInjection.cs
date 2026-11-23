@@ -1,4 +1,5 @@
 using Local133.Application.BankAccounts;
+using Local133.Application.Merchants;
 using Local133.Application.Notifications;
 using Local133.Application.Payments;
 using Local133.Application.Products;
@@ -10,6 +11,7 @@ using Local133.Application.Webhooks;
 using Local133.Infrastructure.BankAccounts;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Jobs;
+using Local133.Infrastructure.Merchants;
 using Local133.Infrastructure.Notifications;
 using Local133.Infrastructure.Payments;
 using Local133.Infrastructure.Persistence;
@@ -56,6 +58,8 @@ public static class DependencyInjection
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FileStorageOptions>>(),
             sp.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()));
         services.AddSingleton<IProductPhotoProcessor, SkiaProductPhotoProcessor>();
+        // «Mi información» (4.1): logo en PNG con transparencia y foto del local en JPEG.
+        services.AddSingleton<IMerchantImageProcessor, SkiaMerchantImageProcessor>();
 
         // Pey (CoDi): una API key para todos los vendedores; la key va en user-secrets (Pey:ApiKey).
         services.AddPeyGateway(configuration);
@@ -75,6 +79,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentReconciliation, PaymentReconciliation>();
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
         services.AddScoped<IProductCatalog, ProductCatalog>();
+        services.AddScoped<IMerchantProfile, MerchantProfileService>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.
         services.AddScoped<IPlanAccess, PlanAccess>();
         // Límites del gratuito (5.5): conteo de cobros del mes y umbrales tras cada pago.
