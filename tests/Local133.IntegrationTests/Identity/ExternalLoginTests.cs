@@ -190,9 +190,10 @@ public class ExternalLoginTests(Local133WebFactory factory) : WebTestBase(factor
     }
 
     internal static Task<HttpResponseMessage> ConfirmExternalAsync(
-        HttpClient client, string callbackUrl, string email, bool acceptLegal = true) =>
+        HttpClient client, string callbackUrl, string email, bool acceptLegal = true, string ownerName = OwnerName) =>
         PostFormAsync(client, callbackUrl, new Dictionary<string, string>
         {
+            ["Input.OwnerName"] = ownerName,
             ["Input.Email"] = email,
             ["Input.AcceptLegal"] = acceptLegal ? "true" : "false",
         }, "/Identity/Account/ExternalLogin?handler=Confirmation");

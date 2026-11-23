@@ -102,11 +102,11 @@ public sealed class SubscriptionDailyJob(
             return false;
         }
 
-        var businessName = await scopedDb.Merchants.AsNoTracking()
+        var greetingName = await scopedDb.Merchants.AsNoTracking()
             .Where(m => m.Id == merchantId)
-            .Select(m => m.BusinessName)
+            .Select(m => Merchant.GreetingNameFor(m.OwnerName, m.BusinessName))
             .SingleAsync(cancellationToken);
-        var message = MerchantEmails.SubscriptionReminder(reminder, businessName, settings);
+        var message = MerchantEmails.SubscriptionReminder(reminder, greetingName, settings);
         var result = await services.GetRequiredService<INotificationService>().NotifyAsync(new NotificationRequest(
             merchantId, reminder.NotificationType, message.Title, message.Body, MerchantEmails.PlanPath,
             reminder.DedupKey, message.Email), cancellationToken);

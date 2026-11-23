@@ -9,14 +9,20 @@ public static class AccountEmails
     public const string ResetSubject = "Restablece tu contraseña · Local133";
     public const string ChangeEmailSubject = "Confirma tu nuevo correo · Local133";
 
-    public static string ConfirmBody(string callbackUrl) => Body(
-        ConfirmSubject,
-        "Confirma tu correo para activar tu cuenta de Local133.",
-        "¡Bienvenido a Local133!",
-        "Para activar tu cuenta confirma tu correo:",
-        "Confirmar mi correo",
-        callbackUrl,
-        "Si no creaste una cuenta, ignora este mensaje.");
+    /// <param name="greetingName">Primer nombre de la persona (4.0), para el saludo; <c>null</c> lo omite.</param>
+    public static string ConfirmBody(string callbackUrl, string? greetingName = null) =>
+        EmailLayout.Render(
+            new EmailContent(
+                ConfirmSubject,
+                "Confirma tu correo para activar tu cuenta de Local133.",
+                "Te damos la bienvenida a Local133",
+                string.IsNullOrWhiteSpace(greetingName)
+                    ? ["Para activar tu cuenta confirma tu correo:"]
+                    : [$"¡Hola, {greetingName.Trim()}!", "Para activar tu cuenta confirma tu correo:"],
+                "Confirmar mi correo",
+                callbackUrl,
+                "Si no creaste una cuenta, ignora este mensaje."),
+            SiteBaseOf(callbackUrl));
 
     public static string ResetBody(string callbackUrl) => Body(
         ResetSubject,

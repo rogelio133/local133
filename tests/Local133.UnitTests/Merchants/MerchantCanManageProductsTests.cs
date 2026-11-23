@@ -13,7 +13,7 @@ public class MerchantCanManageProductsTests
     [InlineData(MerchantStatus.Disabled, false)]
     public void Puede_manejar_productos_salvo_dado_de_baja(MerchantStatus status, bool expected)
     {
-        var merchant = Merchant.Register("user-1", DateTimeOffset.UtcNow);
+        var merchant = Merchant.Register("user-1", DateTimeOffset.UtcNow, "María López");
         merchant.Status = status;
 
         Assert.Equal(expected, merchant.CanManageProducts);

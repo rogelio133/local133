@@ -1,5 +1,6 @@
 using Local133.Application.Subscriptions;
 using Local133.Domain.Common;
+using Local133.Domain.Merchants;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -36,7 +37,7 @@ internal sealed class SubscriptionPaymentEmailNotifier(
 
             var recipient = await db.Merchants.IgnoreQueryFilters().AsNoTracking()
                 .Where(m => m.Id == payment.MerchantId)
-                .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { m.BusinessName, u.Email })
+                .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { m.OwnerName, m.BusinessName, u.Email })
                 .SingleAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(recipient.Email))
             {
@@ -49,7 +50,7 @@ internal sealed class SubscriptionPaymentEmailNotifier(
                 recipient.Email,
                 MerchantEmails.SubscriptionPaidSubject,
                 MerchantEmails.SubscriptionPaidBody(
-                    recipient.BusinessName,
+                    Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName),
                     payment.Package,
                     payment.Amount,
                     MexicoTime.DateOf(payment.ProUntil.AddTicks(-1)),

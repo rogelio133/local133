@@ -14,6 +14,7 @@ public class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
         builder.Property(m => m.UserId).HasMaxLength(450);
         builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(m => m.BusinessName).HasMaxLength(Merchant.BusinessNameMaxLength);
+        builder.Property(m => m.OwnerName).HasMaxLength(PersonName.MaxLength);
 
         // 1:1 con el usuario. Restrict: borrar un usuario no debe llevarse el historial financiero del vendedor.
         builder.HasOne<ApplicationUser>()

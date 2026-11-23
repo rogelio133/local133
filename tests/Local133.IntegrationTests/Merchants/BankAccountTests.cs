@@ -87,7 +87,7 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
         var sent = Assert.Single(ActivationEmails());
         Assert.Equal(Email, sent.To);
         Assert.Equal(ActivationEmailLink, sent.Link);
-        Assert.Contains("¡Hola, Tacos Don Ramón!", WebUtility.HtmlDecode(sent.Html));
+        Assert.Contains("¡Hola, María!", WebUtility.HtmlDecode(sent.Html)); // el nombre de la persona manda sobre el negocio (4.0)
     }
 
     [Fact]

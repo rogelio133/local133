@@ -181,3 +181,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **`App__PublicBaseUrl` con HTTPS es obligatoria** también para las ligas de los recordatorios (ver la tabla de App Settings). El job no tiene petición HTTP de la cual sacar el host.
 - **Resend**: más envíos (hasta 5 recordatorios por ciclo de cada vendedor). Revisar los límites diarios y mensuales del plan de Resend antes del piloto.
 - Sin recursos ni secretos nuevos.
+
+### Fase 4.0 — Nombre en el registro
+- **Migración `MerchantOwnerName`** (no destructiva): agrega la columna nula `Merchants.OwnerName` (`nvarchar(100)`). Se aplica sola al arrancar; los vendedores existentes quedan sin nombre y conservan el saludo anterior.
+- Sin recursos, App Settings ni secretos nuevos. Los correos de confirmación, cuenta activa, pago de Pro y recordatorios ahora saludan con el nombre (mismos envíos de Resend).

@@ -14,6 +14,7 @@
         </p>
         <form asp-page-handler="Confirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+            <partial name="_OwnerNameField" for="Input" />
             <div class="form-floating mb-3">
                 <input asp-for="Input.Email" class="form-control" autocomplete="email" placeholder="nombre@ejemplo.com" />
                 <label asp-for="Input.Email"></label>

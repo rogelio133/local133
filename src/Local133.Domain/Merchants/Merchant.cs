@@ -20,6 +20,12 @@ public class Merchant : Entity
     /// <summary>Nombre del negocio (se captura en "Mi información").</summary>
     public string? BusinessName { get; set; }
 
+    /// <summary>
+    /// Nombre de la persona (<see cref="PersonName"/>), capturado en el alta desde la 4.0. Nulo para los vendedores
+    /// registrados antes.
+    /// </summary>
+    public string? OwnerName { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
@@ -28,12 +34,33 @@ public class Merchant : Entity
     /// </summary>
     public DateTimeOffset? ActivationEmailSentAt { get; set; }
 
-    public static Merchant Register(string userId, DateTimeOffset now) => new()
+    /// <param name="ownerName">Nombre de la persona; se normaliza con <see cref="PersonName.Normalize"/>.</param>
+    /// <exception cref="ArgumentException">El nombre no es válido (<see cref="PersonName.IsValid"/>).</exception>
+    public static Merchant Register(string userId, DateTimeOffset now, string ownerName)
     {
-        UserId = userId,
-        Status = MerchantStatus.PendingBankAccount,
-        CreatedAt = now,
-    };
+        if (!PersonName.IsValid(ownerName))
+        {
+            throw new ArgumentException("El nombre de la persona no es válido.", nameof(ownerName));
+        }
+
+        return new Merchant
+        {
+            UserId = userId,
+            Status = MerchantStatus.PendingBankAccount,
+            OwnerName = PersonName.Normalize(ownerName),
+            CreatedAt = now,
+        };
+    }
+
+    /// <summary>Con quién saludar en Inicio y en los correos (ver <see cref="GreetingNameFor"/>).</summary>
+    public string? GreetingName => GreetingNameFor(OwnerName, BusinessName);
+
+    /// <summary>
+    /// Saludo: el primer nombre de la persona; sin él, el nombre del negocio; sin ninguno, <c>null</c> (cada pantalla o
+    /// correo pone su respaldo). Estático para usarlo con lo que se proyecta de la base.
+    /// </summary>
+    public static string? GreetingNameFor(string? ownerName, string? businessName) =>
+        PersonName.FirstName(ownerName) ?? (string.IsNullOrWhiteSpace(businessName) ? null : businessName.Trim());
 
     /// <summary>
     /// Puede capturar (o volver a capturar) su CLABE: aún no la registra, o Pey rechazó la que envió.
