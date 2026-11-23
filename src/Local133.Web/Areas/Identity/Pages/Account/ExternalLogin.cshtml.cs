@@ -5,6 +5,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
+using Local133.Domain.Merchants;
 using Local133.Infrastructure.Identity;
 using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -44,7 +45,7 @@ public class ExternalLoginModel(
     [TempData]
     public string ErrorMessage { get; set; }
 
-    public class InputModel : LegalAcceptanceInput
+    public class InputModel : MerchantSignUpInput
     {
         [Required(ErrorMessage = "Escribe tu correo.")]
         [EmailAddress(ErrorMessage = "El correo no es válido.")]
@@ -105,7 +106,7 @@ public class ExternalLoginModel(
         // No tiene cuenta: se le pide confirmar el correo para crearla.
         ReturnUrl = returnUrl;
         ProviderDisplayName = info.ProviderDisplayName;
-        Input = new InputModel { Email = providerEmail };
+        Input = new InputModel { Email = providerEmail, OwnerName = ProviderName(info) };
         return Page();
     }
 
@@ -129,7 +130,7 @@ public class ExternalLoginModel(
             var emailConfirmed = string.Equals(Input.Email, ProviderEmail(info), StringComparison.OrdinalIgnoreCase);
             var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = emailConfirmed }
                 .AcceptLegalDocuments(clock.GetUtcNow());
-            var result = await registration.CreateMerchantAsync(user, password: null, info);
+            var result = await registration.CreateMerchantAsync(user, Input.OwnerName, password: null, info);
             if (result.Succeeded)
             {
                 logger.LogInformation("Usuario {UserId} creado con {LoginProvider}.", user.Id, info.LoginProvider);
@@ -148,7 +149,7 @@ public class ExternalLoginModel(
                     pageHandler: null,
                     values: new { area = "Identity", userId, code, returnUrl },
                     protocol: Request.Scheme);
-                await emailSender.SendEmailAsync(Input.Email, AccountEmails.ConfirmSubject, AccountEmails.ConfirmBody(callbackUrl));
+                await emailSender.SendEmailAsync(Input.Email, AccountEmails.ConfirmSubject, AccountEmails.ConfirmBody(callbackUrl, PersonName.FirstName(Input.OwnerName)));
 
                 await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
                 return RedirectToPage("./RegisterConfirmation", new { Input.Email, returnUrl });
@@ -163,6 +164,23 @@ public class ExternalLoginModel(
         ProviderDisplayName = info.ProviderDisplayName;
         ReturnUrl = returnUrl;
         return Page();
+    }
+
+    /// <summary>
+    /// Nombre que manda el proveedor, para proponerlo en el alta: el nombre completo o, sin él, nombre y apellido.
+    /// Normalizado y recortado; se propone aunque traiga caracteres no permitidos (el usuario lo corrige y la
+    /// validación lo marca).
+    /// </summary>
+    private static string ProviderName(ExternalLoginInfo info)
+    {
+        var name = info.Principal.FindFirstValue(ClaimTypes.Name);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            name = $"{info.Principal.FindFirstValue(ClaimTypes.GivenName)} {info.Principal.FindFirstValue(ClaimTypes.Surname)}";
+        }
+
+        name = PersonName.Normalize(name);
+        return name.Length == 0 ? null : name[..Math.Min(name.Length, PersonName.MaxLength)].TrimEnd();
     }
 
     private static string ProviderEmail(ExternalLoginInfo info) =>

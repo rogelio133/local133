@@ -14,10 +14,22 @@ namespace Local133.Web.Identity;
 /// </summary>
 public class AccountRegistration(UserManager<ApplicationUser> userManager, AppDbContext db, TimeProvider clock)
 {
+    /// <param name="ownerName">Nombre de la persona (<see cref="PersonName"/>); se guarda normalizado en el Merchant.</param>
     /// <param name="password">Contraseña, o <c>null</c> si entra solo con proveedor externo.</param>
     /// <param name="login">Cuenta externa a ligar, o <c>null</c>.</param>
-    public async Task<IdentityResult> CreateMerchantAsync(ApplicationUser user, string? password, UserLoginInfo? login = null)
+    public async Task<IdentityResult> CreateMerchantAsync(
+        ApplicationUser user, string? ownerName, string? password, UserLoginInfo? login = null)
     {
+        // El formulario ya lo valida; esto cubre a cualquier otro que llame sin pasar por él, antes de crear nada.
+        if (!PersonName.IsValid(ownerName))
+        {
+            return IdentityResult.Failed(new IdentityError
+            {
+                Code = "InvalidOwnerName",
+                Description = string.IsNullOrWhiteSpace(ownerName) ? OwnerNameMessages.Required : OwnerNameMessages.Invalid,
+            });
+        }
+
         // UserManager guarda en cada llamada sobre el mismo DbContext (scoped): la transacción las abarca todas.
         await using var transaction = await db.Database.BeginTransactionAsync();
 
@@ -36,7 +48,7 @@ public class AccountRegistration(UserManager<ApplicationUser> userManager, AppDb
             return result;
         }
 
-        db.Merchants.Add(Merchant.Register(user.Id, clock.GetUtcNow()));
+        db.Merchants.Add(Merchant.Register(user.Id, clock.GetUtcNow(), ownerName!));
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
         return result;

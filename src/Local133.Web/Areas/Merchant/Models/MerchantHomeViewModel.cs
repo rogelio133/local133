@@ -17,7 +17,8 @@ public sealed record MerchantHomeViewModel(
     public static MerchantHomeViewModel From(
         Domain.Merchants.Merchant merchant, string? userName, string? bankAccountRejection = null, DaySummaryViewModel? today = null,
         PlanSummaryViewModel? plan = null, int trialDays = 0) => new(
-        string.IsNullOrWhiteSpace(merchant.BusinessName) ? userName ?? "vendedor" : merchant.BusinessName,
+        // Primer nombre de la persona (4.0); sin él, el negocio y luego el correo, como antes.
+        merchant.GreetingName ?? userName ?? "vendedor",
         merchant.Status,
         OnboardingChecklist.For(merchant.Status).Select(OnboardingStepViewModel.From).ToArray(),
         bankAccountRejection,

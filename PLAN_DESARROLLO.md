@@ -179,7 +179,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 3. Detalle de venta con productos en historial y recibo. ✅ *(hecho 2026-11-14, dentro de la 2.8)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 
 ### Fase 4 — Mi información (≈4 días)
-0. **Nombre en el registro**: el alta con correo y contraseña y la de Google/Facebook (`ExternalLogin`) piden el nombre de la persona (obligatorio, hasta 100 caracteres, letras con acentos, espacios, `.`, `-` y `'`), con validación en cliente y en servidor. Se guarda en `Merchant.OwnerName` (columna nueva, migración `MerchantOwnerName`, nula para los vendedores ya registrados) desde `AccountRegistration`, en la misma transacción. Con Google/Facebook se propone el nombre que da el proveedor. Se usa en el saludo de Inicio («Hola, María») y en los correos; sin nombre, se queda el respaldo actual (negocio o correo). La 4.1 permite editarlo. *(2026-11-21)*
+0. **Nombre en el registro** (obligatorio en las dos altas, en `Merchant.OwnerName`; saludo con el primer nombre en Inicio y en los correos). ✅ *(hecho 2026-11-23)* — [bitácora](log_plan/fase-4.0-nombre-en-registro.md)
 1. Datos generales: nombre (el capturado en la 4.0), nombre del negocio, dirección, teléfono, email, logo y foto del local. El logo y la foto se usan en el recibo con marca y en el catálogo público (5.10).
 2. Cuenta bancaria completa: historial de estatus, mensaje de error, reintento/cambio de cuenta (invalida y regenera el QR fijo). El cambio respeta la CLABE única (5.2).
 
@@ -261,7 +261,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [Ajustes UI 2026-11-17](actualizaciones/ajustes_2026_11_17_11_54.md#implementación): header del layout de admin (`/admin`) con el icono de usuario más grande. Usa el mismo `_LoginPartial` que ya se revisó en `_Layout` y `_MerchantLayout`, pero no se entró como admin.
 
 **Otros**:
-- [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`).
+- [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`). Con la [4.0](log_plan/fase-4.0-nombre-en-registro.md): ver en el navegador qué nombre propone cada proveedor en el alta.
 - [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta **rechazada** (Notificaciones). El de cuenta activada ya está hecho ([bitácora](log_plan/mantenimiento-correo-cuenta-activa.md)).
 - [Correo de cuenta activa](log_plan/mantenimiento-correo-cuenta-activa.md): verlo en buzones reales (Gmail en Android y en web, Outlook, modo oscuro), con túnel + `App:PublicBaseUrl` o desde producción, porque el logo no carga desde `localhost`. Requiere confirmación para el envío real.
 - [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).

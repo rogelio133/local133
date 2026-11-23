@@ -4,6 +4,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using Local133.Domain.Merchants;
 using Local133.Infrastructure.Identity;
 using Local133.Web.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -32,7 +33,7 @@ public class RegisterModel(
 
     public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
-    public class InputModel : LegalAcceptanceInput
+    public class InputModel : MerchantSignUpInput
     {
         [Required(ErrorMessage = "Escribe tu correo.")]
         [EmailAddress(ErrorMessage = "El correo no es válido.")]
@@ -68,7 +69,7 @@ public class RegisterModel(
 
         var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email }
             .AcceptLegalDocuments(clock.GetUtcNow());
-        var result = await registration.CreateMerchantAsync(user, Input.Password);
+        var result = await registration.CreateMerchantAsync(user, Input.OwnerName, Input.Password);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
@@ -89,7 +90,7 @@ public class RegisterModel(
             values: new { area = "Identity", userId, code, returnUrl },
             protocol: Request.Scheme);
 
-        await emailSender.SendEmailAsync(Input.Email, AccountEmails.ConfirmSubject, AccountEmails.ConfirmBody(callbackUrl));
+        await emailSender.SendEmailAsync(Input.Email, AccountEmails.ConfirmSubject, AccountEmails.ConfirmBody(callbackUrl, PersonName.FirstName(Input.OwnerName)));
 
         return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl });
     }

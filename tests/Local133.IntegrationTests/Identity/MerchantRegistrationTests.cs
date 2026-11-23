@@ -77,6 +77,120 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
         }
     }
 
+    // ---- Nombre en el registro (4.0) ----
+
+    [Fact]
+    public async Task Registro_guarda_el_nombre_normalizado_y_saluda_en_el_correo_de_confirmacion()
+    {
+        var response = await RegisterAsync(CreateClient(), Email, ownerName: "  María   O’Brien  ");
+
+        Assert.StartsWith("/Identity/Account/RegisterConfirmation", Location(response));
+        Assert.Equal("María O'Brien", await OwnerNameAsync(Email));
+        var confirm = WebUtility.HtmlDecode(Factory.Emails.Last(Email).Html);
+        Assert.Contains("¡Hola, María!", confirm);
+        Assert.Contains("Te damos la bienvenida a Local133", confirm);
+    }
+
+    [Fact]
+    public async Task Alta_externa_guarda_el_nombre()
+    {
+        var client = CreateClient();
+        var callback = await StartExternalLoginAsync(client);
+
+        Assert.Equal("/app", Location(await ConfirmExternalAsync(client, callback, ProviderEmail, ownerName: "José Ángel Ruiz")));
+        Assert.Equal("José Ángel Ruiz", await OwnerNameAsync(ProviderEmail));
+        Assert.Contains("Hola, José</h1>", await HtmlAsync(client, "/app"));
+    }
+
+    [Fact]
+    public async Task Alta_externa_propone_el_nombre_del_proveedor()
+    {
+        var client = CreateClient();
+        var html = await HtmlAsync(client, await StartExternalLoginAsync(client));
+
+        Assert.Contains("value=\"Usuario Externo\"", html); // ClaimTypes.Name de FakeExternalAuthHandler
+    }
+
+    [Theory]
+    [InlineData("", OwnerNameMessages.Required)]
+    [InlineData("   ", OwnerNameMessages.Required)]
+    [InlineData("María 123", OwnerNameMessages.Invalid)]
+    [InlineData("...", OwnerNameMessages.Invalid)]
+    [InlineData("<script>", OwnerNameMessages.Invalid)]
+    public async Task Registro_con_nombre_vacio_o_invalido_muestra_error_y_no_crea_cuenta(string ownerName, string message)
+    {
+        var response = await RegisterAsync(CreateClient(), Email, ownerName: ownerName);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(message, WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()));
+        await AssertNoAccountAsync(Email);
+    }
+
+    [Fact]
+    public async Task Registro_con_nombre_de_mas_de_100_caracteres_muestra_error()
+    {
+        var response = await RegisterAsync(CreateClient(), Email, ownerName: new string('a', PersonName.MaxLength + 1));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Tu nombre puede tener hasta 100 caracteres.", WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()));
+        await AssertNoAccountAsync(Email);
+    }
+
+    [Fact]
+    public async Task Alta_externa_sin_nombre_muestra_error_y_no_crea_cuenta()
+    {
+        var client = CreateClient();
+        var callback = await StartExternalLoginAsync(client);
+
+        var response = await ConfirmExternalAsync(client, callback, ProviderEmail, ownerName: "");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(OwnerNameMessages.Required, WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()));
+        await AssertNoAccountAsync(ProviderEmail);
+    }
+
+    [Fact]
+    public async Task Formularios_de_alta_piden_el_nombre_con_validacion_en_cliente()
+    {
+        var client = CreateClient();
+        var register = await HtmlAsync(client, "/Identity/Account/Register");
+        var external = await HtmlAsync(client, await StartExternalLoginAsync(client));
+
+        foreach (var html in new[] { register, external })
+        {
+            Assert.Contains("name=\"Input.OwnerName\"", html);
+            Assert.Contains("autocomplete=\"name\"", html);
+            Assert.Contains($"data-val-required=\"{OwnerNameMessages.Required}\"", html);
+            Assert.Contains($"data-val-regex-pattern=\"{PersonName.Pattern}\"", html);
+            Assert.Contains("data-val-length-max=\"100\"", html);
+            Assert.Contains("data-val-trim", html);
+            // Es el primer campo del formulario.
+            Assert.True(html.IndexOf("name=\"Input.OwnerName\"", StringComparison.Ordinal)
+                < html.IndexOf("name=\"Input.Email\"", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public async Task AccountRegistration_rechaza_un_nombre_invalido_sin_crear_nada()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var user = new Local133.Infrastructure.Identity.ApplicationUser { UserName = Email, Email = Email };
+
+        var result = await scope.ServiceProvider.GetRequiredService<AccountRegistration>().CreateMerchantAsync(user, "123", Password);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(OwnerNameMessages.Invalid, Assert.Single(result.Errors).Description);
+        await AssertNoAccountAsync(Email);
+    }
+
+    private async Task<string?> OwnerNameAsync(string email)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
+        return await db.Merchants.Where(m => m.UserId == userId).Select(m => m.OwnerName).SingleAsync();
+    }
+
     [Theory]
     [InlineData("/terminos", "Términos y condiciones")]
     [InlineData("/aviso-de-privacidad", "Aviso de privacidad")]

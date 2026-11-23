@@ -15,14 +15,15 @@ public static class MerchantEmails
 
     private static readonly CultureInfo Mexico = CultureInfo.GetCultureInfo("es-MX");
 
+    /// <param name="greetingName">Con quién saludar (<c>Merchant.GreetingNameFor</c>); <c>null</c> ⇒ «¡Hola!».</param>
     /// <param name="lastProDay">Último día con Pro (en México).</param>
     /// <param name="extendedExistingPro">Ya tenía Pro pagado vigente: el pago extiende su plan.</param>
     public static string SubscriptionPaidBody(
-        string? businessName, SubscriptionPackage package, decimal amount, DateOnly lastProDay, bool extendedExistingPro,
+        string? greetingName, SubscriptionPackage package, decimal amount, DateOnly lastProDay, bool extendedExistingPro,
         int? founderNumber, string siteBaseUrl)
     {
         var site = siteBaseUrl.Trim().TrimEnd('/');
-        var greeting = string.IsNullOrWhiteSpace(businessName) ? "¡Hola!" : $"¡Hola, {businessName.Trim()}!";
+        var greeting = Greeting(greetingName);
         var until = lastProDay.ToString("d 'de' MMMM 'de' yyyy", Mexico);
         var paragraphs = new List<string>
         {
@@ -59,11 +60,11 @@ public static class MerchantEmails
     /// su paquete y ahí se genera el link de pago: el correo nunca trae una liga de Pey ni el job crea links.
     /// </summary>
     public static SubscriptionReminderMessage SubscriptionReminder(
-        SubscriptionReminder reminder, string? businessName, SystemSettings settings)
+        SubscriptionReminder reminder, string? greetingName, SystemSettings settings)
     {
         ArgumentNullException.ThrowIfNull(reminder);
         ArgumentNullException.ThrowIfNull(settings);
-        var greeting = string.IsNullOrWhiteSpace(businessName) ? "¡Hola!" : $"¡Hola, {businessName.Trim()}!";
+        var greeting = Greeting(greetingName);
         var lastDay = LongDate(reminder.LastProDay);
         var graceDay = reminder.LastGraceDay is { } g ? LongDate(g) : null;
         const string choosePackage = "Entra a «Mi plan» y elige tu paquete para renovar.";
@@ -193,6 +194,9 @@ public static class MerchantEmails
         _ => $"en {daysLeft.ToString(Mexico)} días",
     };
 
+    /// <summary>«¡Hola, María!» o, sin nombre, «¡Hola!».</summary>
+    private static string Greeting(string? name) => string.IsNullOrWhiteSpace(name) ? "¡Hola!" : $"¡Hola, {name.Trim()}!";
+
     private static string LongDate(DateOnly day) => day.ToString("d 'de' MMMM 'de' yyyy", Mexico);
 
     public const string BankAccountActiveSubject = "Tu cuenta ya está activa: ya puedes cobrar · Local133";
@@ -200,13 +204,13 @@ public static class MerchantEmails
     /// <summary>Ruta del botón: la pantalla de cobro (sin sesión, el sitio manda al login y regresa).</summary>
     public const string ChargePath = "/app/cobrar";
 
-    /// <param name="businessName">Nombre del negocio, si ya lo tiene.</param>
+    /// <param name="greetingName">Con quién saludar (<c>Merchant.GreetingNameFor</c>); <c>null</c> ⇒ «¡Hola!».</param>
     /// <param name="maskedClabe">CLABE enmascarada (<c>Clabe.Mask</c>); nunca la completa.</param>
     /// <param name="siteBaseUrl">Base absoluta del sitio.</param>
-    public static string BankAccountActiveBody(string? businessName, string maskedClabe, string siteBaseUrl)
+    public static string BankAccountActiveBody(string? greetingName, string maskedClabe, string siteBaseUrl)
     {
         var site = siteBaseUrl.Trim().TrimEnd('/');
-        var greeting = string.IsNullOrWhiteSpace(businessName) ? "¡Hola!" : $"¡Hola, {businessName.Trim()}!";
+        var greeting = Greeting(greetingName);
         return EmailLayout.Render(new EmailContent(
             BankAccountActiveSubject,
             Preheader: "Tu CLABE quedó lista en CoDi. Entra y haz tu primer cobro.",

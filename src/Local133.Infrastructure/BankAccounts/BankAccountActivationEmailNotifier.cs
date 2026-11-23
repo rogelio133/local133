@@ -46,7 +46,7 @@ internal sealed class BankAccountActivationEmailNotifier(
 
             var recipient = await db.Merchants.IgnoreQueryFilters().AsNoTracking()
                 .Where(m => m.Id == merchantId)
-                .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { m.BusinessName, u.Email })
+                .Join(db.Users, m => m.UserId, u => u.Id, (m, u) => new { m.OwnerName, m.BusinessName, u.Email })
                 .SingleAsync(cancellationToken);
             var clabe = await db.BankAccounts.IgnoreQueryFilters().AsNoTracking()
                 .Where(b => b.MerchantId == merchantId)
@@ -61,7 +61,7 @@ internal sealed class BankAccountActivationEmailNotifier(
             await emailSender.SendEmailAsync(
                 recipient.Email,
                 MerchantEmails.BankAccountActiveSubject,
-                MerchantEmails.BankAccountActiveBody(recipient.BusinessName, Clabe.Mask(clabe), baseUrl));
+                MerchantEmails.BankAccountActiveBody(Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName), Clabe.Mask(clabe), baseUrl));
             logger.LogInformation("Se avisó al vendedor {MerchantId} que su cuenta {Clabe} quedó activa", merchantId, Clabe.Mask(clabe));
         }
         catch (Exception ex)

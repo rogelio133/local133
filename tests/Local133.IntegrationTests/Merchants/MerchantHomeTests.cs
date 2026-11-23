@@ -20,7 +20,7 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         var html = await HomeAsync(Email);
 
         Assert.Contains("data-merchant-status=\"PendingBankAccount\"", html);
-        Assert.Contains("Hola, vendedor@prueba.mx", html);
+        Assert.Contains("Hola, María</h1>", html); // primer nombre de «María López» (4.0)
         AssertStep(html, OnboardingStepKind.CreateAccount, OnboardingStepState.Done);
         AssertStep(html, OnboardingStepKind.RegisterBankAccount, OnboardingStepState.Current);
         AssertStep(html, OnboardingStepKind.BankReview, OnboardingStepState.Pending);
@@ -66,19 +66,30 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
     {
         await CreateMerchantAsync("uno@prueba.mx");
         await CreateMerchantAsync("dos@prueba.mx");
-        await UpdateMerchantAsync("uno@prueba.mx", m => { m.BusinessName = "Tacos Uno"; m.Status = MerchantStatus.Active; });
-        await UpdateMerchantAsync("dos@prueba.mx", m => m.BusinessName = "Jugos Dos");
+        // Uno sin nombre de persona (registrado antes de la 4.0): se saluda con el negocio.
+        await UpdateMerchantAsync("uno@prueba.mx", m => { m.OwnerName = null; m.BusinessName = "Tacos Uno"; m.Status = MerchantStatus.Active; });
+        await UpdateMerchantAsync("dos@prueba.mx", m => { m.OwnerName = "Rosa Pérez"; m.BusinessName = "Jugos Dos"; });
 
         var uno = await GetHomeAsync("uno@prueba.mx");
         var dos = await GetHomeAsync("dos@prueba.mx");
 
-        Assert.Contains("Hola, Tacos Uno", uno);
+        Assert.Contains("Hola, Tacos Uno</h1>", uno);
         Assert.Contains("data-merchant-status=\"Active\"", uno);
         Assert.DoesNotContain("Jugos Dos", uno);
+        Assert.DoesNotContain("Rosa", uno);
 
-        Assert.Contains("Hola, Jugos Dos", dos);
+        Assert.Contains("Hola, Rosa</h1>", dos);
         Assert.Contains("data-merchant-status=\"PendingBankAccount\"", dos);
         Assert.DoesNotContain("Tacos Uno", dos);
+    }
+
+    [Fact]
+    public async Task Sin_nombre_ni_negocio_saluda_con_el_correo()
+    {
+        await CreateMerchantAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.OwnerName = null); // vendedor registrado antes de la 4.0
+
+        Assert.Contains("Hola, vendedor@prueba.mx</h1>", await GetHomeAsync(Email));
     }
 
     // ---- Plan (5.3) ----

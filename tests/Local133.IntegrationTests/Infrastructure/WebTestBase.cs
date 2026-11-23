@@ -16,6 +16,9 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
 {
     public const string Password = "Prueba1234";
 
+    /// <summary>Nombre de la persona con el que se dan de alta los vendedores de prueba (4.0).</summary>
+    public const string OwnerName = "María López";
+
     protected Local133WebFactory Factory { get; } = factory;
 
     public Task InitializeAsync() => Factory.ResetAsync();
@@ -84,9 +87,10 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
         });
 
     protected static Task<HttpResponseMessage> RegisterAsync(
-        HttpClient client, string email, string password = Password, bool acceptLegal = true) =>
+        HttpClient client, string email, string password = Password, bool acceptLegal = true, string ownerName = OwnerName) =>
         PostFormAsync(client, "/Identity/Account/Register", new Dictionary<string, string>
         {
+            ["Input.OwnerName"] = ownerName,
             ["Input.Email"] = email,
             ["Input.Password"] = password,
             ["Input.ConfirmPassword"] = password,
@@ -104,7 +108,7 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
         if (role == Roles.Merchant)
         {
             user.AcceptLegalDocuments(DateTimeOffset.UtcNow);
-            AssertSucceeded(await scope.ServiceProvider.GetRequiredService<AccountRegistration>().CreateMerchantAsync(user, Password));
+            AssertSucceeded(await scope.ServiceProvider.GetRequiredService<AccountRegistration>().CreateMerchantAsync(user, OwnerName, Password));
             return;
         }
 
