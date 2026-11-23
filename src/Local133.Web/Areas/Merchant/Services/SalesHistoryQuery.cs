@@ -60,7 +60,7 @@ public static class SalesHistoryQuery
                 s.Folio,
                 MexicoTime.DateOf(s.CreatedAt),
                 SaleFormats.Time(s.CreatedAt),
-                Sale.ConceptTextOf(s.Concept, merchant.BusinessName),
+                Sale.ConceptTextOf(s.Concept),
                 SaleQrViewModel.FormatAmount(s.Amount),
                 s.Status == SaleStatus.Pending && s.ExpiresAt is { } expiresAt && now >= expiresAt ? SaleStatus.Expired : s.Status,
                 s.Method,

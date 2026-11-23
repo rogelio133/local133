@@ -101,6 +101,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ActivationEmailSentAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("BusinessName")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
@@ -108,9 +112,19 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("LogoKey")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
                     b.Property<string>("OwnerName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShopPhotoKey")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("Status")
                         .IsRequired()

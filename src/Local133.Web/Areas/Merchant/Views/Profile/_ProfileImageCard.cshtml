@@ -1,0 +1,71 @@
+@using Local133.Application.Merchants
+@using Local133.Web.Areas.Merchant.Models
+@model ProfileImageCardViewModel
+@{
+    var hasImage = Model.ImageUrl is not null;
+    var slug = Model.Slug;
+    var alt = Model.IsLogo ? "Logo de tu negocio" : "Foto de tu local";
+}
+<div class="card mb-3" data-profile-image="@slug">
+    <div class="card-body">
+        <h2 class="h6 card-title" id="@slug-title">@Model.Title</h2>
+        <form method="post" action="@Url.Content($"~{Model.UploadUrl}")" enctype="multipart/form-data" novalidate
+              data-image-upload data-disable-on-submit aria-labelledby="@slug-title"
+              data-max-bytes="@MerchantImageRules.MaxUploadBytes" data-output-type="@Model.OutputType">
+            @Html.AntiForgeryToken()
+            <div class="profile-image @(Model.IsLogo ? "profile-image-logo mx-auto" : "profile-image-photo") mb-2">
+                <img class="profile-image-img rounded @(Model.IsLogo ? "object-fit-contain" : "object-fit-cover") @(hasImage ? null : "d-none")"
+                     src="@(Model.ImageUrl is null ? null : Url.Content($"~{Model.ImageUrl}"))" alt="@alt"
+                     data-image-preview data-current-src="@(Model.ImageUrl is null ? null : Url.Content($"~{Model.ImageUrl}"))" />
+                <div class="profile-image-placeholder rounded bg-body-secondary d-flex flex-column align-items-center justify-content-center text-body-secondary @(hasImage ? "d-none" : null)"
+                     data-image-placeholder>
+                    <i class="bi @(Model.IsLogo ? "bi-shop" : "bi-image") fs-1" aria-hidden="true"></i>
+                    <span class="small">@(Model.IsLogo ? "Sin logo" : "Sin foto")</span>
+                </div>
+            </div>
+
+            @if (Model.CanEdit)
+            {
+                <div class="d-flex flex-wrap gap-2">
+                    @if (!Model.IsLogo)
+                    {
+                        @* Cámara trasera del celular; en escritorio se oculta (site.scss, [data-photo-camera]). *@
+                        <label class="btn btn-outline-primary flex-fill" for="@slug-camera" role="button" tabindex="0" data-photo-camera data-image-trigger>
+                            <i class="bi bi-camera me-1" aria-hidden="true"></i> Tomar foto
+                        </label>
+                        <input type="file" id="@slug-camera" name="image" accept="image/*" capture="environment"
+                               class="visually-hidden" tabindex="-1" data-image-input />
+                    }
+                    <label class="btn btn-outline-primary flex-fill" for="@slug-file" role="button" tabindex="0" data-image-trigger>
+                        <i class="bi bi-image me-1" aria-hidden="true"></i> Elegir imagen
+                    </label>
+                    <input type="file" id="@slug-file" name="image" accept="@MerchantImageRules.AcceptedMimeTypes"
+                           class="visually-hidden" tabindex="-1" data-image-input />
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-2" data-image-submit>
+                    <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Guardar @(Model.IsLogo ? "logo" : "foto")
+                </button>
+            }
+
+            <span class="d-block text-danger small mt-1 @(Model.Error is null ? "field-validation-valid" : "field-validation-error")"
+                  data-image-error role="alert">@Model.Error</span>
+            <p class="small text-body-secondary mt-1 mb-0 d-none" data-image-busy role="status">
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> Preparando la imagen…
+            </p>
+            @if (Model.CanEdit)
+            {
+                <div class="form-text">@Model.Hint</div>
+            }
+        </form>
+
+        @if (Model.CanEdit && hasImage)
+        {
+            <form method="post" action="@Url.Content($"~{Model.RemoveUrl}")" data-disable-on-submit data-image-remove-form>
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-link link-danger px-0">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i> Quitar @(Model.IsLogo ? "logo" : "foto")
+                </button>
+            </form>
+        }
+    </div>
+</div>

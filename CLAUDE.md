@@ -50,6 +50,30 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - ExternalLogin propone `ClaimTypes.Name` (o `GivenName` + `Surname`).
   - **Saludo**: `Merchant.GreetingName` / `GreetingNameFor(owner, business)` = primer nombre, luego el negocio, luego `null`. Lo usan Inicio (respaldo final: el correo), `MerchantEmails` (parámetro `greetingName`; respaldo «¡Hola!») y `AccountEmails.ConfirmBody(url, greetingName)`.
   - En pruebas, los vendedores se crean con `WebTestBase.OwnerName` («María López»).
+- **Mi información** (4.1, `/app/mi-informacion`, `ProfileController`, pestaña «Más»):
+  - **Datos**: nombre (`PersonName`), nombre del negocio, teléfono y dirección, con `IMerchantProfile.SaveAsync` (Application/Merchants; Infrastructure/Merchants/MerchantProfileService), que valida con el dominio y llama a `Merchant.UpdateProfile`.
+    - **Nombre del negocio**: `Domain/Merchants/BusinessName`, obligatorio, hasta 120, con los caracteres del concepto del cobro y al menos una letra o número, porque va al inicio de cada concepto. Nunca lleva `·`. El alias de la cuenta bancaria solo lo llena la primera vez y si es válido.
+    - **Dirección**: `Domain/Merchants/MerchantAddress`, texto libre opcional de hasta 200 caracteres en 3 renglones (`\n`). En el cliente, `[MaxLines]` (`Web/Validation/MaxLinesAttribute`, adaptador `maxlines` en `validation.js`).
+    - **Teléfono**: es el **celular de la cuenta** (`AspNetUsers.PhoneNumber`, reglas de `PhoneNumber`). Ya no se edita en `Identity/Account/Manage/Index`, que solo muestra el correo y la liga a «Mi información».
+      - Se guarda en la misma transacción que el vendedor, con `UserManager.SetPhoneNumberAsync`, que renueva el security stamp. Por eso el controlador hace `RefreshSignInAsync` cuando `Saved.PhoneChanged`.
+    - **Correo**: solo lectura, con «Cambiar correo» a `/Identity/Account/Manage/Email`.
+  - **Renombrar el negocio**: `Sale.ConceptTextOf(concept)` corta en el **último** ` · `, así que las ventas viejas se siguen viendo sin el nombre anterior.
+  - **Logo y foto del local**: cada uno tiene su formulario multipart (`POST logo|foto`, `POST logo/quitar|foto/quitar`, campo `image`).
+    - `IMerchantImageProcessor` = `SkiaMerchantImageProcessor`:
+      - logo: PNG con transparencia que cabe en 512 px, sin recortar ni agrandar;
+      - foto: JPEG 80 de 1280 px sobre blanco;
+      - ninguno lleva EXIF.
+    - Reglas y llaves en `MerchantImageRules`: `merchants/{id}/logo-{guid}.png` y `merchants/{id}/local-{guid}.jpg`. `Version` es el guid para `?v=`.
+    - Se sirven **solo al vendedor de la sesión** en `GET /app/mi-informacion/logo|foto` (caché privada inmutable). La ruta pública es de la 5.10.
+    - La carga común de Skia (formato por contenido, 50 MP, 2048 px, EXIF y fondo como parámetro) está en `Infrastructure/Imaging/SkiaImageLoader`. También la usa `SkiaProductPhotoProcessor`.
+    - JS: `wwwroot/js/image-upload.js`, uno por `form[data-image-upload]`:
+      - vista previa;
+      - «Guardar» deshabilitado sin archivo;
+      - tipo y 10 MB;
+      - reduce a 2048 px en `data-output-type`: PNG en el logo, sin fondo blanco.
+  - Un vendedor `Disabled` solo puede leer (`Merchant.CanEditProfile`); cualquier plan edita.
+  - **Inicio**: la tarjeta opcional «Completa tu información» (`data-profile-incomplete`) aparece mientras `!Merchant.HasCompleteProfile(phone)`, es decir, sin nombre del negocio o sin teléfono. No cuenta en «Paso X de N».
+  - **Antiforgery**: un `<form>` con `action` explícito **no** recibe el token del tag helper. Va `@Html.AntiForgeryToken()` a mano. Los helpers de las pruebas toman el token de cualquier formulario, así que cada formulario nuevo se revisa (ver `ProfileTests.Cada_formulario_de_la_pagina_trae_su_token_antiforgery`).
 - Admin: se siembra **al arrancar** (`AdminSeeder`, Web/Identity) si existen `Seed:Admin:Email` y `Seed:Admin:Password` (dev: `dotnet user-secrets set "Seed:Admin:Email" "<correo>" --project src/Local133.Web` y lo mismo con `Seed:Admin:Password`; prod: variables `Seed__Admin__Email` / `Seed__Admin__Password`). Es idempotente: no cambia la contraseña de un admin existente y nunca promueve a un `Merchant`. Las pruebas vacían `Seed:Admin` en `Local133WebFactory`.
 - Inicio del vendedor (`/app`): checklist calculado con `Domain/Merchants/OnboardingChecklist.For(MerchantStatus)`; los textos van en `Areas/Merchant/Models/MerchantHomeViewModel`. Tarjeta del plan (`PlanSummaryViewModel`, `data-plan-tier`) para activos y suspendidos; en el onboarding, aviso de la prueba en el último paso (`data-trial-notice`). Pruebas unitarias en `tests/Local133.UnitTests` (solo Domain, corren en CI).
 - **Suscripción: planes y vigencia** (5.3, `Domain/Subscriptions`):

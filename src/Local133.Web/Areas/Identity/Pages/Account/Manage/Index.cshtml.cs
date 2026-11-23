@@ -3,6 +3,7 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
+using Local133.Application.Auth;
 using Local133.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -10,29 +11,20 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Local133.Web.Areas.Identity.Pages.Account.Manage;
 
-public class IndexModel(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager) : PageModel
+/// <summary>
+/// Perfil de la cuenta: solo el correo. Desde la 4.1 el celular (<c>AspNetUsers.PhoneNumber</c>) se edita en «Mi
+/// información» (<c>/app/mi-informacion</c>), junto con los datos del negocio.
+/// </summary>
+public class IndexModel(UserManager<ApplicationUser> userManager) : PageModel
 {
     [Display(Name = "Correo")]
     public string Username { get; set; }
 
+    /// <summary>Vendedor: se le muestra la liga a «Mi información».</summary>
+    public bool IsMerchant { get; set; }
+
     [TempData]
     public string StatusMessage { get; set; }
-
-    [BindProperty]
-    public InputModel Input { get; set; }
-
-    public class InputModel
-    {
-        [RegularExpression(@"^\d{10}$", ErrorMessage = "Escribe 10 dígitos, sin espacios ni lada internacional.")]
-        [Display(Name = "Celular (10 dígitos)")]
-        public string PhoneNumber { get; set; }
-    }
-
-    private async Task LoadAsync(ApplicationUser user)
-    {
-        Username = await userManager.GetUserNameAsync(user);
-        Input = new InputModel { PhoneNumber = await userManager.GetPhoneNumberAsync(user) };
-    }
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -42,37 +34,8 @@ public class IndexModel(UserManager<ApplicationUser> userManager, SignInManager<
             return NotFound("No se encontró el usuario.");
         }
 
-        await LoadAsync(user);
+        Username = await userManager.GetUserNameAsync(user);
+        IsMerchant = User.IsInRole(Roles.Merchant);
         return Page();
-    }
-
-    public async Task<IActionResult> OnPostAsync()
-    {
-        var user = await userManager.GetUserAsync(User);
-        if (user == null)
-        {
-            return NotFound("No se encontró el usuario.");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            Username = await userManager.GetUserNameAsync(user);
-            return Page();
-        }
-
-        var phoneNumber = await userManager.GetPhoneNumberAsync(user);
-        if (Input.PhoneNumber != phoneNumber)
-        {
-            var setPhoneResult = await userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
-            if (!setPhoneResult.Succeeded)
-            {
-                StatusMessage = "Error: no se pudo guardar el celular.";
-                return RedirectToPage();
-            }
-        }
-
-        await signInManager.RefreshSignInAsync(user);
-        StatusMessage = "Tu perfil se actualizó.";
-        return RedirectToPage();
     }
 }

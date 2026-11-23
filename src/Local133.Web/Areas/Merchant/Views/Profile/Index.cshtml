@@ -1,0 +1,106 @@
+@using Local133.Domain.Merchants
+@using Local133.Web.Areas.Merchant.Controllers
+@using Local133.Web.Areas.Merchant.Models
+@model ProfileViewModel
+@{
+    ViewData["Title"] = "Mi información";
+    var notice = TempData[ProfileController.NoticeKey] as string;
+    var warning = TempData[ProfileController.WarningKey] as string;
+}
+<div class="row justify-content-center" data-profile data-can-edit="@(Model.CanEdit ? "true" : "false")">
+    <div class="col-md-10 col-xl-9">
+        <h1 class="h4 mb-1">Mi información</h1>
+        <p class="text-body-secondary">Los datos de tu negocio. El nombre del negocio aparece en tus cobros y en tus recibos.</p>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-profile-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        @if (warning is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-profile-warning><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @warning</div>
+        }
+        @if (!Model.CanEdit)
+        {
+            <div class="alert alert-secondary" role="status" data-profile-read-only>Tu cuenta está dada de baja: tu información es de solo lectura.</div>
+        }
+
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <form method="post" action="@Url.Content($"~{ProfileUrls.Index}")" data-profile-form data-disable-on-submit>
+                    @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="h6 card-title">Tus datos</h2>
+                            <fieldset disabled="@(!Model.CanEdit)">
+                                <div class="mb-3">
+                                    <label asp-for="Input.OwnerName" class="form-label text-body-secondary"></label>
+                                    <input asp-for="Input.OwnerName" type="text" autocomplete="name" autocapitalize="words"
+                                           maxlength="@PersonName.MaxLength" class="form-control form-control-lg" aria-required="true" data-val-trim />
+                                    <span asp-validation-for="Input.OwnerName" class="d-block text-danger small mt-1"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.BusinessName" class="form-label text-body-secondary"></label>
+                                    <input asp-for="Input.BusinessName" type="text" autocomplete="organization" autocapitalize="words"
+                                           maxlength="@BusinessName.MaxLength" class="form-control form-control-lg" aria-required="true"
+                                           aria-describedby="business-name-help" placeholder="Ej. Tacos Don Ramón" data-val-trim />
+                                    <div class="form-text" id="business-name-help">Lo ve tu cliente en su app del banco al pagarte.</div>
+                                    <span asp-validation-for="Input.BusinessName" class="d-block text-danger small mt-1"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.PhoneNumber" class="form-label text-body-secondary"></label>
+                                    <input asp-for="Input.PhoneNumber" type="tel" inputmode="tel" autocomplete="tel-national"
+                                           maxlength="20" class="form-control form-control-lg" aria-describedby="phone-help"
+                                           placeholder="55 1234 5678" data-val-trim />
+                                    <div class="form-text" id="phone-help">Opcional. 10 dígitos; es el celular de tu cuenta.</div>
+                                    <span asp-validation-for="Input.PhoneNumber" class="d-block text-danger small mt-1"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.Address" class="form-label text-body-secondary"></label>
+                                    <textarea asp-for="Input.Address" rows="3" maxlength="@MerchantAddress.MaxLength" class="form-control"
+                                              autocomplete="street-address" aria-describedby="address-help"
+                                              placeholder="Ej. Tianguis de los martes, pasillo 4"></textarea>
+                                    <div class="form-text" id="address-help">Opcional. Hasta 3 renglones.</div>
+                                    <span asp-validation-for="Input.Address" class="d-block text-danger small mt-1"></span>
+                                </div>
+                            </fieldset>
+
+                            <div class="mb-1">
+                                <span class="form-label d-block text-body-secondary mb-1">Correo</span>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <span class="text-break fw-semibold" data-profile-email>@Model.Email</span>
+                                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Content($"~{ProfileUrls.ChangeEmail}")" data-profile-change-email>
+                                        Cambiar correo
+                                    </a>
+                                </div>
+                                <div class="form-text">Para cambiarlo te mandamos una liga de confirmación al correo nuevo.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.CanEdit)
+                    {
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" data-profile-submit>
+                            <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Guardar cambios
+                        </button>
+                    }
+                </form>
+            </div>
+
+            <div class="col-lg-5">
+                <partial name="_ProfileImageCard" model="ProfileImageCardViewModel.Logo(Model)" />
+                <partial name="_ProfileImageCard" model="ProfileImageCardViewModel.ShopPhoto(Model)" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/image-upload.js" asp-append-version="true"></script>
+}

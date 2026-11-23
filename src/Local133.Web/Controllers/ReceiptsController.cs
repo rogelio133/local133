@@ -55,7 +55,7 @@ public class ReceiptsController(AppDbContext db, TimeProvider clock) : Controlle
             string.IsNullOrWhiteSpace(businessName) ? null : businessName.Trim(),
             sale.Folio,
             SaleQrViewModel.FormatAmount(paidTotal > 0 ? paidTotal : sale.Amount),
-            Sale.ConceptTextOf(sale.Concept, businessName),
+            Sale.ConceptTextOf(sale.Concept),
             sale.PaidAt is { } paidAt ? SaleFormats.DateTime(paidAt, today) : null,
             sale.Items.OrderBy(i => i.Id)
                 .Select(i => new SaleItemView(i.Name, i.Quantity, SaleQrViewModel.FormatAmount(i.UnitPrice), SaleQrViewModel.FormatAmount(i.Amount)))
