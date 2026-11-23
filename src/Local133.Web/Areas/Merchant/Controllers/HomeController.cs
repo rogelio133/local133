@@ -41,9 +41,16 @@ public class HomeController(AppDbContext db, IPlanAccess plans, IChargeUsage usa
             ? ChargeUsageViewModel.From(await usage.GetMonthAsync(merchant.Id, cancellationToken), MexicoTime.Today(now))
             : null;
 
+        // Paso opcional «Completa tu información» (4.1): el teléfono es el celular de la cuenta.
+        var phone = await db.Users.Where(u => u.Id == merchant.UserId).Select(u => u.PhoneNumber).SingleOrDefaultAsync(cancellationToken);
+
         return View(MerchantHomeViewModel.From(merchant, User.Identity?.Name,
             rejection is null ? null : rejection.ErrorMessage ?? MerchantHomeViewModel.DefaultRejection, summary,
-            PlanSummaryViewModel.From(plan.Status, now), plan.TrialDays) with { Usage = usageModel });
+            PlanSummaryViewModel.From(plan.Status, now), plan.TrialDays) with
+        {
+            Usage = usageModel,
+            ProfileIncomplete = merchant.CanEditProfile && !merchant.HasCompleteProfile(phone),
+        });
     }
 
     [HttpGet("mas")]

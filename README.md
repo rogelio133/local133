@@ -10,7 +10,7 @@ Portal para que vendedores informales cobren con CoDi vía la API de Pey. El pla
 | Herramienta | Versión |
 |---|---|
 | .NET SDK | 10.0.401 o superior de la línea 10.0 (ver [global.json](global.json)) |
-| SQL Server | Instancia local, p. ej. SQL Server Express `localhost\SQLEXPRESS`, con autenticación de Windows. **Sin Docker.** |
+| SQL Server | Instancia local, p. ej. SQL Server Express `localhost\SQLEXPRESS`, con autenticación de Windows o mixta (login de SQL). **Sin Docker.** |
 
 ## Primer arranque
 
@@ -20,6 +20,8 @@ dotnet tool restore
 
 # 2. Cadena de conexión en user-secrets (nunca en appsettings)
 dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web
+#    o con login de SQL (autenticación mixta; el login necesita db_owner en Local133):
+#    "Server=localhost\SQLEXPRESS;Database=Local133;User Id=<login>;Password=<contraseña>;TrustServerCertificate=True"
 
 # 3. Crear la base Local133 y aplicar migraciones (EF crea la base si no existe)
 dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web
@@ -28,6 +30,8 @@ dotnet ef database update --project src/Local133.Infrastructure --startup-projec
 dotnet user-secrets set "Seed:Admin:Email" "<correo-admin>" --project src/Local133.Web
 dotnet user-secrets set "Seed:Admin:Password" "<contraseña de 8+ caracteres con un número>" --project src/Local133.Web
 ```
+
+**SQL Server desde otra computadora de la red local**: TCP/IP prendido en el puerto fijo 1433 (Administrador de configuración de SQL Server), autenticación mixta con un login de SQL, red de Windows en perfil *Privado* y una regla de firewall de entrada TCP 1433 solo para `LocalSubnet` en el perfil Privado. La otra computadora usa `Server=<ip-de-este-equipo>,1433;Database=Local133;User Id=<login>;Password=<contraseña>;TrustServerCertificate=True` (con el puerto explícito no hace falta SQL Server Browser). Reserva la IP del equipo en el router.
 
 El seed del admin es idempotente: si el usuario ya existe no cambia su contraseña (cámbiala en `/Identity/Account/Manage`), y nunca convierte en admin el correo de un vendedor. En producción usa las variables de entorno `Seed__Admin__Email` y `Seed__Admin__Password`. Sin ellas no se siembra nada.
 

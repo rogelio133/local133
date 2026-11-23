@@ -226,20 +226,26 @@ public partial class Sale : Entity
     }
 
     /// <summary>
-    /// Lo que escribió el vendedor, sin el nombre del negocio que <see cref="BuildConcept"/> antepone (si el concepto
-    /// empieza con ese negocio y el separador). Si el negocio cambió de nombre, se devuelve el concepto completo.
+    /// Lo que escribió el vendedor, sin el nombre del negocio que <see cref="BuildConcept"/> antepone: lo que sigue al
+    /// <b>último</b> <see cref="ConceptSeparator"/>. El texto del vendedor nunca lleva <c>·</c>
+    /// (<see cref="ConceptTextPattern"/>), así que funciona aunque el negocio haya cambiado de nombre en «Mi
+    /// información» (4.1) o su nombre viejo trajera el separador. Sin separador, el concepto completo.
     /// </summary>
-    public static string? ConceptTextOf(string? concept, string? businessName)
+    public static string? ConceptTextOf(string? concept)
     {
-        if (string.IsNullOrWhiteSpace(concept) || string.IsNullOrWhiteSpace(businessName))
+        if (string.IsNullOrWhiteSpace(concept))
         {
             return concept;
         }
 
-        var prefix = businessName.Trim() + ConceptSeparator;
-        return concept.StartsWith(prefix, StringComparison.Ordinal) && concept.Length > prefix.Length
-            ? concept[prefix.Length..]
-            : concept;
+        var index = concept.LastIndexOf(ConceptSeparator, StringComparison.Ordinal);
+        if (index <= 0)
+        {
+            return concept;
+        }
+
+        var text = concept[(index + ConceptSeparator.Length)..];
+        return string.IsNullOrWhiteSpace(text) ? concept : text;
     }
 
     [GeneratedRegex(ConceptTextPattern)]

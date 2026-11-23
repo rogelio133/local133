@@ -36,6 +36,16 @@
     });
     $.validator.unobtrusive.adapters.addBool('phone');
 
+    // [MaxLines]: a lo más N renglones con texto (los vacíos no cuentan). Misma regla que Web/Validation/MaxLinesAttribute.
+    $.validator.addMethod('maxlines', function (value, element, max) {
+        if (this.optional(element)) {
+            return true;
+        }
+        var lines = String(value).split(/\r\n|\r|\n/).filter(function (line) { return line.trim().length > 0; });
+        return lines.length <= Number(max);
+    });
+    $.validator.unobtrusive.adapters.addSingleVal('maxlines', 'max');
+
     // data-val-trim: las reglas se evalúan sobre el valor sin espacios en los extremos (así "   " cuenta como vacío,
     // igual que [Required] en servidor). Corre después de que unobtrusive crea el validador del formulario.
     $(function () {

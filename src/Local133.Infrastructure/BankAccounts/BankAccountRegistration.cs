@@ -101,9 +101,10 @@ internal sealed class BankAccountRegistration(
         }
 
         var activated = merchant.ApplyBankAccountStatus(registered.CodiStatus) && merchant.Status == MerchantStatus.Active;
-        if (string.IsNullOrWhiteSpace(merchant.BusinessName))
+        // El alias llena el nombre del negocio la primera vez, si sirve para el concepto del cobro (4.1: BusinessName).
+        if (string.IsNullOrWhiteSpace(merchant.BusinessName) && BusinessName.IsValid(alias))
         {
-            merchant.BusinessName = alias;
+            merchant.BusinessName = BusinessName.Normalize(alias);
         }
 
         // Pey la activó en el alta: la prueba de Pro empieza ya, en el mismo guardado.

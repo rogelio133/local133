@@ -72,7 +72,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
             sale.Id,
             sale.Folio,
             amountText,
-            Sale.ConceptTextOf(sale.Concept, merchant.BusinessName),
+            Sale.ConceptTextOf(sale.Concept),
             status,
             sale.Method,
             sale.Source,

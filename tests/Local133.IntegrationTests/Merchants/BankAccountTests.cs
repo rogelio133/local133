@@ -107,6 +107,31 @@ public class BankAccountTests(Local133WebFactory factory) : WebTestBase(factory)
     }
 
     [Theory]
+    [InlineData("Tacos · Don Ramón")]
+    [InlineData("Mary's Tacos")]
+    public async Task Un_alias_que_no_sirve_para_el_concepto_no_llena_el_nombre_del_negocio(string alias)
+    {
+        // 4.1: el nombre del negocio va al inicio de cada concepto; el vendedor lo captura en «Mi información».
+        var client = await LoggedInMerchantAsync(Email);
+
+        await SubmitAsync(client, alias: alias);
+
+        var (merchant, account) = await LoadAsync(Email);
+        Assert.Null(merchant.BusinessName);
+        Assert.Equal(alias, account!.Alias);
+    }
+
+    [Fact]
+    public async Task El_alias_llena_el_nombre_del_negocio_normalizado()
+    {
+        var client = await LoggedInMerchantAsync(Email);
+
+        await SubmitAsync(client, alias: "Tacos   Don Ramón");
+
+        Assert.Equal("Tacos Don Ramón", (await LoadAsync(Email)).Merchant.BusinessName);
+    }
+
+    [Theory]
     [InlineData("012180015826225710")] // dígito verificador incorrecto
     [InlineData("01218001582622571")]  // 17 dígitos
     [InlineData("ABCDEFGHIJKLMNOPQR")]
