@@ -17,7 +17,7 @@ Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento);
   - después: gracia si `LastPeriodKind = Paid` y `ProUntil > MexicoTime.AddDays(now, -GraceDays)`; si no, gratuito.
 
   El plan que se **muestra** en cada fila se calcula exacto con `PlanStatus.For` cargando los periodos de la página. Una prueba de integración compara los dos para todos los estados, con casos borde: prueba con premio encadenado, prueba con pago por delante, regalo del admin, gracia recién vencida y premio vencido.
-- **Vencimiento** = `ProUntil` (prueba, pago o regalo): «próximos 7 días», «próximos 30 días» o «ya venció». Con este filtro la lista se ordena por vencimiento; sin él, por fecha de registro (más reciente primero).
+- **Vencimiento** = `ProUntil` (prueba, pago o regalo): «Próximos 7 días», «Próximos 30 días» o «Ya venció». Con este filtro la lista se ordena por vencimiento; sin él, por fecha de registro (más reciente primero).
 - **Búsqueda** por nombre de la persona, negocio, correo (contiene) o número de cliente exacto. Hasta 100 caracteres.
 - **Datos sensibles:** la CLABE solo con `Clabe.Mask`, el celular de un push solo con `PhoneNumber.Mask`. Sí se muestra el id de la cuenta en Pey (sirve para soporte).
 - El menú del admin marca la opción activa por controlador (Clientes queda activo en todas sus pantallas).
@@ -34,7 +34,7 @@ Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento);
 
 ## Pruebas
 - `dotnet build`: sin advertencias.
-- `dotnet test`: 498 unitarias, 12 de la portada y 634 de integración, todas correctas. **Ojo:** este equipo ya no tiene la instancia `localhost\SQLEXPRESS` (solo LocalDB), así que las de integración se corrieron con `LOCAL133_TEST_DB="Server=(localdb)\MSSQLLocalDB;Database=Local133_Tests;Trusted_Connection=True;TrustServerCertificate=True"`.
+- `dotnet test`: 498 unitarias, 12 de la portada y 634 de integración, todas correctas. Las de integración se corrieron con `LOCAL133_TEST_DB` apuntando a LocalDB, porque se creyó que el equipo ya no tenía `localhost\SQLEXPRESS`. Sí la tiene: el servicio `MSSQL$SQLEXPRESS` (SQL Server 2022) está corriendo, se comprobó el 2026-11-23. Las pruebas pasan con la conexión por defecto (ver la segunda revisión).
 - `dotnet ef migrations has-pending-model-changes`: sin cambios (corrido con `ConnectionStrings__Default` apuntando a LocalDB).
 
 ## Revisión en navegador
@@ -54,6 +54,13 @@ Hecha el 2026-11-23 con Playwright y Edge instalado, a 375, 768 y 1280 px.
   - el placeholder del buscador se cortaba: quedó «Nombre, negocio o correo»;
   - «1 generados» ⇒ «1 generado». Este último no se volvió a ver en el navegador; es solo texto.
 
+### Segunda revisión (2026-11-23, MCP de Playwright)
+- **Pruebas:** `CustomersTests` + `AreaAccessTests`: 33 correctas antes de los cambios y 34 después (se sumó `Plan_en_gracia_no_muestra_dias_de_Pro`). Las 34 pasan con LocalDB y también con la conexión por defecto a `localhost\SQLEXPRESS`, sin `LOCAL133_TEST_DB`.
+- **Navegador:** el MCP de Playwright ya conecta, con Edge, a 375, 768 y 1280 px. Mismo sitio sin Pey, Resend ni jobs, contra la base de desarrollo; solo lectura. Revisado: el listado, la búsqueda al escribir («Tacos»), el filtro de plan «Gracia» (deja `?q=Tacos&plan=gracia` sin recargar), «Vence en 30 días» ordenado por vencimiento, las cuatro pestañas de #20 (CLABE «•••• 5713», ningún número de 18 dígitos en el HTML), el filtro «Pendientes» sin resultados, el Plan de #35 (gracia) y de #34 (Pro, «Quedan 48 días») y el 404 de un cliente inexistente. Sin scroll horizontal; en la consola solo aparece el 404 provocado; ninguna otra respuesta ≥ 400. Se confirmó «1 generado» en singular.
+- **Corregido:**
+  - en la pestaña Plan, un vendedor en **gracia** mostraba «Días de Pro: Hoy es el último día», porque `IsProLike` incluye la gracia y ahí `DaysLeft` vale 0. Ahora la fila solo sale en prueba y Pro; en gracia ya está «Gracia hasta el …» junto a la insignia;
+  - a 1280 px el select de vencimiento cortaba «En los próximos 3…», y no se distinguía 7 de 30. Ahora dice «Próximos 7 días» / «Próximos 30 días». Todavía se corta la «s» final; se ve el número.
+- **Nota:** recién cargada la página, la barra de pestañas a 375 px desborda unos píxeles mientras llegan las fuentes de Google; con ellas cabe (343/343 px). Tiene `overflow-x: auto`, así que no mueve la página.
+
 ## Pendientes
-- Las pruebas de integración usan por defecto `localhost\SQLEXPRESS`, que este equipo ya no tiene: correrlas con `LOCAL133_TEST_DB` (LocalDB) o reinstalar SQL Express. El sitio ya se conecta: `ConnectionStrings:Default` en los user-secrets apunta al SQL Server de la red.
 - Periodos, cargos, pagos, referidos y acciones del plan: 6.2.

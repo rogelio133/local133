@@ -253,6 +253,7 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
 
         var plan = await GetHtmlAsync(admin, $"{ListUrl}/{id}/plan");
         Assert.Contains("data-plan-tier=\"Trial\"", plan);
+        Assert.Contains("data-days-left=\"23\"", plan);
         Assert.Contains("data-plan-coming-soon", plan);
 
         Assert.Contains("data-customer-sales-summary", await GetHtmlAsync(admin, $"{ListUrl}/{id}/ventas"));
@@ -261,6 +262,22 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
         {
             Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{ListUrl}/{id + 1000}{suffix}")).StatusCode);
         }
+    }
+
+    [Fact]
+    public async Task Plan_en_gracia_no_muestra_dias_de_Pro()
+    {
+        var now = DateTimeOffset.UtcNow;
+        await CreateMerchantAsync(Email);
+        await SeedPlanAsync(Email,
+            (SubscriptionPeriodKind.Trial, now.AddDays(-62), now.AddDays(-32)),
+            (SubscriptionPeriodKind.Paid, now.AddDays(-32), now.AddDays(-2)));
+        var id = await MerchantIdAsync(Email);
+
+        var plan = await GetHtmlAsync(await AdminAsync(), $"{ListUrl}/{id}/plan");
+
+        Assert.Contains("data-plan-tier=\"Grace\"", plan);
+        Assert.DoesNotContain("data-days-left", plan);
     }
 
     [Fact]

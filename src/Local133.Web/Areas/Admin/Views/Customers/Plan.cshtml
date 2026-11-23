@@ -26,7 +26,8 @@
                             }
                         </dd>
 
-                        @if (status.IsProLike && Model.DaysLeft is { } daysLeft)
+                        @* En la gracia el Pro ya terminó (DaysLeft vale 0): la fecha de la gracia va junto a la insignia. *@
+                        @if (status.Tier is PlanTier.Trial or PlanTier.Pro && Model.DaysLeft is { } daysLeft)
                         {
                             <dt class="col-sm-4">Días de Pro</dt>
                             <dd class="col-sm-8" data-days-left="@daysLeft">@(daysLeft == 0 ? "Hoy es el último día" : daysLeft == 1 ? "Queda 1 día" : $"Quedan {daysLeft} días")</dd>

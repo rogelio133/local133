@@ -184,8 +184,8 @@ public static class ExpiryFilters
 
     public static string Label(ExpiryFilter filter) => filter switch
     {
-        ExpiryFilter.Within7Days => "En los próximos 7 días",
-        ExpiryFilter.Within30Days => "En los próximos 30 días",
+        ExpiryFilter.Within7Days => "Próximos 7 días",
+        ExpiryFilter.Within30Days => "Próximos 30 días",
         _ => "Ya venció",
     };
 
