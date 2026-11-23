@@ -185,3 +185,6 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Fase 4.0 — Nombre en el registro
 - **Migración `MerchantOwnerName`** (no destructiva): agrega la columna nula `Merchants.OwnerName` (`nvarchar(100)`). Se aplica sola al arrancar; los vendedores existentes quedan sin nombre y conservan el saludo anterior.
 - Sin recursos, App Settings ni secretos nuevos. Los correos de confirmación, cuenta activa, pago de Pro y recordatorios ahora saludan con el nombre (mismos envíos de Resend).
+
+### Fase 6.1 — Clientes en el admin
+- Sin cambios para Azure: sin migraciones, recursos, App Settings ni secretos nuevos. Solo pantallas de lectura en `/admin/clientes` (rol `Admin`) y un JS estático (`wwwroot/js/admin-customer-search.js`) que se publica con el sitio.

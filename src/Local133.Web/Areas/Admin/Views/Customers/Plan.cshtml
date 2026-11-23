@@ -1,0 +1,69 @@
+@using Local133.Domain.Subscriptions
+@model CustomerPlanViewModel
+@{
+    ViewData["Title"] = $"{Model.Header.Name} · Plan";
+    var status = Model.Status;
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <partial name="_CustomerHeader" model="Model.Header" />
+
+        <div class="card mb-3" data-customer-plan-summary data-plan-tier="@status.Tier">
+            <div class="card-body">
+                @if (status.Tier == PlanTier.Onboarding)
+                {
+                    <p class="mb-0 text-body-secondary">La prueba de Pro empieza cuando su cuenta bancaria quede activa.</p>
+                }
+                else
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Plan</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge @AdminLabels.PlanBadge(status.Tier)">@AdminLabels.Plan(status.Tier)</span>
+                            @if (Model.PlanDateText is { } planDate)
+                            {
+                                <span class="small text-body-secondary ms-1">@planDate</span>
+                            }
+                        </dd>
+
+                        @if (status.IsProLike && Model.DaysLeft is { } daysLeft)
+                        {
+                            <dt class="col-sm-4">Días de Pro</dt>
+                            <dd class="col-sm-8" data-days-left="@daysLeft">@(daysLeft == 0 ? "Hoy es el último día" : daysLeft == 1 ? "Queda 1 día" : $"Quedan {daysLeft} días")</dd>
+                        }
+
+                        <dt class="col-sm-4">Inicio de la prueba</dt>
+                        <dd class="col-sm-8">@(Model.TrialStartedText ?? "—")</dd>
+
+                        <dt class="col-sm-4">Último día de Pro</dt>
+                        <dd class="col-sm-8">@(Model.ProUntilText ?? "—")</dd>
+
+                        @if (Model.GraceUntilText is { } grace)
+                        {
+                            <dt class="col-sm-4">Último día de gracia</dt>
+                            <dd class="col-sm-8">@grace</dd>
+                        }
+
+                        <dt class="col-sm-4">Último paquete pagado</dt>
+                        <dd class="col-sm-8">@(Model.LastPackage?.Label() ?? "Ninguno")</dd>
+
+                        <dt class="col-sm-4">Fundador</dt>
+                        <dd class="col-sm-8">@(Model.IsFounder ? $"Sí, lugar {Model.FounderNumber}" : "No")</dd>
+
+                        @if (Model.LockedAnnualPriceText is { } locked)
+                        {
+                            <dt class="col-sm-4">Anual congelado</dt>
+                            <dd class="col-sm-8 mb-0">@locked</dd>
+                        }
+                    </dl>
+                }
+            </div>
+        </div>
+
+        <div class="card" data-plan-coming-soon>
+            <div class="card-body text-body-secondary">
+                Periodos, cargos, pagos y acciones del plan (regalar días, pago manual). <span class="badge text-bg-light border">Fase 6.2</span>
+            </div>
+        </div>
+    </div>
+</div>

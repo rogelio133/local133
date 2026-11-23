@@ -14,9 +14,6 @@ public class HomeController : Controller
     [HttpGet("")]
     public IActionResult Index() => View();
 
-    [HttpGet("clientes")]
-    public IActionResult Customers() => View();
-
     [HttpGet("transacciones")]
     public IActionResult Transactions() => View();
 

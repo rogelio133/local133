@@ -1,0 +1,49 @@
+@model CustomerGeneralViewModel
+@{
+    ViewData["Title"] = $"{Model.Header.Name} · Clientes";
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <partial name="_CustomerHeader" model="Model.Header" />
+
+        <div class="card" data-customer-general>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Nombre</dt>
+                    <dd class="col-sm-8 text-break">@(Model.OwnerName ?? "No capturado")</dd>
+
+                    <dt class="col-sm-4">Negocio</dt>
+                    <dd class="col-sm-8 text-break">@(Model.BusinessName ?? "No capturado")</dd>
+
+                    <dt class="col-sm-4">Correo</dt>
+                    <dd class="col-sm-8 text-break">
+                        @Model.Email
+                        @if (Model.EmailConfirmed)
+                        {
+                            <span class="badge text-bg-success">Confirmado</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-warning">Sin confirmar</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Entra con</dt>
+                    <dd class="col-sm-8">@(Model.ExternalLogins.Count == 0 ? "Correo y contraseña" : string.Join(", ", Model.ExternalLogins))</dd>
+
+                    <dt class="col-sm-4">Registro</dt>
+                    <dd class="col-sm-8">@Model.CreatedAtText</dd>
+
+                    <dt class="col-sm-4">Términos y aviso</dt>
+                    <dd class="col-sm-8">@(Model.LegalAcceptedText ?? "Sin registro")</dd>
+
+                    <dt class="col-sm-4">Estatus</dt>
+                    <dd class="col-sm-8"><span class="badge @AdminLabels.StatusBadge(Model.Header.Status)">@AdminLabels.Status(Model.Header.Status)</span></dd>
+
+                    <dt class="col-sm-4">Correo de cuenta activa</dt>
+                    <dd class="col-sm-8 mb-0">@(Model.ActivationEmailSentText is { } sent ? $"Enviado el {sent}" : "No enviado")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

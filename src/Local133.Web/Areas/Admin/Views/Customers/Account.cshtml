@@ -1,0 +1,62 @@
+@model CustomerAccountViewModel
+@{
+    ViewData["Title"] = $"{Model.Header.Name} · Cuenta";
+    var account = Model.Account;
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <partial name="_CustomerHeader" model="Model.Header" />
+
+        @if (account is null)
+        {
+            <div class="card" data-customer-no-account>
+                <div class="card-body text-center text-body-secondary">
+                    <i class="bi bi-bank display-6" aria-hidden="true"></i>
+                    <p class="mt-2 mb-0">Aún no registra su cuenta bancaria.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (account.ErrorMessage is { } error)
+            {
+                <div class="alert alert-danger" role="alert" data-customer-account-error>
+                    <strong>Pey rechazó la cuenta:</strong> @error
+                </div>
+            }
+
+            <div class="card" data-customer-account>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Estatus CoDi</dt>
+                        <dd class="col-sm-8"><span class="badge @AdminLabels.CodiBadge(account.CodiStatus)" data-codi-status="@account.CodiStatus">@AdminLabels.Codi(account.CodiStatus)</span></dd>
+
+                        <dt class="col-sm-4">Titular</dt>
+                        <dd class="col-sm-8 text-break">@account.HolderName</dd>
+
+                        <dt class="col-sm-4">Tipo de titular</dt>
+                        <dd class="col-sm-8">@AdminLabels.Entity(account.Entity)</dd>
+
+                        <dt class="col-sm-4">CLABE</dt>
+                        <dd class="col-sm-8 font-monospace" data-masked-clabe>@account.MaskedClabe</dd>
+
+                        <dt class="col-sm-4">Alias (negocio)</dt>
+                        <dd class="col-sm-8 text-break">@account.Alias</dd>
+
+                        <dt class="col-sm-4">Id en Pey</dt>
+                        <dd class="col-sm-8 font-monospace small text-break">@account.PeyBankAccountId</dd>
+
+                        <dt class="col-sm-4">Enviada a Pey</dt>
+                        <dd class="col-sm-8">@account.SubmittedAtText</dd>
+
+                        <dt class="col-sm-4">Último cambio de estatus</dt>
+                        <dd class="col-sm-8">@account.StatusUpdatedAtText</dd>
+
+                        <dt class="col-sm-4">Última consulta a Pey</dt>
+                        <dd class="col-sm-8 mb-0">@(account.StatusCheckedAtText ?? "Nunca")</dd>
+                    </dl>
+                </div>
+            </div>
+        }
+    </div>
+</div>

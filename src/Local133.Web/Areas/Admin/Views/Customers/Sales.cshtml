@@ -1,0 +1,85 @@
+@model CustomerSalesViewModel
+@{
+    ViewData["Title"] = $"{Model.Header.Name} · Ventas";
+    var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlFor(page: p)), "Páginas de ventas");
+    var total = Model.Page.TotalCount;
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <partial name="_CustomerHeader" model="Model.Header" />
+
+        <section class="row g-2 mb-3" aria-label="Resumen de ventas" data-customer-sales-summary>
+            <div class="col-6 col-md-3">
+                <div class="card h-100"><div class="card-body py-2">
+                    <div class="small text-body-secondary">Cobrado en total</div>
+                    <div class="fs-5 fw-bold text-nowrap" data-collected-total>@Model.CollectedTotalText</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100"><div class="card-body py-2">
+                    <div class="small text-body-secondary">Cobrado este mes</div>
+                    <div class="fs-5 fw-bold text-nowrap" data-collected-month>@Model.CollectedMonthText</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100"><div class="card-body py-2">
+                    <div class="small text-body-secondary">Ventas pagadas</div>
+                    <div class="fs-5 fw-bold" data-paid-sales>@Model.PaidSalesCount.ToString("N0")</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card h-100"><div class="card-body py-2">
+                    <div class="small text-body-secondary">Cobros del mes</div>
+                    <div class="fs-5 fw-bold" data-month-paid>
+                        @Model.MonthPaidCount.ToString("N0")@(Model.MonthlyLimit is { } limit ? $" de {limit:N0}" : null)
+                    </div>
+                    <div class="small text-body-secondary">@(Model.MonthGeneratedCount == 1 ? "1 generado" : $"{Model.MonthGeneratedCount:N0} generados")</div>
+                </div></div>
+            </div>
+        </section>
+
+        <nav class="d-flex flex-wrap gap-2 mb-2" aria-label="Filtrar por estatus" data-status-filters>
+            @foreach (var filter in SaleStatusFilters.All)
+            {
+                var active = filter == Model.Status;
+                <a class="btn btn-sm rounded-pill @(active ? "btn-primary" : "btn-outline-primary")" href="@Url.Content("~" + Model.UrlFor(filter))"
+                   aria-current="@(active ? "true" : null)" data-status-filter="@(SaleStatusFilters.Slug(filter) ?? "todas")">@SaleStatusFilters.Label(filter)</a>
+            }
+        </nav>
+
+        <p class="small text-body-secondary mb-2" data-sales-count="@total">@(total == 1 ? "1 venta" : $"{total:N0} ventas")</p>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="card" data-sales-no-results>
+                <div class="card-body text-center text-body-secondary">
+                    @(Model.Status == SaleStatusFilter.All ? "Aún no tiene ventas." : "No hay ventas con este estatus.")
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="list-group mb-3">
+                @foreach (var row in Model.Rows)
+                {
+                    <div class="list-group-item d-flex align-items-center gap-3" data-sale-row="@row.Id" data-status="@row.Status">
+                        <i class="bi @SaleStatusText.MethodIcon(row.Method, row.Source) fs-5 text-body-secondary" aria-hidden="true"></i>
+                        <div class="flex-grow-1 text-break">
+                            <div class="small text-body-secondary">Venta @row.Folio · @row.CreatedAtText</div>
+                            <div>@(row.ConceptText ?? "Sin concepto")</div>
+                            <div class="small text-body-secondary">
+                                @SaleStatusText.MethodLabel(row.Method, row.Source)@(row.MaskedPhone is { } phone ? $" · {phone}" : null)
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-semibold text-nowrap">@row.AmountText</div>
+                            <span class="badge @SaleStatusText.BadgeClass(row.Status)">@SaleStatusText.Label(row.Status)</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <partial name="_Pager" model="pager" />
+        }
+    </div>
+</div>

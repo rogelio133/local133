@@ -1,0 +1,79 @@
+@model CustomerListViewModel
+@{
+    ViewData["Title"] = "Clientes";
+    var filters = Model.Filters;
+    var today = SaleFormats.IsoDate(Model.Today);
+    var advanced = filters.Status is not null || filters.Plan is not null || filters.Expiry is not null || filters.From is not null || filters.To is not null;
+}
+<h1 class="h4 mb-3">Clientes</h1>
+
+@* Búsqueda y filtros: un GET normal; admin-customer-search.js lo carga sin recargar. *@
+<form method="get" action="@Url.Content("~" + CustomerUrls.List)" class="card mb-3" role="search"
+      data-customer-search data-results-url="@Url.Content("~" + CustomerUrls.Results)">
+    <div class="card-body">
+        <label class="form-label small mb-1" for="customer-q">Buscar</label>
+        <div class="input-group mb-2">
+            <input class="form-control" type="search" id="customer-q" name="q" value="@filters.Query" maxlength="@CustomerFilters.QueryMaxLength"
+                   placeholder="Nombre, negocio o correo" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
+
+        <button class="btn btn-link btn-sm px-0 d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#customer-filters"
+                aria-expanded="@(advanced ? "true" : "false")" aria-controls="customer-filters">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtros
+        </button>
+        <div class="collapse d-lg-block @(advanced ? "show" : null)" id="customer-filters">
+            <div class="row g-2 pt-2">
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="customer-status">Estatus</label>
+                    <select class="form-select" id="customer-status" name="@MerchantStatusFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var status in MerchantStatusFilters.All)
+                        {
+                            <option value="@MerchantStatusFilters.Slug(status)" selected="@(filters.Status == status)">@AdminLabels.Status(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="customer-plan">Plan</label>
+                    <select class="form-select" id="customer-plan" name="@PlanTierFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var tier in PlanTierFilters.All)
+                        {
+                            <option value="@PlanTierFilters.Slug(tier)" selected="@(filters.Plan == tier)">@AdminLabels.Plan(tier)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="customer-expiry">Vencimiento del Pro</label>
+                    <select class="form-select" id="customer-expiry" name="@ExpiryFilters.QueryKey">
+                        <option value="">Cualquiera</option>
+                        @foreach (var expiry in ExpiryFilters.All)
+                        {
+                            <option value="@ExpiryFilters.Slug(expiry)" selected="@(filters.Expiry == expiry)">@ExpiryFilters.Label(expiry)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="customer-from">Registro desde</label>
+                    <input class="form-control" type="date" id="customer-from" name="desde" max="@today" value="@(filters.From is { } f ? SaleFormats.IsoDate(f) : null)" />
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="customer-to">Registro hasta</label>
+                    <input class="form-control" type="date" id="customer-to" name="hasta" max="@today" value="@(filters.To is { } t ? SaleFormats.IsoDate(t) : null)" />
+                </div>
+            </div>
+            <noscript>
+                <button type="submit" class="btn btn-primary btn-sm mt-2">Aplicar</button>
+            </noscript>
+        </div>
+    </div>
+</form>
+
+<div data-customer-results>
+    <partial name="_CustomerResults" model="Model" />
+</div>
+
+@section Scripts {
+    <script src="~/js/admin-customer-search.js" asp-append-version="true"></script>
+}

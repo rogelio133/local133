@@ -12,6 +12,7 @@ public class AreaAccessTests(Local133WebFactory factory) : WebTestBase(factory)
     [InlineData("/app/cobrar")]
     [InlineData("/admin")]
     [InlineData("/admin/clientes")]
+    [InlineData("/admin/clientes/1")]
     [InlineData("/Identity/Account/Manage")]
     public async Task Sin_sesion_redirige_al_login(string path)
     {

@@ -12,7 +12,9 @@
         "--viewport-size",
         "375,812"
       ],
-      "env": {}
+      "env": {
+        "PATH": "C:\\Program Files\\nodejs;${PATH}"
+      }
     }
   }
 }
