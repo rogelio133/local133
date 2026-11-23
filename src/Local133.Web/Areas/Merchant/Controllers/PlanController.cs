@@ -67,6 +67,16 @@ public class PlanController(
             .ThenByDescending(c => c.Id)
             .ToListAsync(cancellationToken);
 
+        // Aviso de que toca renovar (5.7). Sin link: el vendedor elige su paquete y ahí se genera.
+        var last = await db.Subscriptions.AsNoTracking()
+            .Where(s => s.MerchantId == merchant.Id)
+            .Select(s => new { s.LastPeriodKind, s.LastPackage })
+            .SingleOrDefaultAsync(cancellationToken);
+        var renewal = last is not null && offers.CanPay
+            ? RenewalNoticeViewModel.From(
+                SubscriptionReminders.RenewalNoticeFor(plan.Status, last.LastPeriodKind, last.LastPackage, now), today)
+            : null;
+
         return View(new MyPlanViewModel(
             PlanSummaryViewModel.From(plan.Status, now),
             usageModel,
@@ -74,12 +84,13 @@ public class PlanController(
             MyPlanViewModel.FeaturesFor(settings),
             offers.CanPay,
             merchant.Status == MerchantStatus.Disabled,
-            offers.Offers.Select(o => PlanOfferViewModel.From(o, today)).ToList(),
+            offers.Offers.Select(o => PlanOfferViewModel.From(o, today, last?.LastPackage)).ToList(),
             FounderNoticeFor(offers, settings),
             charges.Where(c => c.Status != SubscriptionChargeStatus.Paid).Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
             charges.Where(c => c.Status == SubscriptionChargeStatus.Paid).Take(PaymentHistorySize)
                 .Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
-            offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null));
+            offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null,
+            renewal));
     }
 
     /// <summary>Crea (o reutiliza) el link del paquete y manda a la página de pago de Pey.</summary>

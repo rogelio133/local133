@@ -98,6 +98,7 @@ public static class PlanBlockedNotices
 /// <param name="Offers">Paquetes; vacío si todavía no puede pagar (onboarding) o está dado de baja.</param>
 /// <param name="FounderNotice">«Eres fundador…» o «Quedan N lugares de fundador»; <c>null</c> si ya no hay.</param>
 /// <param name="HttpsWarning">Solo en Development: el sitio corre por http y Pey rechazaría las URLs de regreso.</param>
+/// <param name="RenewalNotice">Aviso de que toca renovar (5.7): antes del vencimiento, ese día y en la gracia.</param>
 public sealed record MyPlanViewModel(
     PlanSummaryViewModel? Plan,
     ChargeUsageViewModel? Usage,
@@ -109,7 +110,8 @@ public sealed record MyPlanViewModel(
     string? FounderNotice,
     IReadOnlyList<SubscriptionChargeRow> InProgress,
     IReadOnlyList<SubscriptionChargeRow> Payments,
-    string? HttpsWarning)
+    string? HttpsWarning,
+    RenewalNoticeViewModel? RenewalNotice = null)
 {
     /// <summary>Título de la sección de paquetes según el estado: pagar, renovar o agregar tiempo.</summary>
     public string OffersTitle => Plan?.Tier switch
@@ -150,9 +152,64 @@ public sealed record MyPlanViewModel(
 
 public sealed record PlanFeatureRow(string Feature, string Free, string Pro, bool ComingSoon = false);
 
+/// <summary>
+/// Aviso de «Mi plan» de que toca renovar (5.7), con la misma etapa que el recordatorio
+/// (<see cref="SubscriptionReminders.RenewalNoticeFor"/>). No trae link: el vendedor elige su paquete abajo y ahí
+/// nace el link de pago.
+/// </summary>
+/// <param name="IsUrgent">El día del vencimiento y en la gracia (alerta de advertencia).</param>
+public sealed record RenewalNoticeViewModel(string Title, string Message, bool IsUrgent)
+{
+    public static RenewalNoticeViewModel? From(SubscriptionReminder? notice, DateOnly today)
+    {
+        if (notice is null)
+        {
+            return null;
+        }
+
+        var lastDay = SaleFormats.Date(notice.LastProDay, today);
+        var graceDay = notice.LastGraceDay is { } g ? (g == today ? "hoy" : SaleFormats.Date(g, today)) : null;
+        const string choose = "Elige tu paquete para renovar.";
+        return notice.Stage switch
+        {
+            // La tarjeta del plan ya dice cuándo venció y hasta cuándo hay gracia: aquí va la llamada a renovar.
+            SubscriptionReminderStage.Grace => new(
+                graceDay == "hoy" ? "Renueva hoy para no perder Pro" : $"Renueva antes del {graceDay} para no perder Pro",
+                choose,
+                IsUrgent: true),
+            SubscriptionReminderStage.DueToday => new(
+                "Tu plan Pro vence hoy: renuévalo",
+                (graceDay is null ? "" : $"Tienes hasta el {graceDay} sin perder Pro. ") + choose,
+                IsUrgent: true),
+            SubscriptionReminderStage.AnnualUpcoming => new(
+                $"Tu plan anual vence el {lastDay}",
+                $"{choose} Si renuevas el anual antes de que terminen tus días de gracia, conservas tu precio.",
+                IsUrgent: false),
+            SubscriptionReminderStage.Upcoming => notice.EndingKind switch
+            {
+                SubscriptionPeriodKind.Paid => new($"Tu plan Pro vence {When(notice.DaysLeft)}", $"Vence el {lastDay}. {choose}", IsUrgent: false),
+                SubscriptionPeriodKind.Trial => new($"Tu prueba termina {When(notice.DaysLeft)}",
+                    $"Termina el {lastDay}; después pasas al plan gratuito. Elige tu paquete para seguir con Pro.", IsUrgent: false),
+                _ => new($"Tus días de Pro terminan {When(notice.DaysLeft)}",
+                    $"Terminan el {lastDay}; después pasas al plan gratuito. Elige tu paquete para seguir con Pro.", IsUrgent: false),
+            },
+            _ => null,
+        };
+    }
+
+    /// <summary>«en 3 días», «mañana» u «hoy».</summary>
+    private static string When(int daysLeft) => daysLeft switch
+    {
+        <= 0 => "hoy",
+        1 => "mañana",
+        _ => $"en {daysLeft.ToString(CultureInfo.InvariantCulture)} días",
+    };
+}
+
 /// <summary>Un paquete en «Mi plan», con sus textos ya armados.</summary>
 /// <param name="Value">Valor del formulario (nombre del enum).</param>
 /// <param name="Highlight">«Por $796 más llévate el año completo» o «Equivale a $165.83 al mes: 2 meses de regalo».</param>
+/// <param name="IsCurrentPackage">Es el paquete del último pago (insignia «Tu paquete», 5.7).</param>
 public sealed record PlanOfferViewModel(
     string Value,
     string Title,
@@ -161,9 +218,10 @@ public sealed record PlanOfferViewModel(
     string? Highlight,
     string ProUntilText,
     bool IsFounderPrice,
-    bool IsRecommended)
+    bool IsRecommended,
+    bool IsCurrentPackage = false)
 {
-    public static PlanOfferViewModel From(SubscriptionOffer offer, DateOnly today)
+    public static PlanOfferViewModel From(SubscriptionOffer offer, DateOnly today, SubscriptionPackage? currentPackage = null)
     {
         var amount = offer.Quote.Amount;
         // El anual con meses de regalo ya dice cuánto sale al mes en su texto destacado.
@@ -189,7 +247,8 @@ public sealed record PlanOfferViewModel(
             highlight,
             $"Pro hasta el {SaleFormats.Date(offer.LastProDay, today)}",
             offer.IsFounderPrice,
-            offer.Package == SubscriptionPackage.Annual);
+            offer.Package == SubscriptionPackage.Annual,
+            offer.Package == currentPackage);
     }
 
     /// <summary>«$199», o con centavos si los tiene: «$165.83».</summary>

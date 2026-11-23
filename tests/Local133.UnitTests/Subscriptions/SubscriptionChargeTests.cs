@@ -112,13 +112,27 @@ public class SubscriptionChargeTests
     public void Se_reutiliza_solo_pendiente_con_link_del_mismo_paquete_y_monto()
     {
         var quote = SubscriptionPricing.Quote(SubscriptionPackage.OneMonth, Settings);
-        var charge = SubscriptionCharge.Create(7, quote, false, SubscriptionChargeOrigin.Merchant, Mx(2026, 11, 20, 10));
-        Assert.False(charge.CanBeReusedFor(quote)); // sin link
+        var now = Mx(2026, 11, 20, 10);
+        var charge = SubscriptionCharge.Create(7, quote, false, SubscriptionChargeOrigin.Merchant, now);
+        Assert.False(charge.CanBeReusedFor(quote, now, 5)); // sin link
         charge.AttachLink("01PL", "https://pay.pey.mx/01PL");
 
-        Assert.True(charge.CanBeReusedFor(quote));
-        Assert.False(charge.CanBeReusedFor(SubscriptionPricing.Quote(SubscriptionPackage.OneMonth, Settings, isFounder: true)));
-        Assert.False(charge.CanBeReusedFor(SubscriptionPricing.Quote(SubscriptionPackage.Annual, Settings)));
+        Assert.True(charge.CanBeReusedFor(quote, now, 5));
+        Assert.False(charge.CanBeReusedFor(SubscriptionPricing.Quote(SubscriptionPackage.OneMonth, Settings, isFounder: true), now, 5));
+        Assert.False(charge.CanBeReusedFor(SubscriptionPricing.Quote(SubscriptionPackage.Annual, Settings), now, 5));
+    }
+
+    [Fact]
+    public void Se_reutiliza_solo_si_tiene_a_lo_mas_los_dias_de_gracia()
+    {
+        var quote = SubscriptionPricing.Quote(SubscriptionPackage.OneMonth, Settings);
+        var created = Mx(2026, 11, 20, 10);
+        var charge = SubscriptionCharge.Create(7, quote, false, SubscriptionChargeOrigin.Merchant, created);
+        charge.AttachLink("01PL", "https://pay.pey.mx/01PL");
+
+        Assert.True(charge.CanBeReusedFor(quote, created.AddDays(5), 5));
+        Assert.False(charge.CanBeReusedFor(quote, created.AddDays(5).AddMinutes(1), 5));
+        Assert.False(charge.CanBeReusedFor(quote, created.AddMinutes(1), 0)); // sin días de gracia no se reutiliza
     }
 
     // --- Cotización por vendedor y periodo pagado ------------------------------------------------------------------------

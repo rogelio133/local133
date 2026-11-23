@@ -13,7 +13,8 @@ namespace Local133.Infrastructure.Subscriptions;
 /// <summary>
 /// «Mi plan» (5.6): cotiza los paquetes y crea el cargo con su link de pago de Pey (§4 del diseño). El cargo se inserta
 /// antes de llamar a Pey (su id va en <c>clientReferenceId</c> y en la metadata). Un link <c>pending</c> del mismo
-/// paquete y monto se reutiliza. Si Pey no responde, el cargo queda <c>Failed</c>: nadie conoce la URL del link, así
+/// paquete y monto creado en los últimos <c>GraceDays</c> días se reutiliza; uno más viejo se abandona (5.7). El link
+/// solo nace cuando el vendedor elige un paquete: el job diario no crea links. Si Pey no responde, el cargo queda <c>Failed</c>: nadie conoce la URL del link, así
 /// que nadie lo puede pagar, y al reintentar se crea otro.
 /// </summary>
 internal sealed class SubscriptionCheckout(
@@ -77,16 +78,18 @@ internal sealed class SubscriptionCheckout(
         var status = subscription.StatusAt(now, context.Settings.GraceDays);
         var (quote, isFounderPrice) = subscription.QuoteFor(command.Package, context.Settings, status, context.FounderSlotAvailable);
 
+        var reusableSince = SubscriptionCharge.ReusableSince(now, context.Settings.GraceDays);
         var reusable = await db.SubscriptionCharges.IgnoreQueryFilters()
             .Where(c => c.MerchantId == command.MerchantId
                 && c.Status == SubscriptionChargeStatus.Pending
                 && c.Package == quote.Package
                 && c.Amount == quote.Amount
                 && c.PeyPaymentLinkId != null
-                && c.Url != null)
+                && c.Url != null
+                && c.CreatedAt >= reusableSince)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
-        if (reusable is not null && reusable.CanBeReusedFor(quote))
+        if (reusable is not null && reusable.CanBeReusedFor(quote, now, context.Settings.GraceDays))
         {
             logger.LogInformation("Vendedor {MerchantId} reutiliza el link {PaymentLinkId} del cargo {ChargeId} ({Package}, {Amount})",
                 command.MerchantId, reusable.PeyPaymentLinkId, reusable.Id, reusable.Package, reusable.Amount);
@@ -145,8 +148,8 @@ internal sealed class SubscriptionCheckout(
         charge.AttachLink(link.Id, link.Url.AbsoluteUri);
         await db.SaveChangesAsync(CancellationToken.None); // el link ya existe en Pey: no se abandona el guardado
 
-        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Package}, {Amount}, fundador {IsFounderPrice}) con el link {PaymentLinkId}",
-            command.MerchantId, charge.Id, charge.Package, charge.Amount, charge.IsFounderPrice, link.Id);
+        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Origin}, {Package}, {Amount}, fundador {IsFounderPrice}) con el link {PaymentLinkId}",
+            command.MerchantId, charge.Id, charge.Origin, charge.Package, charge.Amount, charge.IsFounderPrice, link.Id);
         return new CheckoutResult.Redirect(charge.Id, link.Url, Reused: false);
     }
 

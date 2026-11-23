@@ -1,6 +1,7 @@
 using Local133.Application.Tenancy;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
+using Local133.Domain.Notifications;
 using Local133.Domain.Payments;
 using Local133.Domain.Products;
 using Local133.Domain.Sales;
@@ -51,6 +52,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
     /// <summary>Transacciones que Pey reportó en los links de la suscripción.</summary>
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
 
+    /// <summary>Avisos al vendedor en el sitio (únicos por vendedor y <c>DedupKey</c>).</summary>
+    public DbSet<Notification> Notifications => Set<Notification>();
+
     /// <summary>Bitácora de webhooks de Pey (sin filtro: no es de un vendedor).</summary>
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();
 
@@ -75,5 +79,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<SubscriptionPeriod>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionCharge>().HasQueryFilter(c => !IsMerchantScoped || c.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionPayment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<Notification>().HasQueryFilter(n => !IsMerchantScoped || n.MerchantId == CurrentMerchantId);
     }
 }

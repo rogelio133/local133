@@ -132,7 +132,7 @@ tests/
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: links de renovación, recordatorios, fin de prueba, baja al gratuito y resumen mensual) · conciliación de links de pago (`conciliar-links`, cada 10 min, 5.6). *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
+- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: recordatorios, fin de prueba, baja al gratuito y resumen mensual; sin crear links, 2026-11-21) · conciliación de links de pago (`conciliar-links`, cada 10 min, 5.6). *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con SkiaSharp. *(Cambio 2026-11-14: antes ImageSharp; ver 3.1.)*
 - **Secretos**: API key y secreto de webhook de Pey en user-secrets / variables de entorno. CLABE enmascarada en UI.
 
@@ -179,7 +179,8 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 3. Detalle de venta con productos en historial y recibo. ✅ *(hecho 2026-11-14, dentro de la 2.8)* — [bitácora](log_plan/fase-2.8-historial-y-recibo.md)
 
 ### Fase 4 — Mi información (≈4 días)
-1. Datos generales: nombre, dirección, teléfono, email, logo y foto del local. El logo y la foto se usan en el recibo con marca y en el catálogo público (5.10).
+0. **Nombre en el registro**: el alta con correo y contraseña y la de Google/Facebook (`ExternalLogin`) piden el nombre de la persona (obligatorio, hasta 100 caracteres, letras con acentos, espacios, `.`, `-` y `'`), con validación en cliente y en servidor. Se guarda en `Merchant.OwnerName` (columna nueva, migración `MerchantOwnerName`, nula para los vendedores ya registrados) desde `AccountRegistration`, en la misma transacción. Con Google/Facebook se propone el nombre que da el proveedor. Se usa en el saludo de Inicio («Hola, María») y en los correos; sin nombre, se queda el respaldo actual (negocio o correo). La 4.1 permite editarlo. *(2026-11-21)*
+1. Datos generales: nombre (el capturado en la 4.0), nombre del negocio, dirección, teléfono, email, logo y foto del local. El logo y la foto se usan en el recibo con marca y en el catálogo público (5.10).
 2. Cuenta bancaria completa: historial de estatus, mensaje de error, reintento/cambio de cuenta (invalida y regenera el QR fijo). El cambio respeta la CLABE única (5.2).
 
 ### Fase 5 — Suscripciones (≈5–6 semanas)
@@ -188,7 +189,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
 1. **Retirar el modelo de comisión**: dominio, base (migración `RemoveCommission`), detalle de venta, textos legales, pruebas y docs; `bankAccountId` obligatorio en QR y push. ✅ *(hecho 2026-11-18)* — [bitácora](log_plan/fase-5.1-retiro-comision.md)
 2. **CLABE única**: se revisa antes de llamar a Pey, con índice único filtrado (`CodiStatus <> 'Error'`) y un mensaje para aclaraciones. La migración se detiene si hay CLABEs repetidas, y la de prueba lo está en las bases de desarrollo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#52-clabe-única)
 3. **Planes y vigencia**: estados `Onboarding`, `Trial`, `Pro`, `Grace` y `Free`, calculados con la historia de periodos; prueba de 30 días al activarse la cuenta; precios y parámetros en `SystemSettings`. La migración les da la prueba a los vendedores activos. ✅ *(hecho 2026-11-19; periodos al instante, en hora de México)* — [bitácora](log_plan/fase-5.3-planes-y-vigencia.md)
-4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
+4. **Avisos en el sitio y correos**: campana, lista y banner, idempotentes por `DedupKey`, con correo opcional por tipo. La base (tabla `Notifications` e `INotificationService` con correo) ya existe desde la 5.7; falta la campana, `/app/avisos`, el banner genérico y conectar los avisos de 80/100 y del pago abonado. — [detalle](actualizaciones/suscripciones_2026_11_18.md#54-avisos-en-el-sitio-y-correos)
 5. **Límites del gratuito**, validados en el servidor:
    - catálogo de solo lectura, carrito bloqueado, recibo sin WhatsApp e historial de 30 días;
    - 100 cobros concretados al mes, sin cortesía, con contador visible y avisos al 80 % y al 100 %;
@@ -202,7 +203,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
    - reutiliza el backend de la [PoC](log_plan/poc-link-de-pago.md) y borra su pantalla.
 
    ✅ *(hecho 2026-11-20; sin el barrido nocturno de links, que se pospuso)* — [bitácora](log_plan/fase-5.6-mi-plan-y-pago.md)
-7. **Recordatorios, gracia y baja al gratuito**: job diario con links de renovación, avisos 15 (anual) y 3 días antes, el día del vencimiento y el día 3 de la gracia, fin de prueba y baja al gratuito. — [detalle](actualizaciones/suscripciones_2026_11_18.md#57-recordatorios-gracia-y-baja-al-gratuito)
+7. **Recordatorios, gracia y baja al gratuito**: job diario (sin crear links: el link nace cuando el vendedor elige paquete) con avisos 15 (anual) y 3 días antes, el día del vencimiento y el día 3 de la gracia, fin de prueba y baja al gratuito. ✅ *(hecho 2026-11-21; con la base de los avisos de la 5.4 y el resumen del día 1 solo en el log hasta la 5.10)* — [bitácora](log_plan/fase-5.7-recordatorios-y-gracia.md)
 8. **Afiliados**:
    - código y liga por vendedor, capturados en el registro;
    - 30 % de un mes para el referido en su primer pago;
@@ -269,6 +270,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
 - [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
+- [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4, y el contenido del resumen mensual con la 5.10.
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

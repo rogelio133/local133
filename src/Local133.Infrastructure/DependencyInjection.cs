@@ -1,4 +1,5 @@
 using Local133.Application.BankAccounts;
+using Local133.Application.Notifications;
 using Local133.Application.Payments;
 using Local133.Application.Products;
 using Local133.Application.Sales;
@@ -9,6 +10,7 @@ using Local133.Application.Webhooks;
 using Local133.Infrastructure.BankAccounts;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Jobs;
+using Local133.Infrastructure.Notifications;
 using Local133.Infrastructure.Payments;
 using Local133.Infrastructure.Persistence;
 using Local133.Infrastructure.Pey;
@@ -85,6 +87,10 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionPaymentRecorder, SubscriptionPaymentRecorder>();
         services.AddScoped<ISubscriptionPaymentReconciliation, SubscriptionPaymentReconciliation>();
         services.AddScoped<ISubscriptionPaymentNotifier, SubscriptionPaymentEmailNotifier>();
+        // Avisos en el sitio con correo opcional, idempotentes por DedupKey (base de la 5.4, adelantada en la 5.7).
+        services.AddScoped<INotificationService, NotificationService>();
+        // Resumen mensual del día 1 (5.7 lo llama; la 5.10 trae el contenido). Por ahora, solo el log.
+        services.TryAddSingleton<IMonthlySummaryNotifier, LoggingMonthlySummaryNotifier>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 
@@ -93,6 +99,7 @@ public static class DependencyInjection
         services.AddScoped<SaleExpirationJob>();
         services.AddScoped<PaymentReconciliationJob>();
         services.AddScoped<PaymentLinkReconciliationJob>();
+        services.AddScoped<SubscriptionDailyJob>();
 
         return services;
     }

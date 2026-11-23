@@ -33,6 +33,9 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
 
         // Lugares de fundador: nunca dos con el mismo número (5.6 lo asigna dentro de una transacción).
         builder.HasIndex(s => s.FounderNumber).IsUnique().HasFilter("[FounderNumber] IS NOT NULL");
+
+        // Job diario de recordatorios (5.7): suscripciones que vencen pronto o vencieron hace poco.
+        builder.HasIndex(s => s.ProUntil);
     }
 }
 

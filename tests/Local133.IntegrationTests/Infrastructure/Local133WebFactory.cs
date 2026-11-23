@@ -55,6 +55,12 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Umbrales del límite del gratuito y del uso justo de Pro detectados tras cada pago (5.5).</summary>
     public RecordingChargeLimitNotifier LimitNotifier { get; } = new();
 
+    /// <summary>Reloj del sitio: la hora real salvo que la prueba lo congele (jobs, 5.7).</summary>
+    public TestClock Clock { get; } = new();
+
+    /// <summary>Meses del resumen mensual que pidió el job diario (5.7).</summary>
+    public RecordingMonthlySummaryNotifier MonthlySummaries { get; } = new();
+
     /// <summary>Secreto Standard Webhooks de prueba (<c>Pey:WebhookSecret</c>).</summary>
     public const string WebhookSecret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
 
@@ -113,6 +119,12 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IChargeLimitNotifier>();
             services.AddSingleton<IChargeLimitNotifier>(LimitNotifier);
 
+            services.RemoveAll<IMonthlySummaryNotifier>();
+            services.AddSingleton<IMonthlySummaryNotifier>(MonthlySummaries);
+
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(Clock);
+
             services.AddTransient<IStartupFilter, ChallengeEndpointsStartupFilter>();
 
             // Proveedor externo falso: las pruebas no dependen de Google/Facebook ni de sus secretos.
@@ -144,6 +156,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Gateway.Reset();
         Notifier.Reset();
         LimitNotifier.Reset();
+        MonthlySummaries.Reset();
+        Clock.Reset();
         var defaults = new FakeExternalUser();
         ExternalUser.ProviderKey = defaults.ProviderKey;
         ExternalUser.Email = defaults.Email;

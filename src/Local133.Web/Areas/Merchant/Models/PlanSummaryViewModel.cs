@@ -34,3 +34,12 @@ public sealed record PlanSummaryViewModel(PlanTier Tier, string Title, string De
         _ => $"Prueba: te quedan {daysLeft} días",
     };
 }
+
+/// <summary>Banner de gracia (5.7). Su botón siempre va a «Mi plan»: ahí se elige el paquete y nace el link de pago.</summary>
+/// <param name="LastGraceDayText">Último día para pagar sin perder Pro («hoy» o «24 de diciembre»).</param>
+public sealed record GraceBannerViewModel(string LastProDayText, string LastGraceDayText)
+{
+    public string DeadlineText => LastGraceDayText == "hoy"
+        ? "Hoy es el último día para pagar sin perder Pro."
+        : $"Paga a más tardar el {LastGraceDayText} para no perder Pro.";
+}
