@@ -19,6 +19,9 @@ public class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
         builder.Property(m => m.Address).HasMaxLength(MerchantAddress.MaxLength);
         builder.Property(m => m.LogoKey).HasMaxLength(Merchant.ImageKeyMaxLength).IsUnicode(false);
         builder.Property(m => m.ShopPhotoKey).HasMaxLength(Merchant.ImageKeyMaxLength).IsUnicode(false);
+        // Código de invitación (5.8): único; la migración lo genera para los vendedores anteriores.
+        builder.Property(m => m.ReferralCode).HasMaxLength(ReferralCode.Length).IsUnicode(false).IsFixedLength();
+        builder.HasIndex(m => m.ReferralCode).IsUnique();
 
         // 1:1 con el usuario. Restrict: borrar un usuario no debe llevarse el historial financiero del vendedor.
         builder.HasOne<ApplicationUser>()

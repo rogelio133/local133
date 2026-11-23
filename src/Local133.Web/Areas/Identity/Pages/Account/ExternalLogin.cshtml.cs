@@ -106,7 +106,12 @@ public class ExternalLoginModel(
         // No tiene cuenta: se le pide confirmar el correo para crearla.
         ReturnUrl = returnUrl;
         ProviderDisplayName = info.ProviderDisplayName;
-        Input = new InputModel { Email = providerEmail, OwnerName = ProviderName(info) };
+        Input = new InputModel
+        {
+            Email = providerEmail,
+            OwnerName = ProviderName(info),
+            ReferralCode = ReferralCookie.Read(Request), // de la liga /r/{código} (5.8)
+        };
         return Page();
     }
 
@@ -130,9 +135,10 @@ public class ExternalLoginModel(
             var emailConfirmed = string.Equals(Input.Email, ProviderEmail(info), StringComparison.OrdinalIgnoreCase);
             var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email, EmailConfirmed = emailConfirmed }
                 .AcceptLegalDocuments(clock.GetUtcNow());
-            var result = await registration.CreateMerchantAsync(user, Input.OwnerName, password: null, info);
+            var result = await registration.CreateMerchantAsync(user, Input.OwnerName, password: null, info, Input.ReferralCode);
             if (result.Succeeded)
             {
+                ReferralCookie.Delete(Response);
                 logger.LogInformation("Usuario {UserId} creado con {LoginProvider}.", user.Id, info.LoginProvider);
 
                 if (emailConfirmed)
@@ -157,7 +163,9 @@ public class ExternalLoginModel(
 
             foreach (var error in result.Errors)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                ModelState.AddModelError(
+                    error.Code == ReferralCodeMessages.UnknownCodeError ? $"{nameof(Input)}.{nameof(Input.ReferralCode)}" : string.Empty,
+                    error.Description);
             }
         }
 

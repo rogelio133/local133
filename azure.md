@@ -188,8 +188,16 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 
 ### Fase 6.1 — Clientes en el admin
 - Sin cambios para Azure: sin migraciones, recursos, App Settings ni secretos nuevos. Solo pantallas de lectura en `/admin/clientes` (rol `Admin`) y un JS estático (`wwwroot/js/admin-customer-search.js`) que se publica con el sitio.
+
 ### Fase 4.1 — Mi información
 - **Migración `MerchantProfile`** (no destructiva): agrega a `Merchants` las columnas nulas `Address` (`nvarchar(200)`), `LogoKey` y `ShopPhotoKey` (`varchar(100)`). Se aplica sola al arrancar.
 - **Archivos nuevos en `IFileStorage`**: el logo (`merchants/{id}/logo-{guid}.png`) y la foto del local (`merchants/{id}/local-{guid}.jpg`), en la misma carpeta `Storage__LocalDirectory` que las fotos de productos. En App Service el disco local no se comparte entre instancias ni sobrevive a todos los despliegues: igual que con los productos, en producción hace falta la implementación para Blob Storage (Fase 7).
 - Subidas de hasta 12 MB por petición (`[RequestSizeLimit]` en el controlador): si se pone un proxy o Front Door delante, permitir ese tamaño de cuerpo.
 - Sin recursos, App Settings ni secretos nuevos.
+
+### Fase 5.8 — Afiliados
+- **Migración `Referrals`** (no destructiva): agrega `Merchants.ReferralCode` (`char(6)`, único) y **le genera un código al azar a cada vendedor existente** dentro de la misma migración (T-SQL con `CRYPT_GEN_RANDOM`, repite si choca). Después crea la tabla `Referrals` y la columna `SubscriptionPeriods.ReferralId` (FK, única filtrada). Se aplica sola al arrancar. En la base local, 30 vendedores quedaron con 30 códigos distintos.
+- **Liga de invitación** `/r/{código}`: se arma con `App__PublicBaseUrl` (o el host de la petición). Con un dominio propio, la liga queda `https://app.local133.com.mx/r/ABC234`.
+- **Cookie** `l133_ref` (30 días, `HttpOnly`, `SameSite=Lax`, `Secure` con HTTPS). Detrás del proxy de App Service se marca `Secure` porque `UseForwardedHeaders` ya respeta `X-Forwarded-Proto`.
+- **Correo**: un aviso más por cada referido que paga (al que invitó). Mismo Resend.
+- Sin recursos, App Settings ni secretos nuevos. Los números (`ReferralRewardDays`, `ReferralRewardsPerYear`, `ReferralWelcomeDiscountRate`) ya estaban en `SystemSettings` desde la 5.3.

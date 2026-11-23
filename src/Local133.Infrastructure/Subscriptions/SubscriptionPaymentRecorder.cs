@@ -26,6 +26,7 @@ namespace Local133.Infrastructure.Subscriptions;
 internal sealed class SubscriptionPaymentRecorder(
     AppDbContext db,
     ISubscriptionPaymentNotifier notifier,
+    ReferralRewardNotifier referralNotifier,
     TimeProvider clock,
     ILogger<SubscriptionPaymentRecorder> logger) : ISubscriptionPaymentRecorder
 {
@@ -57,6 +58,7 @@ internal sealed class SubscriptionPaymentRecorder(
 
         var now = clock.GetUtcNow();
         SubscriptionPaymentCredited? credited = null;
+        ReferralQualification? referral = null;
         SubscriptionPaymentResult result;
 
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
@@ -84,7 +86,7 @@ internal sealed class SubscriptionPaymentRecorder(
             }
             else if (update.Status == PeyPaymentLinkStatus.Paid && charge.IsCoveredBy(charge.Payments.Sum(p => p.Base)))
             {
-                (result, credited) = await CreditAsync(charge, now, cancellationToken);
+                (result, credited, referral) = await CreditAsync(charge, now, cancellationToken);
             }
             else if (update.Status is PeyPaymentLinkStatus.Paid or PeyPaymentLinkStatus.Partial)
             {
@@ -109,10 +111,15 @@ internal sealed class SubscriptionPaymentRecorder(
             await notifier.PaymentCreditedAsync(credited, CancellationToken.None);
         }
 
+        if (referral is not null)
+        {
+            await referralNotifier.NotifyAsync(referral, CancellationToken.None);
+        }
+
         return result;
     }
 
-    private async Task<(SubscriptionPaymentResult, SubscriptionPaymentCredited?)> CreditAsync(
+    private async Task<(SubscriptionPaymentResult, SubscriptionPaymentCredited?, ReferralQualification?)> CreditAsync(
         SubscriptionCharge charge, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var subscription = await db.Subscriptions.IgnoreQueryFilters()
@@ -147,15 +154,24 @@ internal sealed class SubscriptionPaymentRecorder(
             }
         }
 
+        // Primer pago de un referido (5.8): califica y quien lo invitó gana sus días (o quedan pendientes, o se omiten).
+        var referral = await ReferralRewarder.QualifyAsync(db, charge.MerchantId, now, settings, cancellationToken);
+
         await db.SaveChangesAsync(cancellationToken); // para tener el id del periodo
 
         logger.LogInformation("Cargo {ChargeId} del vendedor {MerchantId} abonado: {Package} de {StartsAt:o} a {EndsAt:o}{Founder}",
             charge.Id, charge.MerchantId, charge.Package, period.StartsAt, period.EndsAt,
             founderNumber is { } n ? $", fundador {n.ToString(CultureInfo.InvariantCulture)}" : string.Empty);
+        if (referral is not null)
+        {
+            logger.LogInformation("Referido {ReferralId} calificó: premio {Decision} ({Reason}) para el vendedor {ReferrerId}",
+                referral.ReferralId, referral.Decision, referral.Reason, referral.ReferrerMerchantId);
+        }
 
         return (new SubscriptionPaymentResult.Credited(charge.Id, period.Id, subscription.ProUntil, founderNumber),
             new SubscriptionPaymentCredited(charge.MerchantId, charge.Id, charge.Package, charge.Amount, subscription.ProUntil,
-                extendsPaidPro, founderNumber));
+                extendsPaidPro, founderNumber),
+            referral);
     }
 
     /// <summary>Siguiente lugar de fundador, o <c>null</c> si ya no quedan. Candado de rango sobre los asignados.</summary>

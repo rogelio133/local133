@@ -111,8 +111,15 @@ public sealed record MyPlanViewModel(
     IReadOnlyList<SubscriptionChargeRow> InProgress,
     IReadOnlyList<SubscriptionChargeRow> Payments,
     string? HttpsWarning,
-    RenewalNoticeViewModel? RenewalNotice = null)
+    RenewalNoticeViewModel? RenewalNotice = null,
+    string? WelcomeDiscountNotice = null)
 {
+    /// <summary>Aviso del descuento de bienvenida del referido (5.8): «Te invitaron: tienes $59.70 de descuento…».</summary>
+    public static string? WelcomeDiscountNoticeFor(decimal? discount) =>
+        discount is { } amount && amount > 0
+            ? $"Te invitaron a Local133: tienes {PlanOfferViewModel.Money(amount)} de descuento en tu primer pago de Pro, en el paquete que elijas."
+            : null;
+
     /// <summary>Título de la sección de paquetes según el estado: pagar, renovar o agregar tiempo.</summary>
     public string OffersTitle => Plan?.Tier switch
     {
@@ -144,6 +151,7 @@ public sealed record MyPlanViewModel(
         new("Cobro con productos (carrito)", "—", "Sí"),
         new("Recibo", "Liga para copiar", "WhatsApp y compartir"),
         new("Historial de ventas", $"Últimos {settings.FreeHistoryDays:N0} días", "Completo, con fechas"),
+        new("Invita y gana días de Pro", "Sí", "Sí"),
         new("Vendedores adicionales", "—", "3", ComingSoon: true),
         new("QR impreso del puesto", "—", "Sí", ComingSoon: true),
         new("Reportes", "—", "Sí", ComingSoon: true),
@@ -210,6 +218,7 @@ public sealed record RenewalNoticeViewModel(string Title, string Message, bool I
 /// <param name="Value">Valor del formulario (nombre del enum).</param>
 /// <param name="Highlight">«Por $796 más llévate el año completo» o «Equivale a $165.83 al mes: 2 meses de regalo».</param>
 /// <param name="IsCurrentPackage">Es el paquete del último pago (insignia «Tu paquete», 5.7).</param>
+/// <param name="ListPriceText">Precio antes del descuento de bienvenida (tachado, 5.8); <c>null</c> sin descuento.</param>
 public sealed record PlanOfferViewModel(
     string Value,
     string Title,
@@ -219,7 +228,8 @@ public sealed record PlanOfferViewModel(
     string ProUntilText,
     bool IsFounderPrice,
     bool IsRecommended,
-    bool IsCurrentPackage = false)
+    bool IsCurrentPackage = false,
+    string? ListPriceText = null)
 {
     public static PlanOfferViewModel From(SubscriptionOffer offer, DateOnly today, SubscriptionPackage? currentPackage = null)
     {
@@ -248,7 +258,8 @@ public sealed record PlanOfferViewModel(
             $"Pro hasta el {SaleFormats.Date(offer.LastProDay, today)}",
             offer.IsFounderPrice,
             offer.Package == SubscriptionPackage.Annual,
-            offer.Package == currentPackage);
+            offer.Package == currentPackage,
+            offer.Quote.DiscountAmount > 0 ? Money(offer.Quote.ListPrice) : null);
     }
 
     /// <summary>«$199», o con centavos si los tiene: «$165.83».</summary>

@@ -186,6 +186,60 @@ public static class MerchantEmails
             new NotificationEmail(subject, body, emailTitle, paragraphs, action, PlanPath, ReminderFooter));
     }
 
+    /// <summary>Ruta de «Invita y gana» (5.8).</summary>
+    public const string InvitePath = "/app/invita";
+
+    /// <summary>
+    /// Aviso y correo a quien invitó cuando su referido paga por primera vez (5.8): ganó sus días, los recibe al
+    /// activarse su cuenta o no hubo premio (tope de 12 en 12 meses o cuenta dada de baja).
+    /// </summary>
+    /// <param name="referredName">Primer nombre del referido; <c>null</c> ⇒ «Tu invitado».</param>
+    /// <param name="lastProDay">Último día de Pro después del premio (solo si se otorgó).</param>
+    public static SubscriptionReminderMessage ReferralReward(
+        ReferralRewardDecision decision, ReferralSkipReason? reason, string? greetingName, string? referredName,
+        SystemSettings settings, DateOnly? lastProDay)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var who = string.IsNullOrWhiteSpace(referredName) ? "Tu invitado" : referredName.Trim();
+        var days = settings.ReferralRewardDays == 1 ? "1 día" : $"{settings.ReferralRewardDays.ToString(Mexico)} días";
+        var paragraphs = new List<string> { Greeting(greetingName) };
+        string title, body, subject;
+        switch (decision)
+        {
+            case ReferralRewardDecision.Grant:
+                title = $"¡Ganaste {days} de Pro!";
+                body = lastProDay is { } last
+                    ? $"{who} pagó su plan con tu código. Ahora tienes Pro hasta el {LongDate(last)}."
+                    : $"{who} pagó su plan con tu código.";
+                subject = $"Ganaste {days} de Pro · Local133";
+                paragraphs.Add(body);
+                paragraphs.Add("Sigue invitando: cada persona que pague con tu código te da más días de Pro.");
+                break;
+
+            case ReferralRewardDecision.Pending:
+                title = $"Ganaste {days} de Pro";
+                body = $"{who} pagó su plan con tu código. Tus {days} se suman en cuanto tu cuenta bancaria esté activa, después de tu prueba.";
+                subject = $"Ganaste {days} de Pro · Local133";
+                paragraphs.Add(body);
+                break;
+
+            default:
+                title = $"{who} pagó con tu código";
+                body = reason == ReferralSkipReason.ReferrerDisabled
+                    ? "Tu cuenta está dada de baja, así que esta vez no hubo días de Pro."
+                    : $"Ya ganaste {settings.ReferralRewardsPerYear.ToString(Mexico)} premios en los últimos 12 meses, el máximo: esta vez no hubo días de Pro.";
+                subject = $"{who} pagó con tu código · Local133";
+                paragraphs.Add($"{who} pagó su plan con tu código. ¡Gracias por recomendar Local133!");
+                paragraphs.Add(body);
+                break;
+        }
+
+        return new SubscriptionReminderMessage(
+            title,
+            body,
+            new NotificationEmail(subject, body, title, paragraphs, "Ver mis invitaciones", InvitePath, ReminderFooter));
+    }
+
     /// <summary>«en 3 días», «mañana» u «hoy».</summary>
     private static string When(int daysLeft) => daysLeft switch
     {

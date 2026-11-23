@@ -164,6 +164,7 @@ Consecuencias:
   - el premio solo llega con un pago real;
   - la CLABE única impide que dos cuentas tengan la misma cuenta bancaria;
   - cada vendedor solo puede ser referido una vez.
+- *(5.8, decisiones del usuario del 2026-11-23)* Un código que no existe da error en el campo y no crea la cuenta. Si quien invita sigue en el onboarding (sin suscripción) cuando su referido paga, el premio queda pendiente y se le da al empezar su prueba, después de ella. Detalle en la [bitácora](../log_plan/fase-5.8-afiliados.md).
 - **Pantalla «Invita y gana»** (`/app/invita`): código, liga, botón de WhatsApp (`wa.me` con mensaje), premios ganados y referidos que aún no pagan.
 - **Admin** (Fase 6): referidos de cada vendedor y anulación de un premio.
 
@@ -195,7 +196,7 @@ Los pasos, archivo por archivo, están en la [subfase 5.1 del plan](../PLAN_DESA
 | `SubscriptionPeriods` | `MerchantId`, `Kind` (`Trial`, `Paid`, `ReferralReward`, `AdminGrant`), `StartsAt`, `EndsAt`, `SubscriptionChargeId`, `ReferralId`, `CreatedAt` | Historia de cada día de Pro |
 | `SubscriptionCharges` | `MerchantId`, `Package`, `Months`, `ListPrice`, `DiscountAmount`, `DiscountReason`, `Amount`, `PeyPaymentLinkId` (único), `Url`, `Status`, `Origin` (renovación o vendedor), `CreatedAt`, `PaidAt` | Un link por cargo |
 | `SubscriptionPayments` | `SubscriptionChargeId`, `PeyTransactionId` (único), `PaymentMethod`, `Amount`, `Base`, `Fee`, `ApplicationFee`, `PaidAt` | Lo que reporta Pey |
-| `Referrals` | `ReferrerMerchantId`, `ReferredMerchantId` (único), `Code`, `RegisteredAt`, `QualifiedAt`, `RewardPeriodId`, `SkippedReason` | |
+| `Referrals` | `ReferrerMerchantId`, `ReferredMerchantId` (único), `Code`, `RegisteredAt`, `QualifiedAt`, `RewardedAt`, `SkippedReason` | *(5.8: `RewardedAt` en lugar de `RewardPeriodId`; el periodo apunta al referido con `SubscriptionPeriods.ReferralId`, único)* |
 | `Notifications` | `MerchantId`, `Type`, `Title`, `Body`, `Url`, `CreatedAt`, `ReadAt`, `DedupKey` (único por vendedor) | Avisos en el sitio. `DedupKey` hace idempotente al job |
 | `Merchants` | Nuevos: `ReferralCode` (único), `PublicSlug` (único, opcional), `PublicCatalogEnabled` | |
 | `BankAccounts` | Índice único filtrado de `Clabe` (`CodiStatus <> 'Error'`) | 5.2 |

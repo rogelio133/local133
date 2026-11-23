@@ -209,7 +209,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
    - 30 % de un mes para el referido en su primer pago;
    - 10 días para el que refiere cuando el referido paga, hasta 12 en 12 meses.
 
-   — [detalle](actualizaciones/suscripciones_2026_11_18.md#58-afiliados)
+   ✅ *(hecho 2026-11-23; sin la CLABE única de la 5.2; premio pendiente si quien invita sigue en el onboarding)* — [bitácora](log_plan/fase-5.8-afiliados.md)
 9. **Pro de lanzamiento**: historial completo con búsqueda y exportación a Excel, y corte de caja diario. — [detalle](actualizaciones/suscripciones_2026_11_18.md#59-pro-de-lanzamiento)
 10. **Valor visible**:
     - recibo con marca: logo en Pro, y en el gratuito «Cobrado con Local133» con el código del vendedor;
@@ -245,6 +245,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.5](log_plan/fase-2.5-tiempo-real.md): pago real con el webhook por el túnel HTTPS. La venta 24 ya se concilió en la [2.9](log_plan/fase-2.9-conciliacion.md#conciliación-real-contra-pey-2026-11-18-confirmada-por-el-usuario).
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
+- [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
 **Confirmar con soporte de Pey** (ver también §6):
@@ -270,6 +271,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
 - [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
+- [5.8](log_plan/fase-5.8-afiliados.md): sin la CLABE única (5.2) alguien puede abrir cuentas con su misma CLABE e invitarse; referidos y anulación de premios en el admin (6.2), también para un premio que quedó pendiente por una activación simultánea; referidos y cookie en los textos legales (5.11); revisar en el navegador el aviso pendiente y el premio al activarse.
 - [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4, y el contenido del resumen mensual con la 5.10.
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 

@@ -1,3 +1,4 @@
+using Local133.Domain.Merchants;
 using Local133.Domain.Settings;
 using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
@@ -24,12 +25,13 @@ internal static class TrialStarter
             return null;
         }
 
-        var trialDays = await db.SystemSettings.AsNoTracking()
-            .Where(s => s.Id == SystemSettings.SingletonId)
-            .Select(s => s.TrialDays)
-            .SingleAsync(cancellationToken);
-        var subscription = Subscription.StartTrial(merchantId, now, trialDays);
+        var settings = await db.SystemSettings.AsNoTracking().SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
+        var subscription = Subscription.StartTrial(merchantId, now, settings.TrialDays);
         db.Subscriptions.Add(subscription);
+
+        // Premios de referidos que pagaron mientras su cuenta estaba en revisión (5.8): se encadenan después de la
+        // prueba. Ya se le avisó al calificar cada uno.
+        await ReferralRewarder.GrantPendingAsync(db, subscription, MerchantStatus.Active, now, settings, cancellationToken);
         return subscription;
     }
 }

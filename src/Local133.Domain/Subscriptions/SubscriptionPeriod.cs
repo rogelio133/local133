@@ -23,6 +23,9 @@ public class SubscriptionPeriod : Entity
     /// <summary>Cargo que lo pagó (solo en periodos <see cref="SubscriptionPeriodKind.Paid"/>).</summary>
     public int? SubscriptionChargeId { get; set; }
 
+    /// <summary>Referido que lo ganó (solo en periodos <see cref="SubscriptionPeriodKind.ReferralReward"/>, 5.8).</summary>
+    public int? ReferralId { get; set; }
+
     /// <summary>El periodo cubre ese instante.</summary>
     public bool Covers(DateTimeOffset instant) => StartsAt <= instant && instant < EndsAt;
 

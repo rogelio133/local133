@@ -1,0 +1,112 @@
+@using Local133.Web.Areas.Merchant.Models
+@model InviteViewModel
+@{
+    ViewData["Title"] = "Invita y gana";
+}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-invite>
+        <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
+        <h1 class="h4 mb-1">Invita y gana</h1>
+        <p class="text-body-secondary mb-3">
+            Por cada vendedor que pague Pro con tu código ganas <strong>@ReferralRow.DaysText(Model.RewardDays) de Pro</strong>.
+            Quien se registra con tu código tiene @Model.DiscountText de descuento en su primer pago.
+        </p>
+
+        @if (Model.IsDisabled)
+        {
+            <div class="alert alert-secondary" role="status" data-invite-disabled>
+                Tu cuenta está dada de baja: tus invitados conservan su descuento, pero ya no ganas días de Pro.
+            </div>
+        }
+        else if (Model.IsOnboarding)
+        {
+            <div class="alert alert-info small" role="status" data-invite-onboarding>
+                Ya puedes invitar. Si alguien paga antes de que se active tu cuenta bancaria, tus días de Pro se suman al
+                terminar tu prueba.
+            </div>
+        }
+
+        <div class="card mb-3 border-primary">
+            <div class="card-body text-center">
+                <p class="small text-body-secondary mb-1">Tu código de invitación</p>
+                <p class="display-6 fw-bold font-monospace mb-3 invite-code" data-invite-code>@Model.Code</p>
+                <div class="d-grid gap-2 mx-auto invite-share" data-receipt-share data-receipt-url="@Model.Url" data-receipt-message="@Model.Message"
+                     data-share-title="Invitación a Local133" data-copy-failed="No pudimos copiar la liga. Selecciónala en el campo y cópiala.">
+                    <label class="visually-hidden" for="invite-url">Tu liga de invitación</label>
+                    <input class="form-control text-center" type="text" readonly value="@Model.Url" id="invite-url" data-receipt-url-field data-invite-url />
+                    <a class="btn btn-success" href="@Model.WhatsAppUrl" target="_blank" rel="noopener noreferrer"
+                       data-desktop-href="@Model.WhatsAppAppUrl" data-receipt-whatsapp data-invite-whatsapp>
+                        <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Invitar por WhatsApp
+                    </a>
+                    <p class="small text-body-secondary mb-0 d-none" data-receipt-whatsapp-web>
+                        <span>¿No se abre la app de WhatsApp? Usa</span>
+                        <a class="text-nowrap" href="@Model.WhatsAppWebUrl" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-link>WhatsApp Web</a>
+                    </p>
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-native-share>
+                            <i class="bi bi-share me-1" aria-hidden="true"></i> Compartir
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-copy>
+                            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i> Copiar liga
+                        </button>
+                    </div>
+                    <p class="small text-success mb-0 d-none" role="status" data-receipt-copied>Liga copiada.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row row-cols-2 g-3 mb-3">
+            <div class="col">
+                <div class="card card-body h-100 text-center" data-invite-days>
+                    <span class="fs-3 fw-bold">@Model.DaysEarned</span>
+                    <span class="small text-body-secondary">días de Pro ganados</span>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card card-body h-100 text-center" data-invite-rewards>
+                    <span class="fs-3 fw-bold">@Model.RewardsInWindow <span class="fs-6 fw-normal text-body-secondary">de @Model.RewardsPerYear</span></span>
+                    <span class="small text-body-secondary">premios en los últimos 12 meses</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3" data-invite-referrals>
+            <div class="card-header fw-semibold">Tus invitados</div>
+            @if (Model.Referrals.Count == 0)
+            {
+                <div class="card-body small text-body-secondary" data-invite-empty>
+                    Aún nadie se registra con tu código. Compártelo con otros vendedores de tu tianguis o mercado.
+                </div>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var row in Model.Referrals)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2" data-invite-referral="@row.State">
+                            <span class="text-break">
+                                <span class="d-block">@row.Name</span>
+                                <span class="d-block small text-body-secondary">@row.RegisteredText</span>
+                            </span>
+                            <span class="badge @row.BadgeClass text-wrap text-end">@row.StatusText</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Cómo funciona</div>
+            <ol class="list-group list-group-flush list-group-numbered small">
+                <li class="list-group-item">Comparte tu liga o tu código con otros vendedores.</li>
+                <li class="list-group-item">Se registran con tu código y tienen @Model.DiscountText de descuento en su primer pago de Pro.</li>
+                <li class="list-group-item">Cuando pagan por primera vez, ganas @ReferralRow.DaysText(Model.RewardDays) de Pro, también si estás en el plan gratuito.</li>
+                <li class="list-group-item">Puedes ganar hasta @Model.RewardsPerYear premios en 12 meses. Cada vendedor solo puede registrarse con un código.</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/receipt-share.js" asp-append-version="true"></script>
+}

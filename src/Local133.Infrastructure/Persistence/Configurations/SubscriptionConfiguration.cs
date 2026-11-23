@@ -50,6 +50,10 @@ public class SubscriptionPeriodConfiguration : IEntityTypeConfiguration<Subscrip
         // Periodo pagado ⇒ el cargo que lo pagó (Restrict: el historial no se borra en cascada).
         builder.HasOne<SubscriptionCharge>().WithMany().HasForeignKey(p => p.SubscriptionChargeId).OnDelete(DeleteBehavior.Restrict);
 
+        // Premio de referido ⇒ el referido que lo ganó (5.8): a lo más un premio por referido.
+        builder.HasOne<Referral>().WithMany().HasForeignKey(p => p.ReferralId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(p => p.ReferralId).IsUnique().HasFilter("[ReferralId] IS NOT NULL");
+
         // Estado del plan y jobs: periodos del vendedor por fin.
         builder.HasIndex(p => new { p.MerchantId, p.EndsAt });
     }

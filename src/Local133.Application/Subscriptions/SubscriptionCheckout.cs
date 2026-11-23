@@ -31,8 +31,11 @@ public sealed record StartCheckoutCommand(int MerchantId, SubscriptionPackage Pa
 
 /// <param name="CanPay">Ya tiene suscripción (la prueba empezó) y no está dado de baja.</param>
 /// <param name="FounderSlotsLeft">Lugares de fundador que quedan (0 si ya no hay o si ya es fundador).</param>
+/// <param name="WelcomeDiscount">
+/// Descuento de bienvenida del referido en su primer pago (5.8), ya incluido en los precios; <c>null</c> si no tiene.
+/// </param>
 public sealed record SubscriptionOffersResult(
-    bool CanPay, IReadOnlyList<SubscriptionOffer> Offers, bool IsFounder, int FounderSlotsLeft);
+    bool CanPay, IReadOnlyList<SubscriptionOffer> Offers, bool IsFounder, int FounderSlotsLeft, decimal? WelcomeDiscount = null);
 
 public abstract record CheckoutResult
 {

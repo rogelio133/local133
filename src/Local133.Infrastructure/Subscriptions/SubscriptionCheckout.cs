@@ -50,8 +50,11 @@ internal sealed class SubscriptionCheckout(
             return new SubscriptionOffersResult(false, [], context.Subscription?.IsFounder ?? false, context.FounderSlotsLeft);
         }
 
-        var offers = SubscriptionOffers.For(context.Subscription, context.Settings, clock.GetUtcNow(), context.FounderSlotAvailable);
-        return new SubscriptionOffersResult(true, offers, context.Subscription.IsFounder, context.FounderSlotsLeft);
+        var offers = SubscriptionOffers.For(
+            context.Subscription, context.Settings, clock.GetUtcNow(), context.FounderSlotAvailable, context.WelcomeDiscount);
+        var discount = offers.Select(o => o.Quote.DiscountAmount).Where(d => d > 0).DefaultIfEmpty().Max();
+        return new SubscriptionOffersResult(true, offers, context.Subscription.IsFounder, context.FounderSlotsLeft,
+            discount > 0 ? discount : null);
     }
 
     public async Task<CheckoutResult> StartAsync(StartCheckoutCommand command, CancellationToken cancellationToken = default)
@@ -76,7 +79,8 @@ internal sealed class SubscriptionCheckout(
 
         var now = clock.GetUtcNow();
         var status = subscription.StatusAt(now, context.Settings.GraceDays);
-        var (quote, isFounderPrice) = subscription.QuoteFor(command.Package, context.Settings, status, context.FounderSlotAvailable);
+        var (quote, isFounderPrice) = subscription.QuoteFor(
+            command.Package, context.Settings, status, context.FounderSlotAvailable, context.WelcomeDiscount);
 
         var reusableSince = SubscriptionCharge.ReusableSince(now, context.Settings.GraceDays);
         var reusable = await db.SubscriptionCharges.IgnoreQueryFilters()
@@ -181,8 +185,13 @@ internal sealed class SubscriptionCheckout(
         var assigned = await db.Subscriptions.IgnoreQueryFilters().CountAsync(s => s.FounderNumber != null, cancellationToken);
         var slotsLeft = Math.Max(0, settings.FounderSlots - assigned);
         var isFounder = subscription?.IsFounder ?? false;
+
+        // Descuento de bienvenida (5.8): se registró con un código y todavía no se le abona ningún pago.
+        var welcomeDiscount = await db.Referrals.IgnoreQueryFilters()
+            .AnyAsync(r => r.ReferredMerchantId == merchantId && r.QualifiedAt == null, cancellationToken);
+
         return new CheckoutContext(merchantStatus, subscription, settings, FounderSlotAvailable: !isFounder && slotsLeft > 0,
-            FounderSlotsLeft: isFounder ? 0 : slotsLeft);
+            FounderSlotsLeft: isFounder ? 0 : slotsLeft, welcomeDiscount);
     }
 
     private sealed record CheckoutContext(
@@ -190,5 +199,6 @@ internal sealed class SubscriptionCheckout(
         Subscription? Subscription,
         SystemSettings Settings,
         bool FounderSlotAvailable,
-        int FounderSlotsLeft);
+        int FounderSlotsLeft,
+        bool WelcomeDiscount);
 }

@@ -52,6 +52,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
     /// <summary>Transacciones que Pey reportó en los links de la suscripción.</summary>
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
 
+    /// <summary>Vendedores que se registraron con el código de otro (5.8).</summary>
+    public DbSet<Referral> Referrals => Set<Referral>();
+
     /// <summary>Avisos al vendedor en el sitio (únicos por vendedor y <c>DedupKey</c>).</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
 
@@ -79,6 +82,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<SubscriptionPeriod>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionCharge>().HasQueryFilter(c => !IsMerchantScoped || c.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionPayment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        // Un referido lo ven los dos vendedores: quien invitó («Invita y gana») y el referido (su descuento).
+        modelBuilder.Entity<Referral>().HasQueryFilter(r =>
+            !IsMerchantScoped || r.ReferrerMerchantId == CurrentMerchantId || r.ReferredMerchantId == CurrentMerchantId);
         modelBuilder.Entity<Notification>().HasQueryFilter(n => !IsMerchantScoped || n.MerchantId == CurrentMerchantId);
     }
 }

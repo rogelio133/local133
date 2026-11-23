@@ -22,6 +22,15 @@ public enum NotificationType
 
     /// <summary>Bajó al plan gratuito.</summary>
     DowngradedToFree,
+
+    /// <summary>Un referido pagó: ganó días de Pro (5.8).</summary>
+    ReferralRewardGranted,
+
+    /// <summary>Un referido pagó; sus días llegan cuando empiece su prueba (5.8).</summary>
+    ReferralRewardPending,
+
+    /// <summary>Un referido pagó, pero no hubo premio (tope o dado de baja, 5.8).</summary>
+    ReferralRewardSkipped,
 }
 
 /// <summary>
