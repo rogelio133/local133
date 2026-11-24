@@ -406,3 +406,43 @@ body {
 .invite-share {
   max-width: 28rem;
 }
+
+// --- Valor visible (5.10) --------------------------------------
+/* Recibo con marca: el logo cabe en 6rem sin deformarse (PNG con transparencia). */
+.receipt-logo {
+  max-height: 6rem;
+  max-width: 12rem;
+  object-fit: contain;
+}
+
+/* Catálogo público: portada con la foto del local y el logo encima. */
+.storefront-cover {
+  aspect-ratio: 16 / 7;
+  max-height: 15rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+.storefront-logo {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+  background-color: var(--bs-body-bg);
+}
+
+.storefront-product-img,
+.storefront-product-placeholder {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.storefront-product-info {
+  min-width: 0;
+}
+
+/* La liga del catálogo se lee completa (se parte en cualquier carácter). */
+.storefront-link {
+  word-break: break-all;
+}

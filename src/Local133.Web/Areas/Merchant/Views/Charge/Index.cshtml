@@ -56,6 +56,14 @@
                     </button>
                 </form>
             }
+            @if (Model.MissingCatalogText is { } missingCatalog)
+            {
+                @* Lo que te pierdes (5.10): en el gratuito, el catálogo que ya tiene y no puede usar para cobrar. *@
+                <p class="small text-body-secondary text-center mt-3 mb-0" data-charge-missing-catalog>
+                    <i class="bi bi-cart3 me-1" aria-hidden="true"></i> @missingCatalog
+                    <a href="@Url.Content("~" + PlanUrls.Plan)">Con Pro cobras con ellos.</a>
+                </p>
+            }
         </div>
     </div>
 </div>

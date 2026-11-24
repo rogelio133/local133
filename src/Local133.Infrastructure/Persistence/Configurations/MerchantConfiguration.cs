@@ -22,6 +22,9 @@ public class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
         // Código de invitación (5.8): único; la migración lo genera para los vendedores anteriores.
         builder.Property(m => m.ReferralCode).HasMaxLength(ReferralCode.Length).IsUnicode(false).IsFixedLength();
         builder.HasIndex(m => m.ReferralCode).IsUnique();
+        // Catálogo público (5.10): slug único entre los que tienen uno; se conserva al dejar de publicar.
+        builder.Property(m => m.PublicSlug).HasMaxLength(PublicSlug.MaxLength).IsUnicode(false);
+        builder.HasIndex(m => m.PublicSlug).IsUnique().HasFilter("[PublicSlug] IS NOT NULL");
 
         // 1:1 con el usuario. Restrict: borrar un usuario no debe llevarse el historial financiero del vendedor.
         builder.HasOne<ApplicationUser>()

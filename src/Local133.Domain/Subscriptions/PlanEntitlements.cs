@@ -3,7 +3,8 @@ namespace Local133.Domain.Subscriptions;
 /// <summary>
 /// Lo que permite cada estado del plan (§2 del diseño de suscripciones). Es solo la parte del plan:
 /// <c>MerchantStatus</c> manda sobre él (un vendedor suspendido o dado de baja no cobra en ninguno), y la 5.5 aplica
-/// los dos juntos en el servidor. En el onboarding el catálogo es editable y el cobro lo frena el estatus del vendedor.
+/// los dos juntos en el servidor. <see cref="HasBrandedReceipt"/> (5.10): el recibo público lleva el logo del negocio;
+/// sin él dice «Cobrado con Local133». En el onboarding el catálogo es editable y el cobro lo frena el estatus del vendedor.
 /// </summary>
 public sealed record PlanEntitlements(
     bool CanEditCatalog,
@@ -13,7 +14,8 @@ public sealed record PlanEntitlements(
     bool CanExportHistory,
     bool HasDailyCashCut,
     bool CanPublishCatalog,
-    bool HasMonthlyChargeLimit)
+    bool HasMonthlyChargeLimit,
+    bool HasBrandedReceipt)
 {
     public static PlanEntitlements Pro { get; } = new(
         CanEditCatalog: true,
@@ -23,7 +25,8 @@ public sealed record PlanEntitlements(
         CanExportHistory: true,
         HasDailyCashCut: true,
         CanPublishCatalog: true,
-        HasMonthlyChargeLimit: false);
+        HasMonthlyChargeLimit: false,
+        HasBrandedReceipt: true);
 
     public static PlanEntitlements Free { get; } = new(
         CanEditCatalog: false,
@@ -33,7 +36,8 @@ public sealed record PlanEntitlements(
         CanExportHistory: false,
         HasDailyCashCut: false,
         CanPublishCatalog: false,
-        HasMonthlyChargeLimit: true);
+        HasMonthlyChargeLimit: true,
+        HasBrandedReceipt: false);
 
     public static PlanEntitlements For(PlanTier tier) => tier switch
     {

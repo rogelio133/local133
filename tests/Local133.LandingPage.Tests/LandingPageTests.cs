@@ -31,6 +31,20 @@ public class LandingPageTests
         Assert.Contains($"href=\"{AppUrl}\" target=\"_blank\" rel=\"noopener\">Empieza a cobrar</a>", html);
     }
 
+    [Theory]
+    [InlineData("?codigo=ABC234", AppUrl + "/r/ABC234")]
+    [InlineData("?codigo=abc-234", AppUrl + "/r/ABC234")]
+    [InlineData("?codigo=ABC10I", AppUrl)]
+    [InlineData("?codigo=%3Cscript%3E", AppUrl)]
+    [InlineData("?codigo=", AppUrl)]
+    public async Task Con_codigo_de_invitacion_el_boton_va_a_la_liga_de_invitacion(string query, string expectedHref)
+    {
+        using var factory = CreateFactory();
+        var html = await factory.CreateClient().GetStringAsync("/" + query);
+
+        Assert.Contains($"href=\"{expectedHref}\" target=\"_blank\" rel=\"noopener\">Empieza a cobrar</a>", html);
+    }
+
     [Fact]
     public async Task Con_varias_palabras_pinta_la_primera_y_carga_la_animacion()
     {

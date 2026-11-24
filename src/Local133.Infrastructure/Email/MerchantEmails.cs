@@ -240,6 +240,57 @@ public static class MerchantEmails
             new NotificationEmail(subject, body, title, paragraphs, "Ver mis invitaciones", InvitePath, ReminderFooter));
     }
 
+    /// <summary>Ruta del botón del resumen mensual en Pro: el historial de ventas.</summary>
+    public const string SalesPath = "/app/ventas";
+
+    /// <summary>
+    /// Resumen del mes que terminó (5.10, §7): lo cobrado, la comisión que habría cobrado una terminal (estimación) y el
+    /// precio de Pro. En Pro, prueba o gracia el botón va a las ventas; en el gratuito, a «Mi plan» con lo que se pierde.
+    /// </summary>
+    /// <param name="month">Día 1 del mes (en México).</param>
+    /// <param name="isFree">El vendedor está en el gratuito hoy.</param>
+    public static SubscriptionReminderMessage MonthlySummary(
+        Domain.Subscriptions.MonthlySummary summary, DateOnly month, bool isFree, string? greetingName)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        var monthName = month.ToString("MMMM", Mexico);
+        var sales = summary.SalesCount == 1 ? "1 venta" : $"{summary.SalesCount.ToString("#,0", Mexico)} ventas";
+        var collected = $"En {monthName} cobraste {Money(summary.Collected)} en {sales}.";
+        var rate = (summary.FeeRate * 100).ToString("0.##", Mexico);
+        var fee = summary.EstimatedTerminalFee >= 1
+            ? $"Con una terminal habrías pagado unos {Money(summary.EstimatedTerminalFee)} de comisión (estimación con {rate} % + IVA)."
+            : null;
+        var price = Money(summary.ProMonthlyPrice);
+        var plan = isFree
+            ? $"Con Pro, por {price} al mes, cobras con tus productos, ves tu historial completo y tienes tu catálogo en línea."
+            : $"Tu plan Pro cuesta {price} al mes.";
+
+        var body = string.Join(' ', new[] { collected, fee, plan }.Where(p => p is not null));
+        var title = $"Tu resumen de {monthName}";
+        var paragraphs = new List<string> { Greeting(greetingName), collected };
+        if (fee is not null)
+        {
+            paragraphs.Add(fee);
+        }
+
+        paragraphs.Add(plan);
+        return new SubscriptionReminderMessage(
+            title,
+            body,
+            new NotificationEmail(
+                $"Tu resumen de {monthName} · Local133",
+                collected,
+                $"Así te fue en {monthName}",
+                paragraphs,
+                isFree ? "Conoce Pro" : "Ver mis ventas",
+                isFree ? PlanPath : SalesPath,
+                $"Recibiste este correo porque cobraste con Local133 en {monthName}. Los precios incluyen IVA."));
+    }
+
+    /// <summary>«$18,400» si no hay centavos; si los hay, «$18,400.50».</summary>
+    private static string Money(decimal amount) =>
+        amount.ToString(amount == decimal.Truncate(amount) ? "$#,0" : "$#,0.00", Mexico);
+
     /// <summary>«en 3 días», «mañana» u «hoy».</summary>
     private static string When(int daysLeft) => daysLeft switch
     {

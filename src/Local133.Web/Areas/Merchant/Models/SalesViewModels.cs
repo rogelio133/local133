@@ -206,12 +206,12 @@ public sealed class SalesHistoryViewModel
 
     public bool IsHistoryLimited => HistoryDays is not null;
 
-    /// <summary>«Tienes 47 ventas de hace más de 30 días.»</summary>
+    /// <summary>«Tienes 47 ventas de hace más de 30 días ocultas.» (lo que te pierdes, 5.10)</summary>
     public string? HiddenOlderText => HiddenOlderCount switch
     {
         <= 0 => null,
-        1 => $"Tienes 1 venta de hace más de {HistoryDays} días.",
-        _ => $"Tienes {HiddenOlderCount:N0} ventas de hace más de {HistoryDays} días.",
+        1 => $"Tienes 1 venta de hace más de {HistoryDays} días oculta.",
+        _ => $"Tienes {HiddenOlderCount:N0} ventas de hace más de {HistoryDays} días ocultas.",
     };
 
     public bool HasDateFilter => From is not null || To is not null;

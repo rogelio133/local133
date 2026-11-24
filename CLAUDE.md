@@ -64,7 +64,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
       - foto: JPEG 80 de 1280 px sobre blanco;
       - ninguno lleva EXIF.
     - Reglas y llaves en `MerchantImageRules`: `merchants/{id}/logo-{guid}.png` y `merchants/{id}/local-{guid}.jpg`. `Version` es el guid para `?v=`.
-    - Se sirven **solo al vendedor de la sesión** en `GET /app/mi-informacion/logo|foto` (caché privada inmutable). La ruta pública es de la 5.10.
+    - Se sirven **solo al vendedor de la sesión** en `GET /app/mi-informacion/logo|foto` (caché privada inmutable). Las rutas públicas (recibo con marca y catálogo) son de la 5.10, ver «Valor visible».
     - La carga común de Skia (formato por contenido, 50 MP, 2048 px, EXIF y fondo como parámetro) está en `Infrastructure/Imaging/SkiaImageLoader`. También la usa `SkiaProductPhotoProcessor`.
     - JS: `wwwroot/js/image-upload.js`, uno por `form[data-image-upload]`:
       - vista previa;
@@ -175,7 +175,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
     Son **ventanas**: si el job falla un día, sale al siguiente; pasada la ventana, nada. `DedupKey` = `sub:{etapa}:{ProUntil UTC}`: un pago empieza otro ciclo.
   - **Job** `Infrastructure/Jobs/SubscriptionDailyJob` (`suscripciones-diario`, 9:00 México). Prefiltra por `ProUntil` (índice) y vendedor no `Disabled`; un scope por vendedor; avisa con `INotificationService`. **No crea links de Pey** (decisión del usuario, 2026-11-21): si el vendedor no renueva, no se genera un link en vano. El link nace solo cuando el vendedor elige un paquete en «Mi plan».
 
-    El día 1 llama a `IMonthlySummaryNotifier` (hoy `LoggingMonthlySummaryNotifier`; contenido en la 5.10). Textos de cada etapa en `MerchantEmails.SubscriptionReminder`; el botón siempre va a `/app/plan`, nunca a Pey.
+    El día 1 llama a `IMonthlySummaryNotifier` (`MonthlySummaryNotifier`, 5.10; ver «Valor visible»). Textos de cada etapa en `MerchantEmails.SubscriptionReminder`; el botón siempre va a `/app/plan`, nunca a Pey.
   - **Reutilizar un link al pagar**: `SubscriptionCheckout` reutiliza un cargo `Pending` del mismo paquete y monto solo si se creó hace a lo más `GraceDays` días (`SubscriptionCharge.CanBeReusedFor(quote, now, maxAgeDays)` / `ReusableSince`). Si es más viejo, crea otro.
   - **Avisos** (base de la 5.4): `Domain/Notifications/Notification`, tabla `Notifications` con índice único `(MerchantId, DedupKey)` y filtro multi-tenant. `INotificationService.NotifyAsync(NotificationRequest)` (Application/Notifications; Infrastructure/Notifications/NotificationService):
     - idempotente por llave: con una llave repetida regresa `AlreadyExists`;
@@ -189,7 +189,7 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
     - marca el paquete del último pago con la insignia «Tu paquete» (`data-plan-offer-current`).
   - **En pruebas**:
     - `Local133WebFactory.Clock` (`TestClock`, reemplaza `TimeProvider`; `FreezeAtMexicoNine()`, se restablece entre pruebas);
-    - `Factory.MonthlySummaries`.
+    - `Factory.MonthlySummaries` (registrador que reemplaza la interfaz; las pruebas del contenido resuelven la clase concreta `MonthlySummaryNotifier`).
 - **Afiliados** (5.8, §6 del diseño):
   - **Código**: `Domain/Merchants/ReferralCode` (6 caracteres de `Alphabet`, sin 0, O, 1 ni I; `Generate`, `Normalize`, `IsValid`, `InputPattern` igual en cliente y servidor, `PathFor` = `/r/{código}`). `Merchant.ReferralCode` (`char(6)`, único) nace en `Merchant.Register(..., referralCode = null)`; la migración `Referrals` se lo generó a los vendedores anteriores.
   - **Registro**: `MerchantSignUpInput.ReferralCode` (opcional, parcial `_ReferralCodeField`, mensajes en `ReferralCodeMessages`). `AccountRegistration.CreateMerchantAsync(..., referralCode)` valida que exista **antes de crear nada** (error `UnknownReferralCode`, que las páginas ponen en `Input.ReferralCode`), genera un código único y crea el `Referral` en la misma transacción.
@@ -199,6 +199,26 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - **Premio**: `Infrastructure/Subscriptions/ReferralRewarder.QualifyAsync`, dentro de la transacción de `SubscriptionPaymentRecorder.CreditAsync`, con `UPDLOCK, HOLDLOCK` sobre la suscripción de quien invita (sin ciclos: quien invita siempre existe antes). `ReferralRewardPolicy.Decide`: dado de baja ⇒ `Skip(ReferrerDisabled)`; sin suscripción ⇒ `Pending`; `≥ ReferralRewardsPerYear` premios desde `WindowStart(now)` (12 meses en hora de México) ⇒ `Skip(RewardCap)`; si no, `Grant` (`AddDaysPeriod(ReferralReward, ReferralRewardDays, …, referral.Id)`). Los pendientes los da `ReferralRewarder.GrantPendingAsync` desde `TrialStarter.EnsureTrialAsync`, encadenados después de la prueba. Después del commit, `ReferralRewardNotifier` avisa con `INotificationService` (`DedupKey` `ref:{id}`, tipos `ReferralReward*`, textos en `MerchantEmails.ReferralReward`; nunca lanza).
   - **«Invita y gana»** (`/app/invita`, `Areas/Merchant/Controllers/InviteController`, pestaña «Más»; todos los planes, solo lectura): código, liga absoluta con `PublicSiteOptions.BaseUrlFor`, WhatsApp, copiar y «Compartir» con `receipt-share.js` (`data-receipt-share`, más `data-share-title` y `data-copy-failed`), premios en la ventana, días ganados e invitados con su primer nombre (nunca el correo).
   - En pruebas: `Identity/ReferralRegistrationTests` y `Subscriptions/ReferralTests` (`LinkReferralAsync`, `SeedRewardedReferralsAsync`).
+- **Valor visible** (5.10, §7 del diseño):
+  - **Recibo con marca**: se decide con el plan **al abrir la liga** (`IPlanAccess.GetForMerchantAsync`, `PlanEntitlements.HasBrandedReceipt`).
+    - En Pro, prueba, gracia u onboarding, con logo: `data-receipt-logo`, servido en `GET /recibo/{token}/logo?v=` (solo con recibo y `HasBrandedReceipt`; si no, 404; `private, max-age=86400`).
+    - En el gratuito: pie «Cobrado con Local133» (`data-receipt-powered-by`) a `PublicSiteOptions.LandingUrlFor(ReferralCode)` = `{App:LandingUrl}/?codigo=…`.
+    - `App:LandingUrl` es la portada; por defecto `https://local133.com.mx`, y en `appsettings.Development.json` `http://localhost:5241`.
+  - **Portada con código**: `Local133.LandingPage` enlaza `Domain/Merchants/ReferralCode.cs` (`Compile Link`). `HomeController.SignUpUrl(appUrl, codigo)` manda «Empieza a cobrar» a `{AppUrl}/r/{código}` si el código tiene la forma correcta. La existencia la revisa `/r/`.
+  - **Catálogo público** (`/tienda/{slug}`, `Web/Controllers/StorefrontController`, anónimo, `IgnoreQueryFilters()` + `MerchantId`):
+    - **Slug**: `Domain/Merchants/PublicSlug` (3–40, `Pattern` igual en cliente y servidor, `Normalize`, `Suggest(negocio)`, `PathFor`). `Merchant.PublicSlug` es único con índice filtrado y `PublicCatalogEnabled` dice si está publicado; `PublishCatalog(slug)` y `UnpublishCatalog()` (conserva el slug).
+    - **Visible** con `Merchant.CanShowPublicCatalog(entitlements)`: publicado, `CanPublishCatalog` y estatus distinto de `Suspended` y `Disabled`. Si no, la vista `Unavailable` con 200 y `noindex` («Catálogo no disponible por ahora»), o con 404 si el slug no existe. Publicado se puede indexar.
+    - **Contenido** (`Web/Services/StorefrontQuery.BuildAsync`, `Web/Models/StorefrontViewModels`): productos vigentes por nombre, `?q=` y páginas de 24, «Pedir por WhatsApp» al celular de la cuenta (`wa.me`, solo si es válido) y pie con la portada y el código.
+    - **Imágenes públicas** en `/tienda/{slug}/logo|foto` y `/tienda/{slug}/productos/{id}/foto|miniatura`, con la misma regla de visibilidad y `public, max-age=3600` (`StorefrontUrls`). La vista previa usa `StorefrontQuery.PrivateImages` (rutas de `ProfileUrls` y `ProductUrls`; `ProductUrls.Version` es público).
+    - **Pantalla del vendedor** «Catálogo en línea» (`/app/tienda`, `Areas/Merchant/Controllers/StorefrontSettingsController`, entrada `data-more-storefront` en «Más»):
+      - `POST publicar` (campo `Input.Slug`, que el servidor normaliza; `wwwroot/js/storefront-slug.js` normaliza al escribir), `POST despublicar` y `GET vista-previa`, que reutiliza `~/Views/Storefront/Show.cshtml` con `IsPreview`;
+      - caso de uso `IPublicCatalogSettings` (Application/Merchants; Infrastructure/Merchants/PublicCatalogSettings) ⇒ `Published` | `InvalidSlug` | `SlugTaken` (también por la violación del índice) | `PlanRequired` | `BusinessNameRequired` | `NotAllowed`. Textos en `PublicCatalogMessages`;
+      - en el gratuito, `_ProRequired` con `WaitingCatalogText` y sin formularios. Dado de baja: solo lectura.
+  - **Lo que te pierdes**: «…ocultas» en el historial (`HiddenOlderText`); en Cobrar (Monto), en el gratuito con productos, `ChargeFormViewModel.MissingCatalogText` (`data-charge-missing-catalog`); filas del catálogo en línea y del recibo con marca en `PlanFeatureRow`.
+  - **Resumen mensual**: `Infrastructure/Subscriptions/MonthlySummaryNotifier`, registrado scoped como clase concreta y como `IMonthlySummaryNotifier`.
+    - Agrupa `Payments` sin filtro por `PaidAt` en `MexicoTime.MonthRange(mes)`: suma y ventas distintas. Solo vendedores con cobros que no estén `Disabled`.
+    - Un scope por vendedor. Números en `Domain/Subscriptions/MonthlySummary.For` (comisión de terminal = cobrado × `ReferenceTerminalFeeRate` × (1 + `VatRate`), redondeada; precio de Pro, de fundador si lo es). Textos en `MerchantEmails.MonthlySummary`.
+    - `NotificationType.MonthlySummary` con `DedupKey` `summary:{yyyy-MM}`. Botón a `/app/ventas` en Pro y a `/app/plan` en el gratuito.
 - **Recibo público** (`GET /recibo/{token}`, `Web/Controllers/ReceiptsController`, anónimo):
   - `Sale.ReceiptToken` (32 hex, `RandomNumberGenerator`) se genera al crear la venta (toda venta nueva debe traerlo; la 2.7 también). Solo hay recibo si la venta está pagada (`Sale.HasReceipt`); si no, 404.
   - Busca con `IgnoreQueryFilters()` (quien abre la liga puede tener sesión de otro vendedor). Encabezados `noindex`, `no-referrer`, `no-store`; `ViewData["NoIndex"]` en `_Head`.

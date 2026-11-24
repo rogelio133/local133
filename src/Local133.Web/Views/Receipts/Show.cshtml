@@ -8,6 +8,10 @@
     <div class="col-md-8 col-lg-6">
         <article class="card receipt" data-receipt>
             <div class="card-body text-center">
+                @if (Model.LogoUrl is not null)
+                {
+                    <img class="receipt-logo d-block mx-auto mb-3" src="@Model.LogoUrl" alt="@(Model.BusinessName is null ? "Logo del negocio" : $"Logo de {Model.BusinessName}")" data-receipt-logo />
+                }
                 <p class="text-body-secondary small mb-1">Recibo de pago</p>
                 <h1 class="h4 mb-3 text-break" data-receipt-business>@(Model.BusinessName ?? "Comprobante de pago")</h1>
 
@@ -62,6 +66,16 @@
                     }
                 </dl>
             </div>
+            @if (Model.PoweredByUrl is not null)
+            {
+                @* Gratuito (5.10): la liga lleva a la portada con el código de invitación del vendedor. *@
+                <div class="card-footer bg-transparent text-center small" data-receipt-powered-by>
+                    <a class="link-body-emphasis text-decoration-none" href="@Model.PoweredByUrl" target="_blank" rel="noopener">
+                        Cobrado con <strong>Local133</strong>
+                    </a>
+                    <span class="d-block text-body-secondary">Cobra con CoDi desde tu celular, sin terminal.</span>
+                </div>
+            }
         </article>
 
         <p class="small text-body-secondary text-center mt-3 mb-2">

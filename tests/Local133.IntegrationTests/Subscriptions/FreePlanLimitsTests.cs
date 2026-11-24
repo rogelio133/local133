@@ -166,6 +166,31 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
         Assert.Contains("href=\"/app/plan\"", home);
     }
 
+    [Fact]
+    public async Task Cobrar_en_el_gratuito_recuerda_el_catalogo_que_espera()
+    {
+        // 5.10, lo que te pierdes: sin productos no hay línea; con productos, «Tu catálogo de N productos te espera».
+        var client = await FreeMerchantAsync(Email);
+        Assert.DoesNotContain("data-charge-missing-catalog", await GetHtmlAsync(client, "/app/cobrar"));
+
+        await CreateProductAsync(Email, "Taco al pastor", 25m);
+        await CreateProductAsync(Email, "Refresco", 20m);
+        var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, "/app/cobrar"));
+
+        Assert.Contains("data-charge-missing-catalog", html);
+        Assert.Contains("Tu catálogo de 2 productos te espera.", html);
+    }
+
+    [Fact]
+    public async Task En_la_prueba_Cobrar_no_muestra_el_catalogo_que_espera()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await SeedTrialAsync(Email);
+        await CreateProductAsync(Email, "Taco al pastor", 25m);
+
+        Assert.DoesNotContain("data-charge-missing-catalog", await GetHtmlAsync(client, "/app/cobrar"));
+    }
+
     // --- Carrito ------------------------------------------------------------------------------------------------------
 
     [Fact]
@@ -225,7 +250,7 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
         Assert.Contains($"data-sale-row=\"{recent}\"", html);
         Assert.All(old, id => Assert.DoesNotContain($"data-sale-row=\"{id}\"", html));
         Assert.Contains("data-sales-hidden-older=\"3\"", html);
-        Assert.Contains("Tienes 3 ventas de hace más de 30 días", html);
+        Assert.Contains("Tienes 3 ventas de hace más de 30 días ocultas", html);
         Assert.Contains("data-date-filter-pro", html);
         Assert.DoesNotContain("data-date-filter>", html);
         Assert.All(old, id => Assert.DoesNotContain($"data-sale-row=\"{id}\"", withDates));
@@ -392,6 +417,8 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
         Assert.Contains("<td>100</td>", html);
         Assert.DoesNotContain("cortesía", html);
         Assert.Contains("data-coming-soon", html);
+        Assert.Contains("Catálogo en línea con liga", html);
+        Assert.Contains("Liga para copiar, con «Cobrado con Local133»", html);
         Assert.Contains("data-plan-offers", html);
         Assert.Contains("data-more-plan", more);
         Assert.Contains("data-more-static-qr", more);

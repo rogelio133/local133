@@ -1,0 +1,154 @@
+@using Local133.Web.Areas.Merchant.Controllers
+@using Local133.Web.Areas.Merchant.Models
+@model StorefrontSettingsViewModel
+@{
+    ViewData["Title"] = "Catálogo en línea";
+    var notice = TempData[StorefrontSettingsController.NoticeKey] as string;
+}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-storefront-settings>
+        <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
+        <h1 class="h4 mb-1">Catálogo en línea</h1>
+        <p class="text-body-secondary mb-3">
+            Una página con tus productos, precios y fotos para que tus clientes vean lo que vendes y te pidan por WhatsApp.
+            No reciben pagos en línea: les cobras como siempre.
+        </p>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-storefront-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        @if (Model.IsDisabled)
+        {
+            <div class="alert alert-secondary" role="status" data-storefront-disabled>
+                Tu cuenta está dada de baja: tu catálogo no se muestra y no puedes cambiarlo.
+            </div>
+        }
+        else if (Model.ProRequired is not null)
+        {
+            <div class="mb-3">
+                <partial name="_ProRequired" model="Model.ProRequired" />
+            </div>
+            @if (Model.IsPublished)
+            {
+                <div class="alert alert-secondary small" role="status" data-storefront-hidden-by-plan>
+                    Tu catálogo sigue publicado, pero mientras estés en el plan gratuito la liga muestra «Catálogo no disponible por ahora».
+                </div>
+            }
+        }
+        else if (!Model.HasBusinessName)
+        {
+            <div class="alert alert-warning" role="alert" data-storefront-business-name>
+                Tu catálogo lleva el nombre de tu negocio. Escríbelo primero en
+                <a class="alert-link" href="@Url.Content("~" + ProfileUrls.Index)">Mi información</a>.
+            </div>
+        }
+        else if (Model.IsSuspended)
+        {
+            <div class="alert alert-warning small" role="status" data-storefront-suspended>
+                Tu cuenta está suspendida: mientras tanto la liga muestra «Catálogo no disponible por ahora».
+            </div>
+        }
+
+        @if (Model.Url is not null && Model.CanPublish && !Model.IsDisabled)
+        {
+            <div class="card mb-3 border-primary" data-storefront-published>
+                <div class="card-body">
+                    <span class="badge text-bg-success mb-2"><i class="bi bi-broadcast me-1" aria-hidden="true"></i>Publicado</span>
+                    <p class="small text-body-secondary mb-2">Tu liga</p>
+                    <div class="d-grid gap-2" data-receipt-share data-receipt-url="@Model.Url" data-receipt-message="@Model.ShareMessage"
+                         data-share-title="Mi catálogo" data-copy-failed="No pudimos copiar la liga. Selecciónala en el campo y cópiala.">
+                        <label class="visually-hidden" for="storefront-url">Liga de tu catálogo</label>
+                        <input class="form-control" type="text" readonly value="@Model.Url" id="storefront-url" data-receipt-url-field data-storefront-url />
+                        <a class="btn btn-success" href="@Model.WhatsAppUrl" target="_blank" rel="noopener noreferrer"
+                           data-desktop-href="@Model.WhatsAppAppUrl" data-receipt-whatsapp data-storefront-whatsapp>
+                            <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Compartir por WhatsApp
+                        </a>
+                        <p class="small text-body-secondary mb-0 d-none" data-receipt-whatsapp-web>
+                            <span>¿No se abre la app de WhatsApp? Usa</span>
+                            <a class="text-nowrap" href="@Model.WhatsAppWebUrl" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-link>WhatsApp Web</a>
+                        </p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-outline-primary btn-sm" href="@Model.Url" target="_blank" rel="noopener" data-storefront-open>
+                                <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i> Ver catálogo
+                            </a>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-native-share>
+                                <i class="bi bi-share me-1" aria-hidden="true"></i> Compartir
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-copy>
+                                <i class="bi bi-link-45deg me-1" aria-hidden="true"></i> Copiar liga
+                            </button>
+                        </div>
+                        <p class="small text-success mb-0 d-none" role="status" data-receipt-copied>Liga copiada.</p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.CanEdit)
+        {
+            <form method="post" action="@Url.Content("~" + StorefrontSettingsUrls.Publish)" class="card mb-3" data-storefront-form data-disable-on-submit>
+                @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <h2 class="h6 card-title">@(Model.IsPublished ? "Cambiar tu liga" : "Elige tu liga")</h2>
+                    <label asp-for="Input.Slug" class="form-label text-body-secondary"></label>
+                    @* El prefijo va en su propio renglón: junto al campo no cabe a 375 px. *@
+                    <p class="small text-body-secondary mb-1 storefront-link" data-storefront-prefix>@Model.UrlPrefix…</p>
+                    <input asp-for="Input.Slug" class="form-control" autocomplete="off" autocapitalize="none" spellcheck="false"
+                           maxlength="@Local133.Domain.Merchants.PublicSlug.MaxLength" data-storefront-slug />
+                    <span asp-validation-for="Input.Slug" class="d-block text-danger small mt-1"></span>
+                    <p class="form-text mb-3">
+                        Letras sin acentos, números y guiones. @(Model.IsPublished ? "Si la cambias, la liga anterior deja de funcionar." : null)
+                    </p>
+                    <button type="submit" class="btn btn-primary" data-storefront-publish>
+                        @(Model.IsPublished ? "Guardar liga" : "Publicar catálogo")
+                    </button>
+                </div>
+            </form>
+
+            @if (Model.IsPublished)
+            {
+                <form method="post" action="@Url.Content("~" + StorefrontSettingsUrls.Unpublish)" class="mb-3" data-storefront-unpublish-form data-disable-on-submit>
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger btn-sm" data-storefront-unpublish>
+                        <i class="bi bi-eye-slash me-1" aria-hidden="true"></i> Dejar de publicar
+                    </button>
+                </form>
+            }
+        }
+
+        <div class="card mb-3" data-storefront-summary>
+            <ul class="list-group list-group-flush small">
+                <li class="list-group-item d-flex justify-content-between gap-2">
+                    <span>Productos en tu catálogo</span>
+                    <span class="fw-semibold" data-storefront-product-count>@Model.ProductCount.ToString("N0")</span>
+                </li>
+                <li class="list-group-item" data-storefront-phone>
+                    @if (Model.MaskedPhone is not null)
+                    {
+                        @:El botón «Pedir por WhatsApp» abre un chat con tu celular @Model.MaskedPhone (de «Mi información»). Quien vea tu catálogo puede ver ese número.
+                    }
+                    else
+                    {
+                        <span>Agrega tu celular en <a href="@Url.Content("~" + ProfileUrls.Index)">Mi información</a> para que tus clientes te pidan por WhatsApp.</span>
+                    }
+                </li>
+            </ul>
+            <div class="card-body border-top">
+                <a class="btn btn-outline-primary btn-sm" href="@Url.Content("~" + StorefrontSettingsUrls.Preview)" data-storefront-preview-link>
+                    <i class="bi bi-eye me-1" aria-hidden="true"></i> Vista previa
+                </a>
+                <a class="btn btn-link btn-sm" href="@Url.Content("~" + ProductUrls.List)">Ir a productos</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/storefront-slug.js" asp-append-version="true"></script>
+    <script src="~/js/receipt-share.js" asp-append-version="true"></script>
+}

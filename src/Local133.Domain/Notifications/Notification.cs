@@ -31,6 +31,9 @@ public enum NotificationType
 
     /// <summary>Un referido pagó, pero no hubo premio (tope o dado de baja, 5.8).</summary>
     ReferralRewardSkipped,
+
+    /// <summary>Resumen del mes que terminó: lo cobrado y la comisión que se ahorró (5.10).</summary>
+    MonthlySummary,
 }
 
 /// <summary>

@@ -11,6 +11,8 @@
   <ItemGroup>
     <!-- Limpieza de Home:RotatingWords (máximo de palabras y de caracteres que la CSS asume). -->
     <Compile Include="..\Local133.Web\Hosting\HomeHeroOptions.cs" Link="Hosting\HomeHeroOptions.cs" />
+    <!-- Código de invitación (5.10): «Cobrado con Local133» del recibo llega con ?codigo=. Sin dependencias. -->
+    <Compile Include="..\Local133.Domain\Merchants\ReferralCode.cs" Link="Hosting\ReferralCode.cs" />
   </ItemGroup>
 
 </Project>

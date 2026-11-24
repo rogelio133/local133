@@ -323,6 +323,13 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - «Lo que te pierdes» en el historial, el catálogo y Cobrar.
 - Contenido del resumen mensual, que manda el job de la 5.7.
 - Catálogo público: slug único, `noindex` mientras el vendedor no lo publique y fotos por una ruta pública.
+- *(5.10, hecho 2026-11-24)*:
+  - la marca del recibo sigue el plan **al abrir la liga** (decisión del usuario);
+  - «Cobrado con Local133» lleva a la portada con `?codigo=`, y su botón a `/r/{código}`;
+  - el resumen mensual va solo a quien tuvo cobros en el mes y no está dado de baja, con la llave `summary:{yyyy-MM}`;
+  - el catálogo se publica en `/app/tienda` («Catálogo en línea»). Publicado y en Pro se puede indexar; si no, «Catálogo no disponible por ahora» con `noindex`. Su pie también lleva el código del vendedor.
+
+  Detalle en la [bitácora](../log_plan/fase-5.10-valor-visible.md).
 
 ### 5.11 Precios y textos legales
 - **Portada**: sección «Planes» con la tabla de §2, «Prueba todo gratis 30 días», lugares de fundador y lo que está «Próximamente».

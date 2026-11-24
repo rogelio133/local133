@@ -80,6 +80,7 @@ public static class DependencyInjection
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
         services.AddScoped<IProductCatalog, ProductCatalog>();
         services.AddScoped<IMerchantProfile, MerchantProfileService>();
+        services.AddScoped<IPublicCatalogSettings, PublicCatalogSettings>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.
         services.AddScoped<IPlanAccess, PlanAccess>();
         // Límites del gratuito (5.5): conteo de cobros del mes y umbrales tras cada pago.
@@ -95,8 +96,10 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionPaymentNotifier, SubscriptionPaymentEmailNotifier>();
         // Avisos en el sitio con correo opcional, idempotentes por DedupKey (base de la 5.4, adelantada en la 5.7).
         services.AddScoped<INotificationService, NotificationService>();
-        // Resumen mensual del día 1 (5.7 lo llama; la 5.10 trae el contenido). Por ahora, solo el log.
-        services.TryAddSingleton<IMonthlySummaryNotifier, LoggingMonthlySummaryNotifier>();
+        // Resumen mensual del día 1 (5.7 lo llama; 5.10: aviso y correo). La clase concreta también se registra para que
+        // las pruebas la usen aunque cambien la interfaz por un registrador.
+        services.AddScoped<MonthlySummaryNotifier>();
+        services.AddScoped<IMonthlySummaryNotifier>(sp => sp.GetRequiredService<MonthlySummaryNotifier>());
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 

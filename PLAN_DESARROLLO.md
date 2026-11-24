@@ -132,7 +132,7 @@ tests/
 - **PeyClient**: `HttpClient` tipado + Polly (timeout por intento y total, circuit breaker; reintentos: GET en 5xx/408/429/red/timeout, POST **solo en 503/429** porque Pey no tiene idempotencia), mapeo de `error.type` a excepciones de dominio, logging con `requestId`.
 - **Webhook** `POST /api/webhooks/pey`: leer body crudo → verificar firma Standard Webhooks → guardar en `WebhookEvents` (único por `webhook-id`) → procesar en la misma petición → 200. Si falla algo transitorio (base de datos) responde 500 y el evento queda sin procesar: el reintento de Pey con el mismo `webhook-id` lo reprocesa. Errores permanentes (venta no encontrada, payload inválido) quedan `Failed` con 200. Procesamiento idempotente por `transactionId`. *(Cambio 2026-11-12: antes «responder 200 → procesar»; en la misma petición el vendedor ve el pago al instante sin depender de la cola de Hangfire.)*
 - **Tiempo real**: SignalR, grupo por vendedor; el webhook publica `PaymentReceived` y la vista del QR lo escucha con el cliente JS de SignalR. Respaldo: polling desde la vista a `GET /api/sales/{id}` cada 3 s.
-- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: recordatorios, fin de prueba, baja al gratuito y resumen mensual; sin crear links, 2026-11-21) · conciliación de links de pago (`conciliar-links`, cada 10 min, 5.6). *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
+- **Jobs (Hangfire, almacenamiento SQL Server)**: sondeo de cuentas bancarias · expirar ventas · conciliación de pagos · suscripciones (diario a las 9:00 `America/Mexico_City`: recordatorios, fin de prueba, baja al gratuito y resumen mensual; sin crear links, 2026-11-21; contenido del resumen mensual en la 5.10) · conciliación de links de pago (`conciliar-links`, cada 10 min, 5.6). *(Cambio 2026-11-18: antes, corte semanal y suspensión por falta de pago.)*
 - **Archivos**: `IFileStorage` (disco local en dev, blob en prod), redimensionado con SkiaSharp. *(Cambio 2026-11-14: antes ImageSharp; ver 3.1.)*
 - **Secretos**: API key y secreto de webhook de Pey en user-secrets / variables de entorno. CLABE enmascarada en UI.
 
@@ -216,7 +216,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - catálogo público con liga;
     - «lo que te pierdes» y resumen mensual.
 
-    Depende de la 4.1. — [detalle](actualizaciones/suscripciones_2026_11_18.md#510-valor-visible)
+    ✅ *(hecho 2026-11-24; la marca del recibo sigue el plan al abrir la liga, «Cobrado con Local133» lleva a la portada con el código y el resumen va solo a quien cobró en el mes)* — [bitácora](log_plan/fase-5.10-valor-visible.md)
 11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. — [detalle](actualizaciones/suscripciones_2026_11_18.md#511-precios-y-textos-legales)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
@@ -272,8 +272,9 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): sin la CLABE única (5.2) alguien puede abrir cuentas con su misma CLABE e invitarse; referidos y anulación de premios en el admin (6.2), también para un premio que quedó pendiente por una activación simultánea; referidos y cookie en los textos legales (5.11); revisar en el navegador el aviso pendiente y el premio al activarse.
-- [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4, y el contenido del resumen mensual con la 5.10.
+- [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4 (el contenido del resumen mensual ya llegó con la 5.10).
 - [5.9](log_plan/fase-5.9-pro-de-lanzamiento.md): abrir el `.xlsx` exportado en Excel de escritorio, en el celular (Excel o Google Sheets) y en Numbers; imprimir el corte de caja en papel o PDF (Android, iPhone, Windows) y mandarlo por WhatsApp real.
+- [5.10](log_plan/fase-5.10-valor-visible.md): resumen mensual enviado a Outlook el 2026-11-24 (falta revisar cómo se ve, Gmail, modo oscuro y el envío del job el día 1); catálogo y recibo con marca en un celular real y la vista previa de WhatsApp de la liga del catálogo; el aviso del resumen en la campana (5.4); celular del negocio en el catálogo y uso de los cobros en el resumen, en los textos legales (5.11).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

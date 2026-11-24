@@ -1,0 +1,22 @@
+@using Local133.Application.Merchants
+@model StorefrontUnavailableViewModel
+@{
+    ViewData["Title"] = PublicCatalogMessages.Unavailable;
+    ViewData["NoIndex"] = true;
+}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 text-center" data-storefront-unavailable>
+        <i class="bi bi-shop text-body-secondary display-4" aria-hidden="true"></i>
+        <h1 class="h4 mt-3">@PublicCatalogMessages.Unavailable</h1>
+        <p class="text-body-secondary mb-0">
+            @if (Model.BusinessName is not null)
+            {
+                @:El catálogo de @Model.BusinessName no está disponible en este momento. Pregúntale al negocio por sus productos.
+            }
+            else
+            {
+                @:Este catálogo no está disponible en este momento. Revisa la liga o pregúntale al negocio.
+            }
+        </p>
+    </div>
+</div>
