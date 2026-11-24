@@ -121,6 +121,13 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("ReferralCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .IsUnicode(false)
+                        .HasColumnType("char(6)")
+                        .IsFixedLength();
+
                     b.Property<string>("ShopPhotoKey")
                         .HasMaxLength(100)
                         .IsUnicode(false)
@@ -137,6 +144,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReferralCode")
+                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -566,6 +576,53 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Local133.Domain.Subscriptions.Referral", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .IsUnicode(false)
+                        .HasColumnType("char(6)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("QualifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ReferredMerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReferrerMerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("RegisteredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RewardedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("SkippedReason")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferredMerchantId")
+                        .IsUnique();
+
+                    b.HasIndex("ReferrerMerchantId", "RewardedAt");
+
+                    b.ToTable("Referrals", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Referrals_NotSelf", "[ReferrerMerchantId] <> [ReferredMerchantId]");
+                        });
+                });
+
             modelBuilder.Entity("Local133.Domain.Subscriptions.Subscription", b =>
                 {
                     b.Property<int>("Id")
@@ -789,6 +846,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("MerchantId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReferralId")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("StartsAt")
                         .HasColumnType("datetimeoffset");
 
@@ -796,6 +856,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReferralId")
+                        .IsUnique()
+                        .HasFilter("[ReferralId] IS NOT NULL");
 
                     b.HasIndex("SubscriptionChargeId");
 
@@ -1164,6 +1228,21 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Local133.Domain.Subscriptions.Referral", b =>
+                {
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("ReferredMerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("ReferrerMerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Local133.Domain.Subscriptions.Subscription", b =>
                 {
                     b.HasOne("Local133.Domain.Merchants.Merchant", null)
@@ -1205,6 +1284,11 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("MerchantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Local133.Domain.Subscriptions.Referral", null)
+                        .WithMany()
+                        .HasForeignKey("ReferralId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Local133.Domain.Subscriptions.SubscriptionCharge", null)
                         .WithMany()

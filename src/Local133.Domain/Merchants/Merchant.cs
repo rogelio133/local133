@@ -45,13 +45,27 @@ public class Merchant : Entity
     /// </summary>
     public DateTimeOffset? ActivationEmailSentAt { get; set; }
 
+    /// <summary>
+    /// Código de invitación (<see cref="Merchants.ReferralCode"/>, 5.8), único. Se genera al registrarse y no cambia.
+    /// </summary>
+    public string ReferralCode { get; set; } = string.Empty;
+
     /// <param name="ownerName">Nombre de la persona; se normaliza con <see cref="PersonName.Normalize"/>.</param>
-    /// <exception cref="ArgumentException">El nombre no es válido (<see cref="PersonName.IsValid"/>).</exception>
-    public static Merchant Register(string userId, DateTimeOffset now, string ownerName)
+    /// <param name="referralCode">
+    /// Código de invitación ya revisado contra la base (único); sin él se genera uno al azar
+    /// (<see cref="Merchants.ReferralCode.Generate"/>).
+    /// </param>
+    /// <exception cref="ArgumentException">El nombre o el código no son válidos.</exception>
+    public static Merchant Register(string userId, DateTimeOffset now, string ownerName, string? referralCode = null)
     {
         if (!PersonName.IsValid(ownerName))
         {
             throw new ArgumentException("El nombre de la persona no es válido.", nameof(ownerName));
+        }
+
+        if (referralCode is not null && !Merchants.ReferralCode.IsValid(referralCode))
+        {
+            throw new ArgumentException("El código de invitación no es válido.", nameof(referralCode));
         }
 
         return new Merchant
@@ -60,6 +74,7 @@ public class Merchant : Entity
             Status = MerchantStatus.PendingBankAccount,
             OwnerName = PersonName.Normalize(ownerName),
             CreatedAt = now,
+            ReferralCode = referralCode ?? Merchants.ReferralCode.Generate(),
         };
     }
 

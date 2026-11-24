@@ -1,4 +1,4 @@
-// Recibo compartible ([data-receipt-share]): «Copiar liga» (portapapeles) y «Compartir» (Web Share API, sobre todo en
+// Recibo compartible ([data-receipt-share]; también la liga de «Invita y gana»): «Copiar liga» (portapapeles) y «Compartir» (Web Share API, sobre todo en
 // celulares). Los botones nacen ocultos y solo se muestran si el navegador los soporta; WhatsApp y «Ver recibo» son
 // enlaces normales que funcionan sin JS. En el recibo público, [data-receipt-print] abre el diálogo de impresión.
 (function () {
@@ -37,6 +37,9 @@
         var copyButton = root.querySelector('[data-receipt-copy]');
         var shareButton = root.querySelector('[data-receipt-native-share]');
         var copied = root.querySelector('[data-receipt-copied]');
+        // Textos propios de otras pantallas que reutilizan este script («Invita y gana», 5.8).
+        var shareTitle = root.getAttribute('data-share-title') || 'Recibo de pago';
+        var copyFailed = root.getAttribute('data-copy-failed') || 'No pudimos copiar la liga. Usa «Ver recibo» y cópiala desde ahí.';
         var hideTimer;
 
         if (copyButton && navigator.clipboard && window.isSecureContext) {
@@ -53,7 +56,7 @@
                     hideTimer = setTimeout(function () { copied.classList.add('d-none'); }, 3000);
                 }, function () {
                     if (copied) {
-                        copied.textContent = 'No pudimos copiar la liga. Usa «Ver recibo» y cópiala desde ahí.';
+                        copied.textContent = copyFailed;
                         copied.classList.remove('d-none', 'text-success');
                         copied.classList.add('text-danger');
                     }
@@ -65,7 +68,7 @@
             shareButton.classList.remove('d-none');
             shareButton.addEventListener('click', function () {
                 // El mensaje ya trae la liga al final; se manda solo como texto para que no salga repetida.
-                navigator.share({ title: 'Recibo de pago', text: message }).catch(function () {
+                navigator.share({ title: shareTitle, text: message }).catch(function () {
                     // Cancelado por el usuario: no hay nada que hacer.
                 });
             });

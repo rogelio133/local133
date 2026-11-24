@@ -52,10 +52,12 @@ public class RegisterModel(
         public string ConfirmPassword { get; set; }
     }
 
-    public async Task OnGetAsync(string returnUrl = null)
+    /// <param name="codigo">Código de invitación de la liga <c>/r/{código}</c>; sin él, el de la cookie.</param>
+    public async Task OnGetAsync(string returnUrl = null, string codigo = null)
     {
         ReturnUrl = returnUrl;
         ExternalLogins = (await signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        Input = new InputModel { ReferralCode = ReferralCookie.Proposed(Request, codigo) };
     }
 
     public async Task<IActionResult> OnPostAsync(string returnUrl = null)
@@ -69,16 +71,19 @@ public class RegisterModel(
 
         var user = new ApplicationUser { UserName = Input.Email, Email = Input.Email }
             .AcceptLegalDocuments(clock.GetUtcNow());
-        var result = await registration.CreateMerchantAsync(user, Input.OwnerName, Input.Password);
+        var result = await registration.CreateMerchantAsync(user, Input.OwnerName, Input.Password, referralCode: Input.ReferralCode);
         if (!result.Succeeded)
         {
             foreach (var error in result.Errors)
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                ModelState.AddModelError(
+                    error.Code == ReferralCodeMessages.UnknownCodeError ? $"{nameof(Input)}.{nameof(Input.ReferralCode)}" : string.Empty,
+                    error.Description);
             }
             return Page();
         }
 
+        ReferralCookie.Delete(Response);
         logger.LogInformation("Usuario {UserId} registrado con correo y contraseña.", user.Id);
 
         var userId = await userManager.GetUserIdAsync(user);

@@ -90,6 +90,7 @@ public static class DependencyInjection
         // Pago de la suscripción con link de Pey (5.6): checkout, abono (webhook y conciliación) y correo.
         services.AddScoped<ISubscriptionCheckout, SubscriptionCheckout>();
         services.AddScoped<ISubscriptionPaymentRecorder, SubscriptionPaymentRecorder>();
+        services.AddScoped<ReferralRewardNotifier>();
         services.AddScoped<ISubscriptionPaymentReconciliation, SubscriptionPaymentReconciliation>();
         services.AddScoped<ISubscriptionPaymentNotifier, SubscriptionPaymentEmailNotifier>();
         // Avisos en el sitio con correo opcional, idempotentes por DedupKey (base de la 5.4, adelantada en la 5.7).

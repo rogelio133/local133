@@ -1,0 +1,10 @@
+@model Local133.Web.Identity.MerchantSignUpInput
+@using Local133.Domain.Merchants
+@* Código de invitación opcional en el alta (5.8). Uso: <partial name="_ReferralCodeField" for="Input" /> *@
+<div class="form-floating mb-3">
+    <input asp-for="ReferralCode" type="text" class="form-control text-uppercase" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" maxlength="@ReferralCode.InputMaxLength" placeholder="Código de invitación" data-val-trim />
+    <label asp-for="ReferralCode"></label>
+    <span asp-validation-for="ReferralCode" class="text-danger small"></span>
+    <div class="form-text">Si alguien te invitó, con su código tienes descuento en tu primer pago de Pro.</div>
+</div>

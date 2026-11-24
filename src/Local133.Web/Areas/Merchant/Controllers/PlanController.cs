@@ -90,7 +90,8 @@ public class PlanController(
             charges.Where(c => c.Status == SubscriptionChargeStatus.Paid).Take(PaymentHistorySize)
                 .Select(c => SubscriptionChargeRow.From(c, today)).ToList(),
             offers.CanPay && environment.IsDevelopment() && !IsHttps(site.Value.BaseUrlFor(Request)) ? HttpsDevelopmentWarning : null,
-            renewal));
+            renewal,
+            offers.CanPay ? MyPlanViewModel.WelcomeDiscountNoticeFor(offers.WelcomeDiscount) : null));
     }
 
     /// <summary>Crea (o reutiliza) el link del paquete y manda a la página de pago de Pey.</summary>
