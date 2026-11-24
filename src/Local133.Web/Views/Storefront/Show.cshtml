@@ -28,7 +28,7 @@
             <div class="card-body d-flex align-items-center gap-3">
                 @if (Model.LogoUrl is not null)
                 {
-                    <img class="storefront-logo rounded border p-1" src="@Model.LogoUrl" alt="Logo de @Model.BusinessName" data-storefront-logo />
+                    <img class="storefront-logo rounded border" src="@Model.LogoUrl" alt="Logo de @Model.BusinessName" data-storefront-logo />
                 }
                 <div class="flex-grow-1 storefront-product-info">
                     <h1 class="h4 mb-1 text-break" data-storefront-name>@Model.BusinessName</h1>
