@@ -1,4 +1,5 @@
 @using Local133.Web.Areas.Merchant.Models
+@using Local133.Web.Areas.Merchant.Services
 @model SalesHistoryViewModel
 @{
     ViewData["Title"] = "Ventas";
@@ -9,7 +10,22 @@
 }
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-sales>
-        <h1 class="h4 mb-3">Ventas</h1>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h1 class="h4 mb-0">Ventas</h1>
+            @* Corte de caja (5.9): en el gratuito la misma liga muestra el aviso de Pro. *@
+            <a class="btn btn-outline-primary btn-sm" href="@Url.Content("~" + SalesUrls.CashCut)" data-cash-cut-link>
+                <i class="bi bi-cash-stack me-1" aria-hidden="true"></i> Corte de caja
+                @if (!Model.HasCashCut)
+                {
+                    <span class="badge text-bg-primary ms-1" data-cash-cut-pro>Pro</span>
+                }
+            </a>
+        </div>
+
+        @if (TempData[Local133.Web.Areas.Merchant.Controllers.SalesController.ListNoticeKey] is string notice)
+        {
+            <div class="alert alert-warning" role="status" data-sales-notice>@notice</div>
+        }
 
         @* Resumen del día (hora de México). *@
         <section class="row g-2 mb-3" aria-label="Resumen de hoy" data-day-summary>
@@ -67,11 +83,37 @@
             {
                 <p class="small text-body-secondary mb-3" data-date-filter-pro>
                     <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Últimos @Model.HistoryDays días.
-                    Filtra por fecha y consulta todo tu historial con <a href="@Url.Content("~" + PlanUrls.Plan)">Pro</a>.
+                    Consulta todo tu historial, filtra por fecha, busca y exporta a Excel con <a href="@Url.Content("~" + PlanUrls.Plan)">Pro</a>.
                 </p>
             }
             else
             {
+            @* Búsqueda (5.9, Pro): folio o concepto; conserva estatus y fechas. *@
+            <form method="get" action="@Url.Content("~" + SalesUrls.List)" class="mb-2" role="search" data-sales-search>
+                @if (SaleStatusFilters.Slug(Model.Status) is { } searchSlug)
+                {
+                    <input type="hidden" name="@SaleStatusFilters.QueryKey" value="@searchSlug" />
+                }
+                @if (Model.From is { } searchFrom)
+                {
+                    <input type="hidden" name="desde" value="@SaleFormats.IsoDate(searchFrom)" />
+                }
+                @if (Model.To is { } searchTo)
+                {
+                    <input type="hidden" name="hasta" value="@SaleFormats.IsoDate(searchTo)" />
+                }
+                <div class="input-group">
+                    <input class="form-control" type="search" id="sales-search" name="@SaleSearch.QueryKey" value="@Model.Query"
+                           maxlength="@SaleSearch.MaxLength" placeholder="Buscar por folio o concepto" aria-label="Buscar ventas por folio o concepto"
+                           autocomplete="off" enterkeyhint="search" data-sales-search-input />
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Buscar</span></button>
+                </div>
+                @if (Model.HasSearch)
+                {
+                    <a class="btn btn-link btn-sm px-0" href="@Url.Content("~" + Model.UrlFor(keepQuery: false))" data-clear-search>Quitar búsqueda</a>
+                }
+            </form>
+
             <details class="card mb-3" open="@Model.HasDateFilter" data-date-filter>
                 <summary class="card-body py-2 small fw-semibold">
                     <i class="bi bi-calendar3 me-1" aria-hidden="true"></i> @(Model.DateFilterText ?? "Filtrar por fecha")
@@ -80,6 +122,10 @@
                     @if (SaleStatusFilters.Slug(Model.Status) is { } slug)
                     {
                         <input type="hidden" name="@SaleStatusFilters.QueryKey" value="@slug" />
+                    }
+                    @if (Model.Query is { } dateQuery)
+                    {
+                        <input type="hidden" name="@SaleSearch.QueryKey" value="@dateQuery" />
                     }
                     <div class="row g-2 mb-2">
                         <div class="col-6">
@@ -104,13 +150,22 @@
             </details>
             }
 
-            <p class="small text-body-secondary mb-2" data-sales-count>
-                @(total == 1 ? "1 venta" : $"{total:N0} ventas")
-                @if (Model.IsFiltered)
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <p class="small text-body-secondary mb-0" data-sales-count>
+                    @(total == 1 ? "1 venta" : $"{total:N0} ventas")
+                    @if (Model.IsFiltered)
+                    {
+                        @: · <a href="@Url.Content("~" + SalesUrls.List)" data-clear-filters>Ver todas</a>
+                    }
+                </p>
+                @if (Model.CanExport && total > 0)
                 {
-                    @: · <a href="@Url.Content("~" + SalesUrls.List)" data-clear-filters>Ver todas</a>
+                    @* Exportación a Excel (5.9, Pro): las mismas ventas que la lista, sin paginar. *@
+                    <a class="btn btn-outline-success btn-sm" href="@Url.Content("~" + Model.ExportUrl)" download data-sales-export>
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Exportar a Excel
+                    </a>
                 }
-            </p>
+            </div>
 
             @if (Model.Days.Count == 0)
             {

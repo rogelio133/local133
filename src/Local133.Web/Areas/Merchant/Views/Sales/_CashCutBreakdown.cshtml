@@ -1,0 +1,12 @@
+@model IReadOnlyList<Local133.Web.Areas.Merchant.Models.CashCutBreakdownRow>
+@* Desglose del corte de caja (por método o por origen): un renglón por tipo, con ventas y monto. *@
+<ul class="list-unstyled mb-0">
+    @foreach (var row in Model)
+    {
+        <li class="d-flex align-items-center gap-2 py-1" data-cash-cut-row="@row.Label" data-count="@row.SalesCount">
+            <i class="bi @row.Icon text-body-secondary" aria-hidden="true"></i>
+            <span class="flex-grow-1">@row.Label <span class="small text-body-secondary">· @row.SalesText</span></span>
+            <span class="fw-semibold text-nowrap">@row.AmountText</span>
+        </li>
+    }
+</ul>

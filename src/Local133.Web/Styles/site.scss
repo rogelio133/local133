@@ -326,6 +326,11 @@ body {
   min-width: 0;
 }
 
+/* Corte de caja (5.9): el campo de fecha se encoge entre las flechas (si no, desborda a 375 px). */
+.cash-cut-day {
+  min-width: 0;
+}
+
 /* Botones del recibo en la pantalla de «Pago recibido». */
 .sale-receipt {
   max-width: 24rem;
@@ -339,6 +344,16 @@ body {
 
   .receipt {
     box-shadow: none;
+  }
+
+  /* Corte de caja (5.9): sin el espacio de la barra inferior ni sombras (las barras y botones llevan d-print-none). */
+  .app-main {
+    padding-bottom: 0;
+  }
+
+  .cash-cut .card {
+    box-shadow: none;
+    break-inside: avoid;
   }
 }
 

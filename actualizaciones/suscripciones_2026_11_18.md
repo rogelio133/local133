@@ -310,6 +310,13 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
   - vista para imprimir y para compartir por WhatsApp.
 
   Cuando haya vendedores adicionales, también por vendedor. Sale de `DaySummaryQuery` y `SalesHistoryQuery`.
+- *(5.9, hecho 2026-11-23)*:
+  - el `.xlsx` se arma con `DocumentFormat.OpenXml` (Microsoft, firmado), con un tope de 50,000 ventas por archivo;
+  - la búsqueda es por folio («#12») o por el concepto del vendedor, sin el nombre del negocio, y no distingue acentos;
+  - el corte cuenta lo cobrado por el día del pago, y las pendientes y vencidas por el día en que se creó la venta;
+  - en el gratuito, la exportación responde 403 y el corte muestra el aviso de Pro.
+
+  Detalle en la [bitácora](../log_plan/fase-5.9-pro-de-lanzamiento.md).
 
 ### 5.10 Valor visible
 - Recibo con marca y catálogo público (§7). Los dos dependen del logo y la foto de la 4.1.

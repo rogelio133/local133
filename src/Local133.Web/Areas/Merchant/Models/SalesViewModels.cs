@@ -10,6 +10,16 @@ public static class SalesUrls
 {
     public const string List = "/app/ventas";
 
+    /// <summary>Exportación a Excel (5.9, Pro), con los mismos filtros que la lista.</summary>
+    public const string Export = "/app/ventas/exportar";
+
+    /// <summary>Corte de caja diario (5.9, Pro).</summary>
+    public const string CashCut = "/app/ventas/corte";
+
+    /// <summary>Corte de caja de un día; hoy va sin <c>?fecha=</c>.</summary>
+    public static string CashCutFor(DateOnly day, DateOnly today) =>
+        day >= today ? CashCut : $"{CashCut}?fecha={SaleFormats.IsoDate(day)}";
+
     public static string Detail(int saleId) => $"/app/ventas/{saleId.ToString(CultureInfo.InvariantCulture)}";
 
     /// <summary>Redirige a WhatsApp con el recibo, al chat del celular al que se cobró.</summary>
@@ -172,7 +182,16 @@ public sealed class SalesHistoryViewModel
 
     public DateOnly? To { get; init; }
 
+    /// <summary>Búsqueda por folio o concepto (5.9, Pro); <c>null</c> = sin búsqueda.</summary>
+    public string? Query { get; init; }
+
     public DateOnly Today { get; init; }
+
+    /// <summary>El plan permite exportar a Excel (Pro).</summary>
+    public bool CanExport { get; init; }
+
+    /// <summary>El plan trae el corte de caja diario (Pro).</summary>
+    public bool HasCashCut { get; init; }
 
     /// <summary>El vendedor tiene al menos una venta (sin filtros).</summary>
     public bool HasAnySales { get; init; }
@@ -197,17 +216,27 @@ public sealed class SalesHistoryViewModel
 
     public bool HasDateFilter => From is not null || To is not null;
 
-    public bool IsFiltered => Status != SaleStatusFilter.All || HasDateFilter;
+    public bool HasSearch => Query is not null;
+
+    public bool IsFiltered => Status != SaleStatusFilter.All || HasDateFilter || HasSearch;
 
     /// <summary>URL de la lista con el estatus actual y los días de hoy (atajo «Hoy») o de los últimos 7.</summary>
     public string UrlForLastDays(int days) => UrlFor(from: Today.AddDays(1 - days), to: Today);
 
     /// <summary>
     /// URL de la lista con estos filtros, cambiando estatus, página o días (<paramref name="keepDates"/> = false quita
-    /// las fechas).
+    /// las fechas; <paramref name="keepQuery"/> = false quita la búsqueda).
     /// </summary>
     public string UrlFor(
-        SaleStatusFilter? status = null, int? page = null, bool keepDates = true, DateOnly? from = null, DateOnly? to = null)
+        SaleStatusFilter? status = null, int? page = null, bool keepDates = true, DateOnly? from = null, DateOnly? to = null,
+        bool keepQuery = true) =>
+        UrlWithFilters(SalesUrls.List, status, page, keepDates, from, to, keepQuery);
+
+    /// <summary>Exportación a Excel con los filtros de la lista (sin la página).</summary>
+    public string ExportUrl => UrlWithFilters(SalesUrls.Export, null, null, true, null, null, true);
+
+    private string UrlWithFilters(
+        string path, SaleStatusFilter? status, int? page, bool keepDates, DateOnly? from, DateOnly? to, bool keepQuery)
     {
         var query = new List<string>();
         if (SaleStatusFilters.Slug(status ?? Status) is { } slug)
@@ -227,12 +256,17 @@ public sealed class SalesHistoryViewModel
             query.Add($"hasta={SaleFormats.IsoDate(toDay)}");
         }
 
+        if (keepQuery && Query is { } search)
+        {
+            query.Add($"{Services.SaleSearch.QueryKey}={Uri.EscapeDataString(search)}");
+        }
+
         if (page is > 1)
         {
             query.Add($"{PageInfo.QueryKey}={page.Value.ToString(CultureInfo.InvariantCulture)}");
         }
 
-        return query.Count == 0 ? SalesUrls.List : $"{SalesUrls.List}?{string.Join('&', query)}";
+        return query.Count == 0 ? path : $"{path}?{string.Join('&', query)}";
     }
 
     /// <summary>«Hoy», «Del 1 de noviembre al 14 de noviembre», «Desde el 1 de noviembre»…</summary>
@@ -287,4 +321,177 @@ public sealed record SaleDetailViewModel(
     public string MethodLabel => SaleStatusText.MethodLabel(Method, Source);
 
     public string MethodIcon => SaleStatusText.MethodIcon(Method, Source);
+}
+
+/// <summary>Textos cortos de cómo se cobró, para el corte de caja y la exportación (5.9).</summary>
+public static class SaleChannelText
+{
+    /// <summary>«QR», «Celular» o «QR fijo».</summary>
+    public static string Method(ChargeMethod method) => method switch
+    {
+        ChargeMethod.PushNotification => "Celular",
+        ChargeMethod.StaticQr => "QR fijo",
+        _ => "QR",
+    };
+
+    public static string MethodIcon(ChargeMethod method) => method switch
+    {
+        ChargeMethod.PushNotification => "bi-phone",
+        ChargeMethod.StaticQr => "bi-shop",
+        _ => "bi-qr-code",
+    };
+
+    /// <summary>«Monto», «Productos» o «Monto libre» (QR fijo: el cliente escribe el monto).</summary>
+    public static string Source(SaleSource source) => source switch
+    {
+        SaleSource.Cart => "Productos",
+        SaleSource.OpenAmount => "Monto libre",
+        _ => "Monto",
+    };
+
+    public static string SourceIcon(SaleSource source) => source switch
+    {
+        SaleSource.Cart => "bi-basket",
+        SaleSource.OpenAmount => "bi-shop",
+        _ => "bi-123",
+    };
+}
+
+/// <summary>Una venta en la exportación a Excel (5.9). Fechas en hora de México.</summary>
+public sealed record SalesExportRow(
+    int Folio,
+    DateTime CreatedAt,
+    string? Concept,
+    string Method,
+    string Source,
+    string Status,
+    decimal Amount,
+    decimal Collected,
+    DateTime? PaidAt,
+    string? Products);
+
+/// <summary>Renglón del desglose del corte (por método o por origen).</summary>
+public sealed record CashCutBreakdownRow(string Label, string Icon, int SalesCount, decimal Amount)
+{
+    public string AmountText => SaleQrViewModel.FormatAmount(Amount);
+
+    public string SalesText => SalesCount == 1 ? "1 venta" : $"{SalesCount:N0} ventas";
+}
+
+/// <summary>Producto vendido en el día: nombre guardado en la venta, piezas y monto.</summary>
+public sealed record CashCutProductRow(string Name, int Quantity, decimal Amount)
+{
+    public string AmountText => SaleQrViewModel.FormatAmount(Amount);
+}
+
+/// <summary>Ventas del día que no se pagaron (pendientes o vencidas): cuántas y por cuánto.</summary>
+public sealed record CashCutOpenSales(int Count, decimal Amount, string ListUrl)
+{
+    public string AmountText => SaleQrViewModel.FormatAmount(Amount);
+}
+
+/// <summary>
+/// Corte de caja de un día en hora de México (/app/ventas/corte, 5.9): lo cobrado ese día (pagos recibidos), su
+/// desglose, los productos vendidos y las ventas de ese día que siguen sin pagar.
+/// </summary>
+public sealed class CashCutViewModel
+{
+    /// <summary>Productos que van en el mensaje de WhatsApp (los más vendidos).</summary>
+    public const int MessageProducts = 5;
+
+    public required DateOnly Day { get; init; }
+
+    public required DateOnly Today { get; init; }
+
+    public string? BusinessName { get; init; }
+
+    public required decimal Collected { get; init; }
+
+    public required int PaidSalesCount { get; init; }
+
+    public required IReadOnlyList<CashCutBreakdownRow> ByMethod { get; init; }
+
+    public required IReadOnlyList<CashCutBreakdownRow> BySource { get; init; }
+
+    public required IReadOnlyList<CashCutProductRow> Products { get; init; }
+
+    public required CashCutOpenSales Pending { get; init; }
+
+    public required CashCutOpenSales Expired { get; init; }
+
+    public bool IsToday => Day == Today;
+
+    public bool HasPayments => PaidSalesCount > 0;
+
+    /// <summary>«Hoy», «Ayer» o «12 de noviembre».</summary>
+    public string DayLabel => SaleFormats.DayLabel(Day, Today);
+
+    /// <summary>«23 de noviembre de 2026», siempre con año (va impreso y en el mensaje).</summary>
+    public string FullDateText => Day.ToString("d 'de' MMMM 'de' yyyy", CultureInfo.GetCultureInfo("es-MX"));
+
+    public string CollectedText => SaleQrViewModel.FormatAmount(Collected);
+
+    public string PaidSalesText => PaidSalesCount == 1 ? "1 venta pagada" : $"{PaidSalesCount:N0} ventas pagadas";
+
+    /// <summary>Promedio por venta pagada, redondeado al centavo.</summary>
+    public decimal AverageTicket =>
+        PaidSalesCount == 0 ? 0m : Math.Round(Collected / PaidSalesCount, 2, MidpointRounding.AwayFromZero);
+
+    public string AverageTicketText => SaleQrViewModel.FormatAmount(AverageTicket);
+
+    public int ProductPieces => Products.Sum(p => p.Quantity);
+
+    public string PreviousUrl => SalesUrls.CashCutFor(Day.AddDays(-1), Today);
+
+    /// <summary><c>null</c> en hoy: no hay corte de días que no han llegado.</summary>
+    public string? NextUrl => IsToday ? null : SalesUrls.CashCutFor(Day.AddDays(1), Today);
+
+    /// <summary>Resumen en texto para WhatsApp y «Compartir».</summary>
+    public string Message
+    {
+        get
+        {
+            var lines = new List<string>
+            {
+                string.IsNullOrWhiteSpace(BusinessName) ? "Corte de caja" : $"Corte de caja · {BusinessName.Trim()}",
+                FullDateText,
+                string.Empty,
+                $"Cobrado: {CollectedText} ({PaidSalesText})",
+            };
+            lines.AddRange(ByMethod.Where(r => r.SalesCount > 0).Select(r => $"- {r.Label}: {r.AmountText} ({r.SalesCount:N0})"));
+            if (HasPayments)
+            {
+                lines.Add($"Ticket promedio: {AverageTicketText}");
+            }
+
+            if (Products.Count > 0)
+            {
+                lines.Add(string.Empty);
+                lines.Add("Más vendidos:");
+                lines.AddRange(Products.Take(MessageProducts).Select(p => $"- {p.Quantity:N0} {p.Name}"));
+            }
+
+            if (Pending.Count > 0 || Expired.Count > 0)
+            {
+                lines.Add(string.Empty);
+                if (Pending.Count > 0)
+                {
+                    lines.Add($"Pendientes: {Pending.Count:N0} ({Pending.AmountText})");
+                }
+
+                if (Expired.Count > 0)
+                {
+                    lines.Add($"Vencidas: {Expired.Count:N0} ({Expired.AmountText})");
+                }
+            }
+
+            return string.Join('\n', lines);
+        }
+    }
+
+    public string WhatsAppUrl => ReceiptLinks.WhatsAppUrl(Message);
+
+    public string WhatsAppAppUrl => ReceiptLinks.WhatsAppAppUrl(Message);
+
+    public string WhatsAppWebUrl => ReceiptLinks.WhatsAppWebUrl(Message);
 }

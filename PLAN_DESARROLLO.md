@@ -210,7 +210,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
    - 10 días para el que refiere cuando el referido paga, hasta 12 en 12 meses.
 
    ✅ *(hecho 2026-11-23; sin la CLABE única de la 5.2; premio pendiente si quien invita sigue en el onboarding)* — [bitácora](log_plan/fase-5.8-afiliados.md)
-9. **Pro de lanzamiento**: historial completo con búsqueda y exportación a Excel, y corte de caja diario. — [detalle](actualizaciones/suscripciones_2026_11_18.md#59-pro-de-lanzamiento)
+9. **Pro de lanzamiento**: historial completo con búsqueda y exportación a Excel, y corte de caja diario. ✅ *(hecho 2026-11-23; Excel con DocumentFormat.OpenXml)* — [bitácora](log_plan/fase-5.9-pro-de-lanzamiento.md)
 10. **Valor visible**:
     - recibo con marca: logo en Pro, y en el gratuito «Cobrado con Local133» con el código del vendedor;
     - catálogo público con liga;
@@ -273,6 +273,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): sin la CLABE única (5.2) alguien puede abrir cuentas con su misma CLABE e invitarse; referidos y anulación de premios en el admin (6.2), también para un premio que quedó pendiente por una activación simultánea; referidos y cookie en los textos legales (5.11); revisar en el navegador el aviso pendiente y el premio al activarse.
 - [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4, y el contenido del resumen mensual con la 5.10.
+- [5.9](log_plan/fase-5.9-pro-de-lanzamiento.md): abrir el `.xlsx` exportado en Excel de escritorio, en el celular (Excel o Google Sheets) y en Numbers; imprimir el corte de caja en papel o PDF (Android, iPhone, Windows) y mandarlo por WhatsApp real.
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

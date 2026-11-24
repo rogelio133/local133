@@ -13,8 +13,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Local133.Web.Areas.Merchant.Controllers;
 
 /// <summary>
-/// Ventas (/app/ventas): resumen del día, historial con filtros y detalle de cada venta con sus productos, sus pagos
-/// y el recibo para compartir. Solo lectura: lo ve cualquier vendedor, también suspendido o dado de baja.
+/// Ventas (/app/ventas): resumen del día, historial con filtros y búsqueda, detalle de cada venta con sus productos,
+/// sus pagos y el recibo para compartir; en Pro, exportación a Excel y corte de caja diario (5.9). Solo lectura: lo ve
+/// cualquier vendedor, también suspendido o dado de baja.
 /// </summary>
 [Area("Merchant")]
 [Authorize(Roles = Roles.Merchant)]
@@ -24,20 +25,109 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
 {
     /// <summary>Mensaje (TempData) que el detalle muestra una vez (p. ej. WhatsApp en el gratuito).</summary>
     public const string NoticeKey = "SaleDetailNotice";
+    /// <summary>Mensaje (TempData) que la lista muestra una vez (p. ej. una exportación demasiado grande).</summary>
+    public const string ListNoticeKey = "SalesListNotice";
+
     [HttpGet("")]
     public async Task<IActionResult> Index(
         [FromQuery(Name = SaleStatusFilters.QueryKey)] string? status,
         [FromQuery(Name = "desde")] string? from,
         [FromQuery(Name = "hasta")] string? to,
+        [FromQuery(Name = SaleSearch.QueryKey)] string? query,
         [FromQuery(Name = PageInfo.QueryKey)] int? page,
         CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         var model = await SalesHistoryQuery.BuildAsync(
-            db, merchant, plan, SaleStatusFilters.Parse(status), ParseDate(from), ParseDate(to), page, clock.GetUtcNow(),
-            cancellationToken);
+            db, merchant, plan, Filters(status, from, to, query), page, clock.GetUtcNow(), cancellationToken);
         return View(model);
+    }
+
+    /// <summary>
+    /// Exportación a Excel (5.9, Pro) con los mismos filtros que la lista, sin paginar. En el gratuito ⇒ 403 (el botón
+    /// no aparece; la regla se aplica aquí). Más de <see cref="SalesWorkbook.MaxRows"/> ventas ⇒ regresa a la lista
+    /// con un aviso para acotar las fechas.
+    /// </summary>
+    [HttpGet("exportar")]
+    public async Task<IActionResult> Export(
+        [FromQuery(Name = SaleStatusFilters.QueryKey)] string? status,
+        [FromQuery(Name = "desde")] string? from,
+        [FromQuery(Name = "hasta")] string? to,
+        [FromQuery(Name = SaleSearch.QueryKey)] string? query,
+        CancellationToken cancellationToken)
+    {
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
+        if (!plan.Entitlements.CanExportHistory)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var now = clock.GetUtcNow();
+        var filtered = SalesHistoryQuery.Filter(db, merchant.Id, plan, Filters(status, from, to, query), now);
+        if (await filtered.Sales.CountAsync(cancellationToken) > SalesWorkbook.MaxRows)
+        {
+            TempData[ListNoticeKey] = SalesWorkbook.TooManyRowsMessage;
+            return Redirect(Url.Content("~" + SalesUrls.List) + Request.QueryString);
+        }
+
+        var sales = await filtered.Sales
+            .OrderByDescending(s => s.CreatedAt).ThenByDescending(s => s.Id)
+            .Select(s => new
+            {
+                s.Folio,
+                s.CreatedAt,
+                s.Concept,
+                s.Method,
+                s.Source,
+                s.Status,
+                s.ExpiresAt,
+                s.Amount,
+                s.PaidAt,
+                Collected = db.Payments.Where(p => p.SaleId == s.Id).Sum(p => (decimal?)p.Amount) ?? 0m,
+                Items = s.Items.OrderBy(i => i.Id).Select(i => new { i.Name, i.Quantity }).ToList(),
+            })
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+
+        var rows = sales.Select(s => new SalesExportRow(
+            s.Folio,
+            MexicoTime.ToLocal(s.CreatedAt).DateTime,
+            Sale.ConceptTextOf(s.Concept),
+            SaleChannelText.Method(s.Method),
+            SaleChannelText.Source(s.Source),
+            SaleStatusText.Label(SalesHistoryQuery.EffectiveStatus(s.Status, s.ExpiresAt, now)),
+            s.Amount,
+            s.Collected,
+            s.PaidAt is { } paidAt ? MexicoTime.ToLocal(paidAt).DateTime : null,
+            s.Items.Count == 0 ? null : string.Join("; ", s.Items.Select(i => $"{i.Quantity:N0} × {i.Name}"))));
+
+        var stream = new MemoryStream();
+        SalesWorkbook.Write(stream, rows);
+        stream.Position = 0;
+        Response.Headers.CacheControl = "no-store";
+        return File(stream, SalesWorkbook.ContentType, SalesWorkbook.FileName(filtered.Filters, MexicoTime.Today(now)));
+    }
+
+    /// <summary>
+    /// Corte de caja de un día (5.9, Pro; <c>?fecha=AAAA-MM-DD</c>, sin fecha o con una futura ⇒ hoy en México). En el
+    /// gratuito responde 200 con el aviso de Pro.
+    /// </summary>
+    [HttpGet("corte")]
+    public async Task<IActionResult> CashCut([FromQuery(Name = "fecha")] string? date, CancellationToken cancellationToken)
+    {
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
+        if (!plan.Entitlements.HasDailyCashCut)
+        {
+            return View("CashCutLocked");
+        }
+
+        var now = clock.GetUtcNow();
+        var today = MexicoTime.Today(now);
+        var day = ParseDate(date) is { } parsed && parsed < today ? parsed : today;
+        return View(await CashCutQuery.BuildAsync(db, merchant, day, now, cancellationToken));
     }
 
     /// <summary>Detalle. El filtro multi-tenant de EF Core hace que la venta de otro vendedor dé 404.</summary>
@@ -128,10 +218,16 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         return Redirect(ReceiptLinks.WhatsAppUrlFor(destination, message, sale.PhoneNumber));
     }
 
+    private static SalesHistoryFilters Filters(string? status, string? from, string? to, string? query) =>
+        new(SaleStatusFilters.Parse(status), ParseDate(from), ParseDate(to), query);
+
+    /// <summary>Primer día que se acepta en los filtros (evita fechas absurdas como el año 1).</summary>
+    private static readonly DateOnly MinDate = new(2020, 1, 1);
+
     /// <summary>Fecha <c>AAAA-MM-DD</c> (la que manda <c>input type=date</c>); cualquier otra cosa se ignora.</summary>
     private static DateOnly? ParseDate(string? text) =>
         DateOnly.TryParseExact(text?.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.None, out var date)
+            System.Globalization.DateTimeStyles.None, out var date) && date >= MinDate
             ? date
             : null;
 }

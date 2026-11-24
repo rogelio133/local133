@@ -201,3 +201,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Cookie** `l133_ref` (30 días, `HttpOnly`, `SameSite=Lax`, `Secure` con HTTPS). Detrás del proxy de App Service se marca `Secure` porque `UseForwardedHeaders` ya respeta `X-Forwarded-Proto`.
 - **Correo**: un aviso más por cada referido que paga (al que invitó). Mismo Resend.
 - Sin recursos, App Settings ni secretos nuevos. Los números (`ReferralRewardDays`, `ReferralRewardsPerYear`, `ReferralWelcomeDiscountRate`) ya estaban en `SystemSettings` desde la 5.3.
+
+### Fase 5.9 — Pro de lanzamiento (búsqueda, Excel y corte de caja)
+- Sin cambios para Azure: sin migraciones, recursos, App Settings ni secretos nuevos. Se agrega el paquete NuGet `DocumentFormat.OpenXml` (Microsoft, MIT), que se publica con el sitio.
+- La exportación arma el `.xlsx` en memoria con hasta 50,000 ventas (unos pocos MB). Si se pone un proxy o Front Door delante, no debe recortar descargas de ese tamaño.

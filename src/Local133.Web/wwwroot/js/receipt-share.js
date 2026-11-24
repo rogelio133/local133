@@ -1,4 +1,4 @@
-// Recibo compartible ([data-receipt-share]; también la liga de «Invita y gana»): «Copiar liga» (portapapeles) y «Compartir» (Web Share API, sobre todo en
+// Recibo compartible ([data-receipt-share]; también la liga de «Invita y gana» y el texto del corte de caja): «Copiar liga» (portapapeles) y «Compartir» (Web Share API, sobre todo en
 // celulares). Los botones nacen ocultos y solo se muestran si el navegador los soporta; WhatsApp y «Ver recibo» son
 // enlaces normales que funcionan sin JS. En el recibo público, [data-receipt-print] abre el diálogo de impresión.
 (function () {
@@ -40,6 +40,7 @@
         // Textos propios de otras pantallas que reutilizan este script («Invita y gana», 5.8).
         var shareTitle = root.getAttribute('data-share-title') || 'Recibo de pago';
         var copyFailed = root.getAttribute('data-copy-failed') || 'No pudimos copiar la liga. Usa «Ver recibo» y cópiala desde ahí.';
+        var copiedText = root.getAttribute('data-copied-text') || 'Liga copiada.';
         var hideTimer;
 
         if (copyButton && navigator.clipboard && window.isSecureContext) {
@@ -49,7 +50,7 @@
                     if (!copied) {
                         return;
                     }
-                    copied.textContent = 'Liga copiada.';
+                    copied.textContent = copiedText;
                     copied.classList.remove('d-none', 'text-danger');
                     copied.classList.add('text-success');
                     clearTimeout(hideTimer);
