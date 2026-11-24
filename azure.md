@@ -31,6 +31,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 | `ForwardedHeaders__KnownNetworks__0` / `__1` (o `KnownProxies__0`) | Red o IP del front-end de App Service o del proxy. En App Service: `0.0.0.0/0` y `::/0` (el proceso solo recibe tráfico del front-end de la plataforma; su IP interna no es fija). Sin esto el sitio no confía en `X-Forwarded-Proto`: la redirección a HTTPS puede ciclarse, el webhook recibe 307 y el login de Google/Facebook falla con `redirect_uri_mismatch` (callback con `http://`) | Fase 2.5 (corrección 2026-11-13) |
 | `Storage__LocalDirectory` | Mientras no exista el blob: carpeta persistente (`/home/...` en Linux). No sirve con varias instancias | Fase 3.1 |
 | `App__PublicBaseUrl` | Dominio público **con HTTPS**, p. ej. `https://local133.mx`. Ver Fase 2.8. **Obligatoria** desde el correo de cuenta activa: sin ella ese correo no sale. Desde la 5.6 también arma las URLs de regreso de los links de Pey, que deben ser HTTPS. Desde la 5.7 el job diario la usa para las ligas de los recordatorios: sin ella, fuera de Development, los recordatorios no mandan correo | Fase 2.8 · Correo de cuenta activa 2026-11-18 · Fase 5.6 · Fase 5.7 |
+| `App__LandingUrl` | Portada pública sin diagonal final. Por defecto `https://local133.com.mx`. «Cobrado con Local133» del recibo y el pie del catálogo público llevan a `{LandingUrl}/?codigo=…` | Fase 5.10 |
 | `Resend__ApiKey` | Referencia a Key Vault. Llave de **solo envío** restringida al dominio de envío. Sin ella los correos se guardan en disco y **no salen** | Mantenimiento 2026-11-17 |
 | `Email__From` | Opcional: `appsettings.json` ya trae `Local133 <hola@notificaciones.local133.com.mx>`. Si se cambia, debe ser de un dominio verificado en Resend | Mantenimiento 2026-11-17 |
 
@@ -205,3 +206,10 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Fase 5.9 — Pro de lanzamiento (búsqueda, Excel y corte de caja)
 - Sin cambios para Azure: sin migraciones, recursos, App Settings ni secretos nuevos. Se agrega el paquete NuGet `DocumentFormat.OpenXml` (Microsoft, MIT), que se publica con el sitio.
 - La exportación arma el `.xlsx` en memoria con hasta 50,000 ventas (unos pocos MB). Si se pone un proxy o Front Door delante, no debe recortar descargas de ese tamaño.
+
+### Fase 5.10 — Valor visible (recibo con marca, catálogo público y resumen mensual)
+- **Migración `PublicCatalog`** (no destructiva): agrega a `Merchants` `PublicSlug` (`varchar(40)`, nula, índice único filtrado `IX_Merchants_PublicSlug`) y `PublicCatalogEnabled` (`bit`, 0 por defecto). Se aplica sola al arrancar.
+- **App Setting nuevo `App__LandingUrl`**: la portada pública (`Local133.LandingPage`), sin diagonal final, p. ej. `https://local133.com.mx`. Es el valor por defecto si no se configura. «Cobrado con Local133» del recibo gratuito y el pie del catálogo público llevan a `{LandingUrl}/?codigo={código}`. La portada usa `Landing__AppUrl` para mandar su botón a `{AppUrl}/r/{código}`. No es secreto.
+- **Rutas públicas nuevas** (anónimas): `/tienda/{slug}` con sus imágenes (`/tienda/{slug}/logo`, `/foto`, `/productos/{id}/foto` y `/miniatura`, con `Cache-Control: public, max-age=3600`) y `/recibo/{token}/logo` (`private`). Si se pone un CDN o Front Door delante, respetar esos encabezados: un vendedor que deja de publicar deja de servir imágenes en una hora. Las imágenes salen de `IFileStorage`, así que en producción dependen de la implementación en Blob Storage (Fase 7), igual que las privadas.
+- **Correo**: el día 1 sale un resumen mensual por cada vendedor que cobró en el mes, en el mismo job `suscripciones-diario`. Revisar los límites diarios y mensuales del plan de Resend antes del piloto.
+- Sin recursos ni secretos nuevos.

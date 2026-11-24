@@ -121,6 +121,14 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("PublicCatalogEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PublicSlug")
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
                     b.Property<string>("ReferralCode")
                         .IsRequired()
                         .HasMaxLength(6)
@@ -144,6 +152,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PublicSlug")
+                        .IsUnique()
+                        .HasFilter("[PublicSlug] IS NOT NULL");
 
                     b.HasIndex("ReferralCode")
                         .IsUnique();

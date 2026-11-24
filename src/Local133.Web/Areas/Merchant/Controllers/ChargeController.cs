@@ -253,7 +253,16 @@ public class ChargeController(
         var (merchant, account) = await MerchantAndAccountAsync(cancellationToken);
         var blocked = ChargeFormViewModel.BlockedNoticeFor(merchant, account);
         var (usageModel, planBlocked) = blocked is null ? await MonthlyUsageAsync(merchant.Id, cancellationToken) : (null, null);
-        return new ChargeFormViewModel { Input = input, Blocked = blocked ?? planBlocked, Usage = usageModel };
+        string? missingCatalog = null;
+        if (blocked is null && !(await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements.CanChargeWithCart)
+        {
+            missingCatalog = ProductListViewModel.WaitingCatalogText(await ActiveProductCountAsync(merchant.Id, cancellationToken));
+        }
+
+        return new ChargeFormViewModel
+        {
+            Input = input, Blocked = blocked ?? planBlocked, Usage = usageModel, MissingCatalogText = missingCatalog,
+        };
     }
 
     /// <summary>
@@ -309,11 +318,15 @@ public class ChargeController(
         };
     }
 
+    /// <summary>Productos vigentes del vendedor (para «Tu catálogo de N productos te espera»).</summary>
+    private Task<int> ActiveProductCountAsync(int merchantId, CancellationToken cancellationToken) =>
+        // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
+        db.Products.AsNoTracking().CountAsync(p => p.MerchantId == merchantId && !p.IsDeleted, cancellationToken);
+
     /// <summary>Aviso del carrito en el gratuito, con el catálogo que ya tiene esperando.</summary>
     private async Task<ProRequiredViewModel> CartProRequiredAsync(int merchantId, CancellationToken cancellationToken)
     {
-        // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
-        var count = await db.Products.AsNoTracking().CountAsync(p => p.MerchantId == merchantId && !p.IsDeleted, cancellationToken);
+        var count = await ActiveProductCountAsync(merchantId, cancellationToken);
         return new ProRequiredViewModel(
             "Cobra con tus productos",
             "Con Pro armas la venta con tu catálogo en unos toques. Con el plan gratuito puedes cobrar por monto.",

@@ -1,6 +1,7 @@
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Common;
 using Local133.Domain.Pey;
+using Local133.Domain.Subscriptions;
 
 namespace Local133.Domain.Merchants;
 
@@ -49,6 +50,15 @@ public class Merchant : Entity
     /// Código de invitación (<see cref="Merchants.ReferralCode"/>, 5.8), único. Se genera al registrarse y no cambia.
     /// </summary>
     public string ReferralCode { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Nombre del catálogo público (<see cref="Merchants.PublicSlug"/>, 5.10), único entre vendedores. Se conserva al
+    /// dejar de publicar.
+    /// </summary>
+    public string? PublicSlug { get; set; }
+
+    /// <summary>El vendedor publicó su catálogo (<c>/tienda/{slug}</c>). Solo se ve si además su plan lo permite.</summary>
+    public bool PublicCatalogEnabled { get; set; }
 
     /// <param name="ownerName">Nombre de la persona; se normaliza con <see cref="PersonName.Normalize"/>.</param>
     /// <param name="referralCode">
@@ -152,6 +162,38 @@ public class Merchant : Entity
         ShopPhotoKey = key;
         return previous;
     }
+
+    /// <summary>
+    /// Publica el catálogo con <paramref name="slug"/> (ya normalizado). La unicidad la revisa quien lo guarda; el plan
+    /// y el nombre del negocio, el caso de uso.
+    /// </summary>
+    /// <exception cref="ArgumentException">El slug no cumple <see cref="Merchants.PublicSlug"/>.</exception>
+    public void PublishCatalog(string slug)
+    {
+        if (!Merchants.PublicSlug.IsValid(slug))
+        {
+            throw new ArgumentException("El nombre de la liga no es válido.", nameof(slug));
+        }
+
+        PublicSlug = slug;
+        PublicCatalogEnabled = true;
+    }
+
+    /// <summary>Deja de publicar el catálogo. El slug queda apartado para volver a publicarlo.</summary>
+    public void UnpublishCatalog() => PublicCatalogEnabled = false;
+
+    /// <summary>
+    /// El catálogo público se muestra: está publicado, el plan lo permite (Pro) y el vendedor no está suspendido ni
+    /// dado de baja. Si no, la liga dice «Catálogo no disponible por ahora».
+    /// </summary>
+    public bool CanShowPublicCatalog(PlanEntitlements entitlements) =>
+        CanShowPublicCatalog(PublicCatalogEnabled, PublicSlug, Status, entitlements);
+
+    /// <summary>Igual que la de instancia, con lo que se proyecta de la base.</summary>
+    public static bool CanShowPublicCatalog(
+        bool enabled, string? slug, MerchantStatus status, PlanEntitlements entitlements) =>
+        enabled && slug is not null && entitlements.CanPublishCatalog
+        && status is not (MerchantStatus.Suspended or MerchantStatus.Disabled);
 
     /// <summary>
     /// «Mi información» completa para el paso opcional de Inicio: el negocio tiene nombre y hay un teléfono válido

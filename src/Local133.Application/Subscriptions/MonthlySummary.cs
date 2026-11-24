@@ -2,8 +2,9 @@ namespace Local133.Application.Subscriptions;
 
 /// <summary>
 /// Resumen mensual del vendedor («En noviembre cobraste $18,400 en 212 ventas…», §7 del diseño). El job diario de la
-/// suscripción lo llama el día 1 con el mes que terminó (5.7); el contenido llega en la 5.10. Debe ser idempotente por
-/// mes (llave del aviso) porque el job puede repetirse.
+/// suscripción lo llama el día 1 con el mes que terminó (5.7); el aviso y el correo son de la 5.10
+/// (<c>Infrastructure/Subscriptions/MonthlySummaryNotifier</c>). Es idempotente por mes (llave del aviso) porque el job
+/// puede repetirse.
 /// </summary>
 public interface IMonthlySummaryNotifier
 {

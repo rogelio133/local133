@@ -139,6 +139,12 @@ public sealed class ChargeFormViewModel
     /// <summary>Contador del mes del gratuito (5.5); <c>null</c> sin límite o si aún no puede cobrar.</summary>
     public ChargeUsageViewModel? Usage { get; init; }
 
+    /// <summary>
+    /// Lo que te pierdes (5.10): «Tu catálogo de 63 productos te espera.» en el gratuito con productos; <c>null</c> si
+    /// puede cobrar con carrito o no tiene productos.
+    /// </summary>
+    public string? MissingCatalogText { get; init; }
+
     public static ChargeBlockedNotice? BlockedNoticeFor(Domain.Merchants.Merchant merchant, BankAccount? account)
     {
         if (merchant.CanCharge(account))

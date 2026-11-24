@@ -142,8 +142,8 @@ public static class ProductUrls
 
     public static string Thumbnail(int id, string photoKey) => $"/app/productos/{id}/foto/miniatura?v={Version(photoKey)}";
 
-    /// <summary>Último segmento de la llave (el guid de la foto).</summary>
-    private static string Version(string photoKey) => photoKey[(photoKey.LastIndexOf('/') + 1)..];
+    /// <summary>Último segmento de la llave (el guid de la foto); también lo usa el catálogo público (5.10).</summary>
+    public static string Version(string photoKey) => photoKey[(photoKey.LastIndexOf('/') + 1)..];
 }
 
 /// <summary>Por qué el catálogo es de solo lectura.</summary>

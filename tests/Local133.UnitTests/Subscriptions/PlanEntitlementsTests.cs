@@ -22,6 +22,7 @@ public class PlanEntitlementsTests
         Assert.True(e.HasDailyCashCut);
         Assert.True(e.CanPublishCatalog);
         Assert.False(e.HasMonthlyChargeLimit);
+        Assert.True(e.HasBrandedReceipt);
     }
 
     [Fact]
@@ -37,6 +38,7 @@ public class PlanEntitlementsTests
         Assert.False(e.HasDailyCashCut);
         Assert.False(e.CanPublishCatalog);
         Assert.True(e.HasMonthlyChargeLimit);
+        Assert.False(e.HasBrandedReceipt);
     }
 
     [Fact]
