@@ -341,36 +341,83 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         Assert.Contains($"href=\"/app/ventas/{sale.Id}\" data-sale-detail-link", paid);
     }
 
-    // --- Ayudas -----------------------------------------------------------------------------------------------------
+    // --- Búsqueda (5.9) ------------------------------------------------------------------------------------------------
 
-    /// <summary>Venta con QR insertada directo en la base (para fechas y estatus a la medida).</summary>
-    private Task<Sale> InsertSaleAsync(
-        string email, decimal amount, DateTimeOffset createdAt, SaleStatus status = SaleStatus.Pending,
-        DateTimeOffset? expiresAt = null, string concept = "Tacos Don Ramón · 2 tacos") => WithDbAsync(async db =>
+    [Fact]
+    public async Task Busca_por_concepto_sin_acentos_ni_mayusculas_y_no_por_el_negocio()
     {
-        var merchant = await MerchantOfAsync(db, email);
-        var folio = (await db.Sales.IgnoreQueryFilters().Where(s => s.MerchantId == merchant.Id).MaxAsync(s => (int?)s.Folio) ?? 0) + 1;
-        var sale = Sale.StartDirect(merchant.Id, folio, amount, concept, expiresAt ?? createdAt.AddMinutes(10), createdAt);
-        var idc = $"IDC{Guid.NewGuid():N}"[..20];
-        sale.AttachQr(idc, FakePaymentGateway.QrStringFor(idc));
-        sale.Status = status;
-        if (status == SaleStatus.Cancelled)
-        {
-            sale.CancelledAt = createdAt.AddMinutes(1);
-        }
+        var client = await ActiveMerchantAsync(Email);
+        await ActiveMerchantAsync(OtherEmail);
+        var now = DateTimeOffset.UtcNow;
+        var platano = await InsertSaleAsync(Email, 10m, now.AddMinutes(-30), concept: "Tacos Don Ramón · Plátano frito");
+        var refresco = await InsertSaleAsync(Email, 20m, now.AddMinutes(-20), concept: "Tacos Don Ramón · Refresco");
+        var old = await InsertSaleAsync(Email, 30m, now.AddMinutes(-10), concept: "Agua de jamaica"); // sin negocio (antes de la 4.1)
+        var foreign = await InsertSaleAsync(OtherEmail, 40m, now.AddMinutes(-5), concept: "Tacos Don Ramón · Plátano frito");
 
-        db.Sales.Add(sale);
-        await db.SaveChangesAsync();
-        return sale;
-    });
+        var byConcept = await GetHtmlAsync(client, Url + "?q=PLATANO");
+        Assert.Contains($"data-sale-row=\"{platano.Id}\"", byConcept);
+        Assert.DoesNotContain($"data-sale-row=\"{refresco.Id}\"", byConcept);
+        Assert.DoesNotContain($"data-sale-row=\"{foreign.Id}\"", byConcept);
+        Assert.Contains("value=\"PLATANO\"", byConcept);
+        Assert.Contains("data-clear-search", byConcept);
+        Assert.Contains("data-clear-filters", byConcept);
 
-    /// <summary>Pago recibido (3 %) de una venta insertada; la deja pagada.</summary>
-    private Task AddPaymentAsync(Sale sale, decimal amount, DateTimeOffset paidAt) => WithDbAsync(async db =>
+        // El nombre del negocio va antes de cada concepto: buscarlo no debe traer todas las ventas.
+        Assert.Contains("data-sales-no-results", await GetHtmlAsync(client, Url + "?q=Don%20Ram%C3%B3n"));
+
+        var withoutBusiness = await GetHtmlAsync(client, Url + "?q=jamaica");
+        Assert.Contains($"data-sale-row=\"{old.Id}\"", withoutBusiness);
+        Assert.DoesNotContain($"data-sale-row=\"{platano.Id}\"", withoutBusiness);
+
+        // Los comodines de LIKE se buscan como texto.
+        Assert.Contains("data-sales-no-results", await GetHtmlAsync(client, Url + "?q=%25"));
+    }
+
+    [Fact]
+    public async Task Busca_por_folio_y_combina_con_estatus_y_fechas()
     {
-        var tracked = await db.Sales.IgnoreQueryFilters().SingleAsync(s => s.Id == sale.Id);
-        db.Payments.Add(Payment.Record(
-            tracked.MerchantId, tracked.Id, NewTransactionId(), amount, paidAt, "TRK123", 40012, DateTimeOffset.UtcNow));
-        tracked.MarkPaid(paidAt);
-        await db.SaveChangesAsync();
-    });
+        var client = await ActiveMerchantAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        var first = await InsertSaleAsync(Email, 10m, now.AddMinutes(-30), concept: "Tacos Don Ramón · Mesa 2");
+        var second = await InsertSaleAsync(Email, 20m, now.AddMinutes(-20), concept: "Tacos Don Ramón · Refresco");
+        var third = await InsertSaleAsync(Email, 30m, now.AddMinutes(-10), concept: "Tacos Don Ramón · Refresco grande");
+        await AddPaymentAsync(third, 30m, now.AddMinutes(-9));
+
+        // «#2» es solo el folio; «2» también busca en el concepto («Mesa 2»).
+        var byFolio = await GetHtmlAsync(client, Url + "?q=%232");
+        Assert.Contains($"data-sale-row=\"{second.Id}\"", byFolio);
+        Assert.DoesNotContain($"data-sale-row=\"{first.Id}\"", byFolio);
+        var number = await GetHtmlAsync(client, Url + "?q=2");
+        Assert.Contains($"data-sale-row=\"{first.Id}\"", number);
+        Assert.Contains($"data-sale-row=\"{second.Id}\"", number);
+        Assert.DoesNotContain($"data-sale-row=\"{third.Id}\"", number);
+
+        var today = MexicoTime.Today(now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var paid = await GetHtmlAsync(client, $"{Url}?estado=pagadas&q=refresco&desde={today}&hasta={today}");
+        Assert.Contains($"data-sale-row=\"{third.Id}\"", paid);
+        Assert.DoesNotContain($"data-sale-row=\"{second.Id}\"", paid);
+        // Los filtros conservan la búsqueda, y la búsqueda conserva el estatus y las fechas.
+        Assert.Contains("q=refresco", paid);
+        Assert.Contains($"name=\"desde\" value=\"{today}\"", paid);
+        Assert.Contains($"href=\"/app/ventas/exportar?estado=pagadas&amp;desde={today}&amp;hasta={today}&amp;q=refresco\"", paid);
+    }
+
+    [Fact]
+    public async Task El_gratuito_no_busca_ni_exporta_ni_tiene_corte()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await SeedFreePlanAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        var platano = await InsertSaleAsync(Email, 10m, now.AddMinutes(-30), concept: "Tacos Don Ramón · Plátano frito");
+        var refresco = await InsertSaleAsync(Email, 20m, now.AddMinutes(-20), concept: "Tacos Don Ramón · Refresco");
+
+        var html = await GetHtmlAsync(client, Url + "?q=platano");
+
+        Assert.Contains($"data-sale-row=\"{platano.Id}\"", html);
+        Assert.Contains($"data-sale-row=\"{refresco.Id}\"", html);
+        Assert.DoesNotContain("data-sales-search", html);
+        Assert.DoesNotContain("data-sales-export", html);
+        Assert.Contains("data-date-filter-pro", html);
+        Assert.Contains("data-cash-cut-pro", html);
+    }
 }

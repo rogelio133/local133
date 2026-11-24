@@ -108,6 +108,62 @@ public abstract class SaleFlowTestBase(Local133WebFactory factory) : WebTestBase
         await db.SaveChangesAsync();
     });
 
+    /// <summary>
+    /// Venta insertada directo en la base (para fechas y estatus a la medida): con QR o, con <paramref name="phone"/>,
+    /// al celular; con <paramref name="items"/> (nombre, precio, cantidad) es una venta con productos y el monto es su
+    /// suma.
+    /// </summary>
+    protected Task<Sale> InsertSaleAsync(
+        string email, decimal amount, DateTimeOffset createdAt, SaleStatus status = SaleStatus.Pending,
+        DateTimeOffset? expiresAt = null, string concept = "Tacos Don Ramón · 2 tacos", string? phone = null,
+        IReadOnlyList<(string Name, decimal Price, int Quantity)>? items = null) => WithDbAsync(async db =>
+    {
+        var merchant = await MerchantOfAsync(db, email);
+        var folio = (await db.Sales.IgnoreQueryFilters().Where(s => s.MerchantId == merchant.Id).MaxAsync(s => (int?)s.Folio) ?? 0) + 1;
+        var lines = items?.Select(i => new SaleItem
+        {
+            MerchantId = merchant.Id, Name = i.Name, UnitPrice = i.Price, Quantity = i.Quantity, Amount = i.Price * i.Quantity,
+        }).ToList();
+        if (lines is { Count: > 0 })
+        {
+            amount = lines.Sum(i => i.Amount);
+        }
+
+        var expires = expiresAt ?? createdAt.AddMinutes(10);
+        Sale sale;
+        if (phone is null)
+        {
+            sale = Sale.StartDirect(merchant.Id, folio, amount, concept, expires, createdAt, lines);
+            var idc = $"IDC{Guid.NewGuid():N}"[..20];
+            sale.AttachQr(idc, FakePaymentGateway.QrStringFor(idc));
+        }
+        else
+        {
+            sale = Sale.StartPush(merchant.Id, folio, amount, concept, phone, expires, createdAt, lines);
+            sale.AttachPushNotification(NewTransactionId(), null);
+        }
+
+        sale.Status = status;
+        if (status == SaleStatus.Cancelled)
+        {
+            sale.CancelledAt = createdAt.AddMinutes(1);
+        }
+
+        db.Sales.Add(sale);
+        await db.SaveChangesAsync();
+        return sale;
+    });
+
+    /// <summary>Pago recibido de una venta insertada; la deja pagada.</summary>
+    protected Task AddPaymentAsync(Sale sale, decimal amount, DateTimeOffset paidAt) => WithDbAsync(async db =>
+    {
+        var tracked = await db.Sales.IgnoreQueryFilters().SingleAsync(s => s.Id == sale.Id);
+        db.Payments.Add(Domain.Payments.Payment.Record(
+            tracked.MerchantId, tracked.Id, NewTransactionId(), amount, paidAt, "TRK123", 40012, DateTimeOffset.UtcNow));
+        tracked.MarkPaid(paidAt);
+        await db.SaveChangesAsync();
+    });
+
     protected Task<int> MerchantIdAsync(string email) => WithDbAsync(async db => (await MerchantOfAsync(db, email)).Id);
 
     protected async Task WithDbAsync(Func<AppDbContext, Task> action)

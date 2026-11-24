@@ -1,0 +1,191 @@
+@using Local133.Web.Areas.Merchant.Models
+@model CashCutViewModel
+@{
+    ViewData["Title"] = "Corte de caja";
+    var iso = SaleFormats.IsoDate(Model.Day);
+    var today = SaleFormats.IsoDate(Model.Today);
+}
+@* Corte de caja diario (5.9, Pro): lo cobrado en el día (pagos recibidos, hora de México), su desglose, los productos
+   vendidos y lo que quedó sin pagar. Se imprime (sin barras ni botones) o se comparte por WhatsApp como texto. *@
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8 cash-cut" data-cash-cut="@iso">
+        <a class="d-inline-block mb-3 d-print-none" href="@Url.Content("~" + SalesUrls.List)" data-back-to-sales>
+            <i class="bi bi-chevron-left" aria-hidden="true"></i> Ventas
+        </a>
+
+        <header class="mb-3">
+            <h1 class="h4 mb-0">Corte de caja</h1>
+            <p class="text-body-secondary mb-0" data-cash-cut-date>
+                @if (!string.IsNullOrWhiteSpace(Model.BusinessName))
+                {
+                    <span class="fw-semibold text-body">@Model.BusinessName</span><span> · </span>
+                }
+                @(Model.IsToday ? "Hoy, " : null)@Model.FullDateText
+            </p>
+        </header>
+
+        @* Cambiar de día: flechas y un GET normal (sin JS). *@
+        <form method="get" action="@Url.Content("~" + SalesUrls.CashCut)" class="d-flex align-items-end gap-2 mb-3 d-print-none" data-cash-cut-nav>
+            <a class="btn btn-outline-primary px-2" href="@Url.Content("~" + Model.PreviousUrl)" aria-label="Día anterior" data-cash-cut-previous>
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </a>
+            <div class="flex-grow-1 cash-cut-day">
+                <label class="form-label small mb-1" for="fecha">Día</label>
+                <input class="form-control" type="date" id="fecha" name="fecha" min="2020-01-01" max="@today" value="@iso" required />
+            </div>
+            <button type="submit" class="btn btn-primary px-3">Ver</button>
+            @if (Model.NextUrl is { } next)
+            {
+                <a class="btn btn-outline-primary px-2" href="@Url.Content("~" + next)" aria-label="Día siguiente" data-cash-cut-next>
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>
+            }
+            else
+            {
+                <span class="btn btn-outline-primary px-2 disabled" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+            }
+        </form>
+
+        <section class="row g-2 mb-3" aria-label="Totales del día">
+            <div class="col-12 col-sm-4">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <div class="small text-body-secondary">Cobrado</div>
+                        <div class="fs-3 fw-bold text-nowrap" data-cash-cut-collected>@Model.CollectedText</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <div class="small text-body-secondary">Ventas pagadas</div>
+                        <div class="fs-3 fw-bold" data-cash-cut-paid>@Model.PaidSalesCount.ToString("N0")</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-sm-4">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <div class="small text-body-secondary">Ticket promedio</div>
+                        <div class="fs-3 fw-bold text-nowrap" data-cash-cut-average>@Model.AverageTicketText</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (!Model.HasPayments)
+        {
+            <div class="card mb-3" data-cash-cut-empty>
+                <div class="card-body text-center text-body-secondary">
+                    <i class="bi bi-cash-stack fs-2 d-block mb-1" aria-hidden="true"></i>
+                    @(Model.IsToday ? "Hoy todavía no recibes pagos." : "Este día no recibiste pagos.")
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <section class="card h-100" aria-labelledby="cash-cut-method" data-cash-cut-by-method>
+                        <div class="card-body">
+                            <h2 class="h6 mb-2" id="cash-cut-method">Por método</h2>
+                            <partial name="_CashCutBreakdown" model="Model.ByMethod" />
+                        </div>
+                    </section>
+                </div>
+                <div class="col-md-6">
+                    <section class="card h-100" aria-labelledby="cash-cut-source" data-cash-cut-by-source>
+                        <div class="card-body">
+                            <h2 class="h6 mb-2" id="cash-cut-source">Por origen</h2>
+                            <partial name="_CashCutBreakdown" model="Model.BySource" />
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            @if (Model.Products.Count > 0)
+            {
+                <section class="card mb-3" aria-labelledby="cash-cut-products" data-cash-cut-products>
+                    <div class="card-body">
+                        <h2 class="h6 mb-2" id="cash-cut-products">Productos vendidos <span class="fw-normal text-body-secondary">· @Model.ProductPieces.ToString("N0") @(Model.ProductPieces == 1 ? "pieza" : "piezas")</span></h2>
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Producto</th>
+                                    <th scope="col" class="text-end">Cant.</th>
+                                    <th scope="col" class="text-end">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in Model.Products)
+                                {
+                                    <tr data-cash-cut-product>
+                                        <td class="text-break">@product.Name</td>
+                                        <td class="text-end">@product.Quantity.ToString("N0")</td>
+                                        <td class="text-end text-nowrap">@product.AmountText</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            }
+        }
+
+        <section class="card mb-3" aria-labelledby="cash-cut-open" data-cash-cut-open>
+            <div class="card-body">
+                <h2 class="h6 mb-0" id="cash-cut-open">Sin pagar</h2>
+                <p class="small text-body-secondary mb-2">Ventas creadas este día</p>
+                <ul class="list-unstyled mb-0">
+                    @foreach (var (label, open, key) in new[] { ("Pendientes", Model.Pending, "pending"), ("Vencidas", Model.Expired, "expired") })
+                    {
+                        <li class="d-flex align-items-center justify-content-between gap-2 py-1" data-cash-cut-open-row="@key" data-count="@open.Count">
+                            <span>
+                                @label: <span class="fw-semibold">@open.Count.ToString("N0")</span>
+                                @if (open.Count > 0)
+                                {
+                                    <span class="text-body-secondary">· @open.AmountText</span>
+                                }
+                            </span>
+                            @if (open.Count > 0)
+                            {
+                                <a class="small d-print-none" href="@Url.Content("~" + open.ListUrl)">Ver</a>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        </section>
+
+        @* Compartir: WhatsApp (wa.me; en escritorio la app con data-desktop-href y el respaldo de WhatsApp Web),
+           «Compartir» y «Copiar resumen» con receipt-share.js, e «Imprimir». Se comparte el texto, no una liga. *@
+        <div class="d-grid gap-2 d-print-none" data-receipt-share data-receipt-url="@Model.Message" data-receipt-message="@Model.Message"
+             data-share-title="Corte de caja" data-copied-text="Resumen copiado." data-copy-failed="No pudimos copiar el resumen."
+             data-cash-cut-share>
+            <a class="btn btn-success" href="@Model.WhatsAppUrl" target="_blank" rel="noopener noreferrer"
+               data-desktop-href="@Model.WhatsAppAppUrl" data-receipt-whatsapp data-cash-cut-whatsapp>
+                <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Enviar corte por WhatsApp
+            </a>
+            <p class="small text-body-secondary text-center mb-0 d-none" data-receipt-whatsapp-web>
+                <span>¿No se abre la app de WhatsApp? Usa</span>
+                <a class="text-nowrap" href="@Model.WhatsAppWebUrl" target="_blank" rel="noopener noreferrer" data-receipt-whatsapp-web-link>WhatsApp Web</a>
+            </p>
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-native-share>
+                    <i class="bi bi-share me-1" aria-hidden="true"></i> Compartir
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-copy>
+                    <i class="bi bi-clipboard me-1" aria-hidden="true"></i> Copiar resumen
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" data-receipt-print data-cash-cut-print>
+                    <i class="bi bi-printer me-1" aria-hidden="true"></i> Imprimir
+                </button>
+            </div>
+            <p class="small text-success text-center mb-0 d-none" role="status" data-receipt-copied>Resumen copiado.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/receipt-share.js" asp-append-version="true"></script>
+}

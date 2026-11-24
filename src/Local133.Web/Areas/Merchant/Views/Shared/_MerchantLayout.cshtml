@@ -23,7 +23,7 @@
     <partial name="_Head" />
 </head>
 <body>
-    <nav class="navbar bg-primary sticky-top" data-bs-theme="dark">
+    <nav class="navbar bg-primary sticky-top d-print-none" data-bs-theme="dark">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="~/app">
                 <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
@@ -43,12 +43,12 @@
         @if (ViewContext.RouteData.Values["controller"] as string != "Plan")
         {
             @* Gracia (5.7): en «Mi plan» no hace falta, la tarjeta del plan ya lo dice. *@
-            @await Component.InvokeAsync("GraceBanner")
+            <div class="d-print-none">@await Component.InvokeAsync("GraceBanner")</div>
         }
         @RenderBody()
     </main>
 
-    <nav class="tabbar nav nav-justified fixed-bottom bg-body border-top d-md-none" aria-label="Navegación principal">
+    <nav class="tabbar nav nav-justified fixed-bottom bg-body border-top d-md-none d-print-none" aria-label="Navegación principal">
         @foreach (var tab in tabs)
         {
             var active = tab.Action == current;
