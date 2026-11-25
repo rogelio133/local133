@@ -1,0 +1,123 @@
+@using Local133.Domain.Webhooks
+@using Local133.Web.Areas.Admin.Controllers
+@model WebhookDetailViewModel
+@{
+    ViewData["Title"] = $"Webhook #{Model.Id}";
+    var notice = TempData[WebhooksController.NoticeKey] as string;
+    var error = TempData[WebhooksController.ErrorKey] as string;
+    var modalId = $"reprocess-webhook-{Model.Id}";
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <a class="small d-inline-block mb-2" href="@Url.Content("~" + WebhookUrls.List)"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Webhooks</a>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <h1 class="h4 mb-0 text-break">Webhook #@Model.Id · @Model.TypeLabel</h1>
+            <span class="badge @WebhookLog.StatusBadge(Model.Status, Model.IsStuck)" data-webhook-status="@Model.Status">@WebhookLog.StatusText(Model.Status, Model.IsStuck)</span>
+            @if (Model.CanReprocess)
+            {
+                <button type="button" class="btn btn-outline-primary btn-sm ms-sm-auto" data-bs-toggle="modal" data-bs-target="#@modalId" data-webhook-reprocess>
+                    <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Reprocesar
+                </button>
+            }
+        </div>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-webhook-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        @if (error is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-webhook-error-notice><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @error</div>
+        }
+
+        <div class="card mb-3" data-webhook-detail="@Model.Id">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">webhook-id</dt>
+                    <dd class="col-sm-8 font-monospace small text-break">@Model.WebhookId</dd>
+                    <dt class="col-sm-4">Tipo</dt>
+                    <dd class="col-sm-8 text-break">@Model.TypeLabel <span class="small text-body-secondary font-monospace">@(string.IsNullOrEmpty(Model.EventType) ? null : Model.EventType)</span></dd>
+                    <dt class="col-sm-4">Recibido</dt>
+                    <dd class="col-sm-8">@Model.ReceivedAtText</dd>
+                    <dt class="col-sm-4">Enviado por Pey</dt>
+                    <dd class="col-sm-8">@Model.WebhookTimestampText</dd>
+                    @if (Model.ProcessedAtText is { } processed)
+                    {
+                        <dt class="col-sm-4">Último resultado</dt>
+                        <dd class="col-sm-8">@processed</dd>
+                    }
+                    <dt class="col-sm-4">Intentos</dt>
+                    <dd class="col-sm-8" data-webhook-attempts="@Model.Attempts">@Model.Attempts</dd>
+                    @if (Model.Error is { } webhookError)
+                    {
+                        <dt class="col-sm-4">@(Model.Status == WebhookEventStatus.Ignored ? "Motivo" : "Error")</dt>
+                        <dd class="col-sm-8 text-break" data-webhook-error>@webhookError</dd>
+                    }
+                    @if (Model.Relations.Count > 0)
+                    {
+                        <dt class="col-sm-4">Relacionado con</dt>
+                        <dd class="col-sm-8">
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var relation in Model.Relations)
+                                {
+                                    <li><a href="@Url.Content("~" + relation.Url)" data-webhook-relation>@relation.Text</a></li>
+                                }
+                            </ul>
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <section class="card mb-3" aria-labelledby="webhook-payload-title">
+            <div class="card-body">
+                <h2 class="h6 mb-1" id="webhook-payload-title">Payload</h2>
+                <p class="small text-body-secondary">
+                    @(Model.PayloadIsJson ? "Con la CLABE, el RFC y el celular enmascarados." : "No es JSON válido; los números largos van enmascarados.")
+                </p>
+                <pre class="bg-body-tertiary border rounded p-2 small mb-0 overflow-auto" style="max-height: 28rem" data-webhook-payload tabindex="0"><code>@Model.PayloadText</code></pre>
+            </div>
+        </section>
+
+        <section class="card mb-3" aria-labelledby="webhook-history-title">
+            <div class="card-body">
+                <h2 class="h6 mb-2" id="webhook-history-title">Reprocesos del admin</h2>
+                @if (Model.History.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary" data-webhook-no-history>Nadie lo ha reprocesado.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush" data-webhook-history>
+                        @foreach (var entry in Model.History)
+                        {
+                            <li class="list-group-item px-0">
+                                <div class="small text-body-secondary">@entry.OccurredAtText · @entry.ActorEmail</div>
+                                <div>@entry.Summary</div>
+                                @if (entry.Note is { } note)
+                                {
+                                    <div class="small text-body-secondary text-break">Motivo: @note</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </section>
+    </div>
+</div>
+
+@if (Model.CanReprocess)
+{
+    <partial name="_PlanConfirmModal" model='new PlanConfirmModalViewModel(
+        modalId,
+        $"¿Reprocesar el webhook #{Model.Id}?",
+        "Se vuelve a procesar con el payload guardado, igual que si Pey lo reintentara. No se llama a Pey y no duplica pagos ni abonos.",
+        WebhookUrls.Reprocess(Model.Id),
+        "Sí, reprocesar",
+        "btn-primary")' />
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

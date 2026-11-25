@@ -1,0 +1,114 @@
+@model TransactionListViewModel
+@{
+    ViewData["Title"] = "Transacciones · Ventas";
+    var filters = Model.Filters;
+    var today = SaleFormats.IsoDate(Model.Today);
+    var advanced = filters.Status != SaleStatusFilter.All || filters.Method != SaleMethodFilter.All || filters.From is not null || filters.To is not null;
+    var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlFor(p)), "Páginas de ventas");
+    var total = Model.Page.TotalCount;
+}
+<partial name="_TransactionsTabs" model="TransactionTab.Sales" />
+
+<form method="get" action="@Url.Content("~" + TransactionUrls.Sales)" class="card mb-3" role="search" data-transaction-search>
+    <div class="card-body">
+        @if (filters.MerchantId is { } merchantId)
+        {
+            <input type="hidden" name="@TransactionFilters.MerchantKey" value="@merchantId" />
+            <p class="small mb-2" data-transaction-merchant-filter="@merchantId">
+                Solo las ventas de <a href="@Url.Content("~" + CustomerUrls.Detail(merchantId))">@(Model.MerchantName ?? $"#{merchantId}")</a>
+                · <a href="@Url.Content("~" + TransactionUrls.Sales)">Ver de todos</a>
+            </p>
+        }
+        <label class="form-label small mb-1" for="transaction-q">Buscar</label>
+        <div class="input-group mb-2">
+            <input class="form-control" type="search" id="transaction-q" name="q" value="@filters.Query" maxlength="@TransactionFilters.QueryMaxLength"
+                   placeholder="Folio, cliente o id de Pey" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
+        <div class="form-text mt-0 mb-1">«#12» busca el folio. También el id del QR o de la transacción y la clave de rastreo exactos.</div>
+
+        <button class="btn btn-link btn-sm px-0 d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#transaction-filters"
+                aria-expanded="@(advanced ? "true" : "false")" aria-controls="transaction-filters">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtros
+        </button>
+        <div class="collapse d-lg-block @(advanced ? "show" : null)" id="transaction-filters">
+            <div class="row g-2 pt-2 align-items-end">
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="transaction-status">Estatus</label>
+                    <select class="form-select" id="transaction-status" name="@SaleStatusFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var status in SaleStatusFilters.All.Where(s => s != SaleStatusFilter.All))
+                        {
+                            <option value="@SaleStatusFilters.Slug(status)" selected="@(filters.Status == status)">@SaleStatusFilters.Label(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="transaction-method">Método</label>
+                    <select class="form-select" id="transaction-method" name="@SaleMethodFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var method in SaleMethodFilters.All)
+                        {
+                            <option value="@SaleMethodFilters.Slug(method)" selected="@(filters.Method == method)">@SaleMethodFilters.Label(method)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="transaction-from">Creada desde</label>
+                    <input class="form-control" type="date" id="transaction-from" name="desde" max="@today" value="@AdminQueryString.Date(filters.From)" />
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="transaction-to">Creada hasta</label>
+                    <input class="form-control" type="date" id="transaction-to" name="hasta" max="@today" value="@AdminQueryString.Date(filters.To)" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-auto">
+                    <button type="submit" class="btn btn-primary w-100">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+    <p class="small text-body-secondary mb-0" data-transactions-count="@total">@(total == 1 ? "1 venta" : $"{total:N0} ventas")</p>
+    <p class="small mb-0" data-transactions-collected>· Cobrado: <span class="fw-semibold">@Model.CollectedText</span></p>
+    @if (filters.IsFiltered)
+    {
+        <a class="small ms-auto" href="@Url.Content("~" + TransactionUrls.Sales)" data-clear-search>Ver todas</a>
+    }
+</div>
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="card" data-transactions-empty>
+        <div class="card-body text-center text-body-secondary">
+            @(filters.IsFiltered ? "No hay ventas con estos filtros." : "Todavía no hay ventas.")
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var row in Model.Rows)
+        {
+            <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="@Url.Content("~" + TransactionUrls.SaleDetail(row.Id))"
+               data-transaction-row="@row.Id" data-status="@row.Status" data-merchant="@row.MerchantId">
+                <i class="bi @SaleStatusText.MethodIcon(row.Method, row.Source) fs-5 text-body-secondary" aria-hidden="true"></i>
+                <div class="flex-grow-1 text-break">
+                    <div class="small text-body-secondary">Venta @row.Folio · @row.CreatedAtText</div>
+                    <div class="fw-semibold">@row.MerchantName@(row.BusinessName is { } b ? $" · {b}" : null)</div>
+                    <div>@(row.ConceptText ?? "Sin concepto")</div>
+                    <div class="small text-body-secondary">
+                        @SaleStatusText.MethodLabel(row.Method, row.Source)@(row.MaskedPhone is { } phone ? $" · {phone}" : null)@(row.PaymentsCount > 1 ? $" · {row.PaymentsCount} pagos" : null)
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-semibold text-nowrap">@row.AmountText</div>
+                    <span class="badge @SaleStatusText.BadgeClass(row.Status)">@SaleStatusText.Label(row.Status)</span>
+                </div>
+            </a>
+        }
+    </div>
+
+    <partial name="_Pager" model="pager" />
+}

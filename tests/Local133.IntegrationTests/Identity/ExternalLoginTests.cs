@@ -115,8 +115,8 @@ public class ExternalLoginTests(Local133WebFactory factory) : WebTestBase(factor
         var client = CreateClient();
 
         var login = await client.GetAsync(await StartExternalLoginAsync(client));
-        Assert.Equal("/admin", Location(login));
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/admin")).StatusCode);
+        Assert.Equal("/admin/clientes", Location(login));
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/admin/clientes")).StatusCode);
     }
 
     [Fact]

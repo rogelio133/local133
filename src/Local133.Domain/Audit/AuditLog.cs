@@ -19,10 +19,13 @@ public enum AuditAction
 
     /// <summary>Dio los premios de referidos que se quedaron pendientes.</summary>
     PendingReferralRewardsGranted,
+
+    /// <summary>Reprocesó un webhook guardado en la bitácora (6.4).</summary>
+    WebhookReprocessed,
 }
 
 /// <summary>
-/// Bitácora de cambios del admin: precios, parámetros y acciones sobre el plan de un vendedor. No pertenece a un
+/// Bitácora de cambios del admin: precios, parámetros, acciones sobre el plan de un vendedor y reprocesos de webhooks. No pertenece a un
 /// vendedor (sin filtro multi-tenant): solo la ve el admin. Se guarda en la misma transacción que el cambio.
 /// </summary>
 public class AuditLog : Entity
@@ -54,9 +57,12 @@ public class AuditLog : Entity
     /// <summary>JSON con el detalle (cambios antes/después, fechas, ids).</summary>
     public string? Details { get; set; }
 
+    /// <summary>Webhook reprocesado (<see cref="AuditAction.WebhookReprocessed"/>); <c>null</c> en lo demás.</summary>
+    public int? WebhookEventId { get; set; }
+
     public static AuditLog Create(
         string actorUserId, string actorEmail, AuditAction action, int? merchantId, string summary, string? note,
-        string? details, DateTimeOffset now)
+        string? details, DateTimeOffset now, int? webhookEventId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(actorUserId);
         ArgumentException.ThrowIfNullOrWhiteSpace(summary);
@@ -76,6 +82,7 @@ public class AuditLog : Entity
             Summary = Truncate(summary.Trim(), SummaryMaxLength),
             Note = trimmedNote,
             Details = details,
+            WebhookEventId = webhookEventId,
         };
     }
 

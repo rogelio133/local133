@@ -15,7 +15,7 @@ public static class PostLoginRedirect
         }
         if (await userManager.IsInRoleAsync(user, Roles.Admin))
         {
-            return "~/admin";
+            return "~/admin/clientes";
         }
         return await userManager.IsInRoleAsync(user, Roles.Merchant) ? "~/app" : "~/";
     }

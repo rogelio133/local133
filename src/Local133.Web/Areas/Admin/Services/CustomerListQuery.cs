@@ -50,27 +50,7 @@ public static class CustomerListQuery
         var graceDays = await db.SystemSettings.AsNoTracking()
             .Where(s => s.Id == SystemSettings.SingletonId).Select(s => s.GraceDays).SingleAsync(cancellationToken);
 
-        var merchants =
-            from m in db.Merchants.AsNoTracking()
-            join u in db.Users on m.UserId equals u.Id
-            join s in db.Subscriptions on m.Id equals s.MerchantId into subscriptions
-            from s in subscriptions.DefaultIfEmpty()
-            join b in db.BankAccounts on m.Id equals b.MerchantId into accounts
-            from b in accounts.DefaultIfEmpty()
-            select new MerchantData
-            {
-                Id = m.Id,
-                CreatedAt = m.CreatedAt,
-                Status = m.Status,
-                OwnerName = m.OwnerName,
-                BusinessName = m.BusinessName,
-                Email = u.Email,
-                ProUntil = (DateTimeOffset?)s.ProUntil,
-                LastPeriodKind = (SubscriptionPeriodKind?)s.LastPeriodKind,
-                CodiStatus = (PeyCodiStatus?)b.CodiStatus,
-            };
-
-        var query = merchants;
+        var query = Merchants(db);
         if (filters.Query is { Length: > 0 } text)
         {
             var id = int.TryParse(text, out var parsed) ? parsed : (int?)null;
@@ -140,6 +120,43 @@ public static class CustomerListQuery
             HasAnyMerchants = pageInfo.TotalCount > 0 || await db.Merchants.AnyAsync(cancellationToken),
         };
     }
+
+    /// <summary>
+    /// Vendedores por estado del plan (tablero, 6.4): un <c>COUNT</c> por estado con el mismo filtro del listado
+    /// (<see cref="WithPlan"/>), así que cada número coincide con lo que muestra <c>/admin/clientes?plan=…</c>.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<PlanTier, int>> CountByPlanAsync(
+        AppDbContext db, DateTimeOffset now, int graceDays, CancellationToken cancellationToken)
+    {
+        var counts = new Dictionary<PlanTier, int>();
+        foreach (var tier in PlanTierFilters.All)
+        {
+            counts[tier] = await WithPlan(db, Merchants(db), tier, now, graceDays).CountAsync(cancellationToken);
+        }
+
+        return counts;
+    }
+
+    /// <summary>Vendedores con su usuario, suscripción y cuenta bancaria (base del listado y de los conteos).</summary>
+    private static IQueryable<MerchantData> Merchants(AppDbContext db) =>
+        from m in db.Merchants.AsNoTracking()
+        join u in db.Users on m.UserId equals u.Id
+        join s in db.Subscriptions on m.Id equals s.MerchantId into subscriptions
+        from s in subscriptions.DefaultIfEmpty()
+        join b in db.BankAccounts on m.Id equals b.MerchantId into accounts
+        from b in accounts.DefaultIfEmpty()
+        select new MerchantData
+        {
+            Id = m.Id,
+            CreatedAt = m.CreatedAt,
+            Status = m.Status,
+            OwnerName = m.OwnerName,
+            BusinessName = m.BusinessName,
+            Email = u.Email,
+            ProUntil = (DateTimeOffset?)s.ProUntil,
+            LastPeriodKind = (SubscriptionPeriodKind?)s.LastPeriodKind,
+            CodiStatus = (PeyCodiStatus?)b.CodiStatus,
+        };
 
     /// <summary>
     /// Nombre a mostrar: el de la persona; sin él, el negocio; sin ninguno, el correo. El negocio va aparte solo si no

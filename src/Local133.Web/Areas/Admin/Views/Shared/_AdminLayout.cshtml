@@ -1,13 +1,14 @@
 @{
     // Portal administrador: menú en Offcanvas en móvil; en ≥lg el mismo Offcanvas se muestra como sidebar fijo.
-    // Activo por controlador y, en Home, por acción (Clientes queda activo en todo CustomersController).
+    // Activo por controlador (Clientes queda activo en todo CustomersController) y, si se indica, por acción.
     var currentController = ViewContext.RouteData.Values["controller"] as string;
     var currentAction = ViewContext.RouteData.Values["action"] as string;
     var links = new (string Controller, string? Action, string Href, string Label, string Icon)[]
     {
-        ("Home", "Index", "~/admin", "Tablero", "bi-speedometer2"),
         ("Customers", null, "~/admin/clientes", "Clientes", "bi-people"),
-        ("Home", "Transactions", "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
+        ("Home", "Dashboard", "~/admin/tablero", "Tablero", "bi-speedometer2"),
+        ("Transactions", null, "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
+        ("Webhooks", null, "~/admin/webhooks", "Webhooks", "bi-broadcast"),
         ("Settings", null, "~/admin/parametros", "Parámetros", "bi-sliders"),
     };
 }
@@ -22,7 +23,7 @@
             <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#admin-menu" aria-controls="admin-menu" aria-label="Abrir menú">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand d-flex align-items-center gap-2" href="~/admin">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="~/admin/clientes">
                 <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
                 Admin
             </a>
@@ -51,7 +52,7 @@
             </div>
         </div>
 
-        <main class="flex-grow-1 p-3 p-lg-4">
+        <main class="admin-main flex-grow-1 p-3 p-lg-4">
             @RenderBody()
         </main>
     </div>

@@ -1,0 +1,98 @@
+@using Local133.Domain.Subscriptions
+@model SubscriptionPaymentListViewModel
+@{
+    ViewData["Title"] = "Transacciones · Suscripciones";
+    var filters = Model.Filters;
+    var today = SaleFormats.IsoDate(Model.Today);
+    var advanced = filters.Method != SubscriptionPaymentMethodFilter.All || filters.From is not null || filters.To is not null;
+    var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlFor(p)), "Páginas de pagos");
+    var total = Model.Page.TotalCount;
+}
+<partial name="_TransactionsTabs" model="TransactionTab.Subscriptions" />
+
+<form method="get" action="@Url.Content("~" + TransactionUrls.Subscriptions)" class="card mb-3" role="search" data-subscription-payment-search>
+    <div class="card-body">
+        <label class="form-label small mb-1" for="subscription-q">Buscar</label>
+        <div class="input-group mb-2">
+            <input class="form-control" type="search" id="subscription-q" name="q" value="@filters.Query" maxlength="@SubscriptionPaymentFilters.QueryMaxLength"
+                   placeholder="Cliente, #cargo o id de Pey" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
+
+        <button class="btn btn-link btn-sm px-0 d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#subscription-filters"
+                aria-expanded="@(advanced ? "true" : "false")" aria-controls="subscription-filters">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtros
+        </button>
+        <div class="collapse d-lg-block @(advanced ? "show" : null)" id="subscription-filters">
+            <div class="row g-2 pt-2 align-items-end">
+                <div class="col-12 col-md-4 col-xl">
+                    <label class="form-label small mb-1" for="subscription-method">Método</label>
+                    <select class="form-select" id="subscription-method" name="@SubscriptionPaymentMethodFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var method in SubscriptionPaymentMethodFilters.All)
+                        {
+                            <option value="@SubscriptionPaymentMethodFilters.Slug(method)" selected="@(filters.Method == method)">@SubscriptionPaymentMethodFilters.Label(method)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-xl">
+                    <label class="form-label small mb-1" for="subscription-from">Pagado desde</label>
+                    <input class="form-control" type="date" id="subscription-from" name="desde" max="@today" value="@AdminQueryString.Date(filters.From)" />
+                </div>
+                <div class="col-6 col-md-4 col-xl">
+                    <label class="form-label small mb-1" for="subscription-to">Pagado hasta</label>
+                    <input class="form-control" type="date" id="subscription-to" name="hasta" max="@today" value="@AdminQueryString.Date(filters.To)" />
+                </div>
+                <div class="col-12 col-xl-auto">
+                    <button type="submit" class="btn btn-primary w-100">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+    <p class="small text-body-secondary mb-0" data-subscription-payments-count="@total">@(total == 1 ? "1 pago" : $"{total:N0} pagos")</p>
+    <p class="small mb-0" data-subscription-payments-total>· Pagado: <span class="fw-semibold">@Model.TotalText</span></p>
+    @if (filters.IsFiltered)
+    {
+        <a class="small ms-auto" href="@Url.Content("~" + TransactionUrls.Subscriptions)" data-clear-search>Ver todos</a>
+    }
+</div>
+<p class="small text-body-secondary">Pagos que confirmó Pey. Los cargos abonados a mano se ven en la pestaña Plan de cada cliente.</p>
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="card" data-subscription-payments-empty>
+        <div class="card-body text-center text-body-secondary">
+            @(filters.IsFiltered ? "No hay pagos con estos filtros." : "Todavía no hay pagos de la suscripción.")
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var row in Model.Rows)
+        {
+            <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="@Url.Content("~" + CustomerUrls.Tab(row.MerchantId, CustomerTab.Plan))"
+               data-subscription-payment-row="@row.Id" data-merchant="@row.MerchantId">
+                <i class="bi bi-star fs-5 text-body-secondary" aria-hidden="true"></i>
+                <div class="flex-grow-1 text-break">
+                    <div class="small text-body-secondary">Cargo #@row.ChargeId · @row.PaidAtText</div>
+                    <div class="fw-semibold">@row.MerchantName@(row.BusinessName is { } b ? $" · {b}" : null)</div>
+                    <div>Pro, @row.Package.Label()</div>
+                    <div class="small text-body-secondary">
+                        @row.MethodText · base @row.BaseText@(row.FeeText is { } fee ? $" · comisión {fee}" : null)
+                    </div>
+                    <div class="small text-body-secondary font-monospace">@row.PeyTransactionId</div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-semibold text-nowrap">@row.AmountText</div>
+                    <span class="badge @PlanLabels.ChargeBadge(row.ChargeStatus)">@PlanLabels.ChargeStatus(row.ChargeStatus)</span>
+                </div>
+            </a>
+        }
+    </div>
+
+    <partial name="_Pager" model="pager" />
+}
