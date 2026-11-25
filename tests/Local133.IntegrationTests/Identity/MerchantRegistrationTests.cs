@@ -191,15 +191,6 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
         return await db.Merchants.Where(m => m.UserId == userId).Select(m => m.OwnerName).SingleAsync();
     }
 
-    [Theory]
-    [InlineData("/terminos", "Términos y condiciones")]
-    [InlineData("/aviso-de-privacidad", "Aviso de privacidad")]
-    public async Task Paginas_legales_son_publicas(string url, string title)
-    {
-        var html = await HtmlAsync(CreateClient(), url);
-        Assert.Contains($"<h1 class=\"h3\">{title}</h1>", html);
-    }
-
     private async Task AssertMerchantCreatedAsync(string email, DateTimeOffset notBefore)
     {
         using var scope = Factory.Services.CreateScope();

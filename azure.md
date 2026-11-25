@@ -213,3 +213,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Rutas públicas nuevas** (anónimas): `/tienda/{slug}` con sus imágenes (`/tienda/{slug}/logo`, `/foto`, `/productos/{id}/foto` y `/miniatura`, con `Cache-Control: public, max-age=3600`) y `/recibo/{token}/logo` (`private`). Si se pone un CDN o Front Door delante, respetar esos encabezados: un vendedor que deja de publicar deja de servir imágenes en una hora. Las imágenes salen de `IFileStorage`, así que en producción dependen de la implementación en Blob Storage (Fase 7), igual que las privadas.
 - **Correo**: el día 1 sale un resumen mensual por cada vendedor que cobró en el mes, en el mismo job `suscripciones-diario`. Revisar los límites diarios y mensuales del plan de Resend antes del piloto.
 - Sin recursos ni secretos nuevos.
+
+### Fase 5.11 — Textos legales
+- Sin cambios para Azure: solo cambia el texto de `/terminos` y `/aviso-de-privacidad`, la versión en `LegalDocuments` (código, sin migración) y un estilo en `site.scss`.
+- El aviso de privacidad nombra a Microsoft Azure como hospedaje y a Resend como envío de correo. Si se cambia de proveedor, actualizar el aviso y subir su versión.
+- La sección «Planes» de la portada quedó pendiente: no cambia el App Service de la portada.

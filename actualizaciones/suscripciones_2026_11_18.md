@@ -336,6 +336,13 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 - **Términos**: planes, prueba, límites y uso justo (con número), pago con link, gracia, baja al gratuito, referidos, fundador, precio congelado, cancelación y reembolsos.
 - **Aviso de privacidad**: datos de referidos, pagos de la suscripción y avisos.
 - Subir las versiones en `LegalDocuments` y pasar los textos por revisión legal.
+- *(5.11, textos legales hechos el 2026-11-24)*:
+  - la sección «Planes» de la portada queda **pendiente** (decisión del usuario). La portada no tiene base para leer precios ni lugares de fundador;
+  - versión `2026-11-24`, solo para los registros nuevos;
+  - los números van escritos y una prueba los compara con `SystemSettings`;
+  - el responsable y el contacto quedan como marcadores hasta la revisión legal.
+
+  Detalle en la [bitácora](../log_plan/fase-5.11-textos-legales.md).
 
 ## 11. Por confirmar
 **Con el usuario** (este documento ya usa el valor por defecto que se indica)
@@ -344,9 +351,9 @@ Los pasos están en el plan. Para el vendedor solo cambian dos cosas: desaparece
 3. **Historial en el gratuito**: conserva el filtro de estatus; el rango de fechas, la búsqueda y la exportación son de Pro.
 4. **Números**: tope de 300 cobros generados al mes en el gratuito, uso justo de 5,000 al mes en Pro y tasa de referencia de terminal de 3.5 % + IVA.
 5. **Anual**: recordatorio también 15 días antes.
-6. **Cancelación y reembolsos**: no se reembolsan periodos pagados y se puede dejar de pagar cuando sea.
-7. **Datos de cuentas que no vuelven**: cuánto tiempo se guardan (va en el aviso de privacidad).
-8. **Términos nuevos**: si se pide aceptarlos de nuevo a los usuarios existentes. Hoy solo se guarda la versión al registrarse.
+6. **Cancelación y reembolsos**: no se reembolsan periodos pagados y se puede dejar de pagar cuando sea. *(Así quedó en los términos de la 5.11.)*
+7. ~~**Datos de cuentas que no vuelven**: cuánto tiempo se guardan (va en el aviso de privacidad).~~ *Decidido el 2026-11-24: con 2 años sin actividad, aviso por correo y eliminación, salvo lo que la ley obligue a conservar. Todavía no hay job.*
+8. ~~**Términos nuevos**: si se pide aceptarlos de nuevo a los usuarios existentes.~~ *Decidido el 2026-11-24: solo los registros nuevos aceptan la versión nueva; a los existentes no se les pide nada.*
 
 **Con soporte de Pey**
 1. Con tarjeta, ¿el `fee` lo paga el pagador encima del monto? ¿Qué es `applicationFee` y se descuenta a la plataforma? ¿Un link puede ofrecer solo CoDi? Si el pagador paga una comisión con tarjeta, el precio «IVA incluido» sube con tarjeta, y hay que decirlo en «Mi plan».
