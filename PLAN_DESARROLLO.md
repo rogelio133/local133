@@ -217,7 +217,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - «lo que te pierdes» y resumen mensual.
 
     ✅ *(hecho 2026-11-24; la marca del recibo sigue el plan al abrir la liga, «Cobrado con Local133» lleva a la portada con el código y el resumen va solo a quien cobró en el mes)* — [bitácora](log_plan/fase-5.10-valor-visible.md)
-11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. — [detalle](actualizaciones/suscripciones_2026_11_18.md#511-precios-y-textos-legales)
+11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. ✅ *(textos legales hechos el 2026-11-24, versión `2026-11-24`, con marcadores para el responsable y el contacto y pendientes de revisión legal; la sección «Planes» de la portada queda **pendiente**, decisión del usuario)* — [bitácora](log_plan/fase-5.11-textos-legales.md)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
 1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan. ✅ *(hecho 2026-11-23; solo lectura, la pestaña Plan con el resumen)* — [bitácora](log_plan/fase-6.1-clientes.md)
@@ -271,10 +271,16 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.9](log_plan/fase-2.9-conciliacion.md): barrido nocturno con `GET /transaction/bank-account/{id}` (pagos sin venta pendiente: adicionales, push sin transacción confirmada, ventas de más de 24 h). Pospuesto; conviene junto con el reproceso del admin (Fase 6).
 - [5.5](log_plan/fase-5.5-limites-del-gratuito.md): avisos en el sitio y correos de 80 y 100 cobros (los conecta la 5.4 reemplazando `LoggingChargeLimitNotifier`); alerta en el admin del uso justo de Pro (Fase 6).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): barrido nocturno de links con `GET /transaction/api-key` (pospuesto; cubriría links de más de 60 días pagados con el webhook perdido); revisión en el admin de cargos `Partial` y pagos extra (Fase 6); aviso en el sitio del pago abonado (5.4); confirmar con Pey el `fee` con tarjeta, `applicationFee`, `partial`, si un link puede ofrecer solo CoDi y si `externalMetadata` siempre viaja en el webhook.
-- [5.8](log_plan/fase-5.8-afiliados.md): sin la CLABE única (5.2) alguien puede abrir cuentas con su misma CLABE e invitarse; referidos y anulación de premios en el admin (6.2), también para un premio que quedó pendiente por una activación simultánea; referidos y cookie en los textos legales (5.11); revisar en el navegador el aviso pendiente y el premio al activarse.
+- [5.8](log_plan/fase-5.8-afiliados.md): sin la CLABE única (5.2) alguien puede abrir cuentas con su misma CLABE e invitarse; referidos y anulación de premios en el admin (6.2), también para un premio que quedó pendiente por una activación simultánea; revisar en el navegador el aviso pendiente y el premio al activarse.
 - [5.7](log_plan/fase-5.7-recordatorios-y-gracia.md): ver correr `suscripciones-diario` en Hangfire a las 9:00 y un recordatorio real en un buzón (requiere confirmación). La campana y `/app/avisos` que muestran sus avisos llegan con la 5.4 (el contenido del resumen mensual ya llegó con la 5.10).
 - [5.9](log_plan/fase-5.9-pro-de-lanzamiento.md): abrir el `.xlsx` exportado en Excel de escritorio, en el celular (Excel o Google Sheets) y en Numbers; imprimir el corte de caja en papel o PDF (Android, iPhone, Windows) y mandarlo por WhatsApp real.
-- [5.10](log_plan/fase-5.10-valor-visible.md): resumen mensual enviado a Outlook el 2026-11-24 (falta revisar cómo se ve, Gmail, modo oscuro y el envío del job el día 1); catálogo y recibo con marca en un celular real y la vista previa de WhatsApp de la liga del catálogo; el aviso del resumen en la campana (5.4); celular del negocio en el catálogo y uso de los cobros en el resumen, en los textos legales (5.11).
+- [5.10](log_plan/fase-5.10-valor-visible.md): resumen mensual enviado a Outlook el 2026-11-24 (falta revisar cómo se ve, Gmail, modo oscuro y el envío del job el día 1); catálogo y recibo con marca en un celular real y la vista previa de WhatsApp de la liga del catálogo; el aviso del resumen en la campana (5.4).
+- [5.11](log_plan/fase-5.11-textos-legales.md):
+  - sección «Planes» de la portada, pospuesta (falta decidir de dónde saca precios y lugares de fundador, porque la portada no tiene base);
+  - revisión legal de Términos y Aviso de privacidad, y razón social, domicilio y correo de contacto en lugar de los marcadores (con un buzón que reciba correo);
+  - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
+  - en la 6.2, cambiar un parámetro que aparece en los términos exige publicar una versión nueva;
+  - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 
 ---

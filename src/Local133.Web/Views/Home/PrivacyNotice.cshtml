@@ -1,8 +1,9 @@
 @using Local133.Domain.Legal
 @{
     ViewData["Title"] = "Aviso de privacidad";
+    // Al cambiar el texto, subir LegalDocuments.CurrentPrivacyNoticeVersion. La cookie y sus días: ReferralCookie (Web/Identity).
 }
-<article class="mx-auto" style="max-width: 46rem;">
+<article class="legal-document mx-auto">
     <h1 class="h3">@ViewData["Title"]</h1>
     <p class="text-body-secondary small">Versión @LegalDocuments.CurrentPrivacyNoticeVersion</p>
 
@@ -10,36 +11,102 @@
         <strong>Borrador pendiente de revisión legal.</strong> Este texto es provisional y puede cambiar antes del lanzamiento.
     </div>
 
-    <h2 class="h5 mt-4">Responsable</h2>
-    <p>Local133 es responsable del tratamiento de tus datos personales conforme a la Ley Federal de Protección de Datos
-        Personales en Posesión de los Particulares.</p>
+    <nav aria-label="Contenido" class="small" data-section-index>
+        <p class="fw-bold mb-1">Contenido</p>
+        <ol class="mb-0">
+            <li><a href="#responsable">Responsable</a></li>
+            <li><a href="#datos">Datos que recabamos</a></li>
+            <li><a href="#finalidades">Finalidades</a></li>
+            <li><a href="#publicos">Datos que se vuelven públicos</a></li>
+            <li><a href="#transferencias">Con quién compartimos tus datos</a></li>
+            <li><a href="#cookies">Cookies</a></li>
+            <li><a href="#conservacion">Cuánto tiempo guardamos tus datos</a></li>
+            <li><a href="#arco">Derechos ARCO</a></li>
+            <li><a href="#cambios">Cambios</a></li>
+        </ol>
+    </nav>
 
-    <h2 class="h5 mt-4">Datos que recabamos</h2>
+    <h2 id="responsable" class="h5 mt-4">Responsable</h2>
+    <p><mark>[razón social y domicilio]</mark>, que opera Local133, es responsable del tratamiento de tus datos personales
+        conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares. Contacto:
+        <mark>[correo de contacto]</mark>.</p>
+
+    <h2 id="datos" class="h5 mt-4">Datos que recabamos</h2>
     <ul>
-        <li>Identificación y contacto: nombre, correo electrónico, teléfono y dirección del negocio.</li>
-        <li>Datos financieros: nombre del titular y CLABE de la cuenta bancaria donde recibes tus cobros.</li>
-        <li>Datos de operación: ventas, pagos recibidos y pagos de tu suscripción.</li>
-        <li>Si entras con Google o Facebook: el correo y el identificador que nos comparte ese proveedor.</li>
+        <li>Identificación y negocio: tu nombre, correo electrónico y celular; el nombre, la dirección, el logo y la foto de
+            tu negocio.</li>
+        <li>Datos financieros: nombre del titular, tipo de titular (persona o empresa) y CLABE de la cuenta bancaria donde
+            recibes tus cobros.</li>
+        <li>Datos de operación: ventas, conceptos, productos y los pagos que recibes, con su clave de rastreo y el banco del
+            pagador.</li>
+        <li>Datos de tus clientes que tú capturas: el celular al que envías un cobro.</li>
+        <li>Pagos de tu suscripción: paquete, monto, método de pago (CoDi o tarjeta) y fecha. Los datos de tu tarjeta los
+            recibe el proveedor de pagos; Local133 no los recibe ni los guarda.</li>
+        <li>Programa «Invita y gana»: tu código de invitación, quién te invitó y a quién invitaste.</li>
+        <li>Avisos y correos que te enviamos, y si ya leíste los avisos.</li>
+        <li>Si entras con Google o Facebook: tu nombre, el correo y el identificador que nos comparte ese proveedor.</li>
+        <li>Datos técnicos: cookies (ver abajo) y la dirección IP, que queda en los registros de seguridad del sitio.</li>
     </ul>
 
-    <h2 class="h5 mt-4">Finalidades</h2>
+    <h2 id="finalidades" class="h5 mt-4">Finalidades</h2>
     <ul>
         <li>Crear y administrar tu cuenta.</li>
         <li>Registrar tu cuenta bancaria ante el proveedor de pagos y el sistema CoDi para que recibas tus cobros.</li>
-        <li>Generar cobros y recibos, y cobrar tu suscripción.</li>
-        <li>Enviarte avisos sobre tu cuenta (activación, vencimiento de tu plan, cambio de plan).</li>
+        <li>Generar cobros y recibos, y mostrarte tu historial y tu corte de caja.</li>
+        <li>Cobrar y abonar tu suscripción: recordatorios, días de gracia y paso al plan gratuito.</li>
+        <li>Operar «Invita y gana»: aplicar el descuento y los premios, y mostrar a quien te invitó <strong>solo tu primer
+            nombre</strong> y si ya pagaste Pro.</li>
+        <li>Enviarte avisos en la plataforma y por correo: activación de tu cuenta, vencimiento de tu plan, límite de cobros,
+            pagos recibidos y el <strong>resumen mensual</strong>, que usa tus cobros del mes para estimar cuánto pagarías de
+            comisión con una terminal. Si no quieres recibir el resumen mensual, escríbenos a
+            <mark>[correo de contacto]</mark>.</li>
+        <li>Publicar tu catálogo en línea, solo si tú lo publicas.</li>
+        <li>Prevenir abusos: que una CLABE esté en una sola cuenta, el uso justo del plan Pro y las invitaciones falsas.</li>
+        <li>Cumplir obligaciones legales y fiscales.</li>
     </ul>
 
-    <h2 class="h5 mt-4">Transferencias</h2>
-    <p>Compartimos tu nombre, CLABE y los datos de cada cobro con el proveedor de pagos y, a través de él, con Banxico y las
-        instituciones bancarias que participan en CoDi, únicamente para procesar tus cobros.</p>
+    <h2 id="publicos" class="h5 mt-4">Datos que se vuelven públicos</h2>
+    <ul>
+        <li>Si publicas tu catálogo en línea: el nombre de tu negocio, tu logo, la foto de tu local, tus productos con precio y
+            foto, y el celular de tu cuenta para que te pidan por WhatsApp.</li>
+        <li>En el recibo de cada venta pagada, para quien tenga la liga: el nombre de tu negocio, tu logo, el concepto, el
+            monto y la fecha. El recibo nunca muestra tu CLABE ni el celular de tu cliente.</li>
+    </ul>
 
-    <h2 class="h5 mt-4">Derechos ARCO</h2>
+    <h2 id="transferencias" class="h5 mt-4">Con quién compartimos tus datos</h2>
+    <ul>
+        <li>El proveedor de pagos (Pey) y, a través de él, Banxico y las instituciones bancarias que participan en CoDi: tu nombre,
+            tu CLABE y los datos de cada cobro y de cada pago de tu suscripción, únicamente para procesarlos.</li>
+        <li>Proveedores que trabajan por cuenta nuestra: el envío de correo (Resend) y el hospedaje del sitio (Microsoft Azure).</li>
+        <li>Google o Facebook, si entras con ellos.</li>
+        <li>Google Fonts, que recibe la dirección IP de tu navegador al cargar las tipografías del sitio.</li>
+    </ul>
+    <p>No vendemos tus datos ni los compartimos con fines de publicidad.</p>
+
+    <h2 id="cookies" class="h5 mt-4">Cookies</h2>
+    <ul>
+        <li>De sesión y de seguridad, para mantenerte dentro de tu cuenta y proteger los formularios.</li>
+        <li><code>l133_ref</code>, que guarda por 30 días el código de invitación de la liga con la que llegaste, para
+            aplicarlo al registrarte. Se borra al crear tu cuenta.</li>
+        <li>El carrito de cobro se guarda en tu navegador solo mientras la pestaña está abierta.</li>
+    </ul>
+    <p>No usamos cookies de publicidad ni de analítica.</p>
+
+    <h2 id="conservacion" class="h5 mt-4">Cuánto tiempo guardamos tus datos</h2>
+    <p>Mientras tu cuenta esté activa. Si pasa <strong>2 años sin actividad</strong> (sin que entres ni cobres), te avisamos
+        por correo y eliminamos tu cuenta, salvo los datos que la ley nos obligue a conservar, como los pagos de tu
+        suscripción para fines fiscales.</p>
+
+    <h2 id="arco" class="h5 mt-4">Derechos ARCO</h2>
     <p>Puedes solicitar el acceso, rectificación, cancelación u oposición al tratamiento de tus datos, así como revocar tu
-        consentimiento, escribiendo al correo de contacto que publicaremos en esta página.</p>
+        consentimiento, escribiendo a <mark>[correo de contacto]</mark>.</p>
 
-    <h2 class="h5 mt-4">Cambios</h2>
+    <h2 id="cambios" class="h5 mt-4">Cambios</h2>
     <p>Cualquier cambio a este aviso se publicará en esta página con una nueva versión.</p>
 
     <p class="mt-4">Consulta también nuestros <a href="~/terminos">Términos y condiciones</a>.</p>
 </article>
+
+@section Scripts {
+    <script src="~/js/section-index.js" asp-append-version="true"></script>
+}
