@@ -1,0 +1,164 @@
+@using Local133.Domain.Settings
+@using Local133.Web.Areas.Admin.Controllers
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "Parámetros";
+    var notice = TempData[SettingsController.NoticeKey] as string;
+    var termsWarning = TempData[SettingsController.TermsWarningKey] as string;
+
+    // Un campo del formulario: los atributos de validación salen de SettingsInput (Html.TextBox con el nombre).
+    void Field(string field, string? prefix = null, string? suffix = null, bool decimals = false)
+    {
+        var name = "Input." + field;
+        var id = "settings-" + field;
+        var helpId = id + "-help";
+        var inTerms = SystemSettingsRules.InTerms.Contains(field);
+        <div class="col-sm-6 col-xl-4" data-setting="@field">
+            <label class="form-label" for="@id">
+                @SettingsLabels.Label(field)
+                @if (inTerms)
+                {
+                    <span class="badge text-bg-light border fw-normal" data-setting-in-terms>En los Términos</span>
+                }
+            </label>
+            <div class="input-group">
+                @if (prefix is not null)
+                {
+                    <span class="input-group-text">@prefix</span>
+                }
+                @Html.TextBox(name, null, new { id, @class = "form-control", inputmode = decimals ? "decimal" : "numeric", autocomplete = "off", aria_describedby = helpId })
+                @if (suffix is not null)
+                {
+                    <span class="input-group-text">@suffix</span>
+                }
+            </div>
+            @Html.ValidationMessage(name, null, new { @class = "d-block text-danger small mt-1" })
+            <div class="form-text" id="@helpId">@SettingsLabels.Help(field)</div>
+        </div>
+    }
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <h1 class="h4 mb-1">Parámetros</h1>
+        <p class="text-body-secondary">
+            Precios y reglas de la plataforma. Cada cargo guarda su propio monto: un precio nuevo solo afecta a los links
+            que se creen después. Cada cambio queda en la bitácora.
+        </p>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-settings-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        @if (termsWarning is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-settings-terms-warning>
+                <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                Cambiaste parámetros que aparecen en los Términos (@termsWarning). Publica una versión nueva de los Términos:
+                actualiza el texto, sube la versión en <code>LegalDocuments</code> y los números de <code>LegalPagesTests</code>.
+            </div>
+        }
+
+        <form method="post" action="@Url.Content("~/admin/parametros")" data-settings-form data-disable-on-submit novalidate>
+            @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Precios de Pro (IVA incluido)</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.MonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.AnnualPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.FounderMonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.FounderAnnualPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.FounderSlots)); }
+                    </div>
+                    <p class="small text-body-secondary mt-2 mb-0" data-assigned-founders>Lugares de fundador asignados: @Model.AssignedFounders.</p>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Prueba y gracia</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.TrialDays), suffix: "días"); }
+                        @{ Field(nameof(SystemSettings.GraceDays), suffix: "días"); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Plan gratuito y uso justo de Pro</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.FreeMonthlyPaidLimit)); }
+                        @{ Field(nameof(SystemSettings.FreeMonthlyGeneratedLimit)); }
+                        @{ Field(nameof(SystemSettings.FreeHistoryDays), suffix: "días"); }
+                        @{ Field(nameof(SystemSettings.ProFairUseMonthlyPaid)); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Referidos</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.ReferralRewardDays), suffix: "días"); }
+                        @{ Field(nameof(SystemSettings.ReferralRewardsPerYear)); }
+                        @{ Field(nameof(SystemSettings.ReferralWelcomeDiscountRate), suffix: "%", decimals: true); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Impuestos y cobro</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.VatRate), suffix: "%", decimals: true); }
+                        @{ Field(nameof(SystemSettings.SaleQrExpirationSeconds), suffix: "s"); }
+                        @{ Field(nameof(SystemSettings.ReferenceTerminalFeeRate), suffix: "%", decimals: true); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+                <button type="submit" class="btn btn-primary">Guardar parámetros</button>
+                <span class="small text-body-secondary">Los marcados «En los Términos» exigen publicar una versión nueva si cambian.</span>
+            </div>
+        </form>
+
+        <div class="card" data-settings-recent>
+            <div class="card-body">
+                <h2 class="h6 card-title">Cambios recientes</h2>
+                @if (Model.Recent.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary">Sin cambios.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var row in Model.Recent)
+                        {
+                            <li class="border-top py-2" data-settings-change>
+                                <div class="small text-body-secondary">@row.WhenText · @row.ActorEmail</div>
+                                <ul class="small mb-0 ps-3">
+                                    @foreach (var change in row.Changes)
+                                    {
+                                        <li class="text-break">
+                                            @SettingsLabels.Label(change.Field):
+                                            @SettingsLabels.Display(change.Field, change.OldValue) → <strong>@SettingsLabels.Display(change.Field, change.NewValue)</strong>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

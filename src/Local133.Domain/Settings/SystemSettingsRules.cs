@@ -1,0 +1,228 @@
+using System.Globalization;
+
+namespace Local133.Domain.Settings;
+
+/// <summary>Un error de validación de un parámetro (<see cref="Field"/> es el nombre de la propiedad).</summary>
+public sealed record SettingsError(string Field, string Message);
+
+/// <summary>Un parámetro que cambió, con sus valores en texto invariante.</summary>
+public sealed record SettingsChange(string Field, string OldValue, string NewValue);
+
+/// <summary>
+/// Reglas de los parámetros globales que edita el admin (6.2). Los precios llevan el IVA incluido y las tasas son
+/// fracciones (0.16 = 16 %) con hasta 4 decimales, por la columna <c>decimal(5,4)</c>.
+/// </summary>
+public static class SystemSettingsRules
+{
+    public const decimal MinPrice = 0.01m;
+    public const decimal MaxPrice = 99_999.99m;
+    public const int MaxTrialDays = 365;
+    public const int MaxGraceDays = 30;
+    public const int MaxCount = 1_000_000;
+    public const int MaxHistoryDays = 3650;
+    public const int MaxRewardDays = 365;
+    public const int MaxRewardsPerYear = 365;
+    public const decimal MaxWelcomeDiscountRate = 0.90m;
+    public const decimal MaxVatRate = 0.50m;
+    public const decimal MaxTerminalFeeRate = 0.20m;
+
+    /// <summary>Pey exige 0 o ≥ 360 s; el QR de venta nunca es «sin expiración».</summary>
+    public const int MinSaleQrExpirationSeconds = 360;
+
+    public const int MaxSaleQrExpirationSeconds = 86_400;
+
+    /// <summary>
+    /// Parámetros que aparecen escritos en los Términos (los que compara <c>LegalPagesTests</c>). Cambiar uno exige
+    /// publicar una versión nueva de los Términos.
+    /// </summary>
+    public static readonly IReadOnlySet<string> InTerms = new HashSet<string>(StringComparer.Ordinal)
+    {
+        nameof(SystemSettings.MonthlyPrice),
+        nameof(SystemSettings.AnnualPrice),
+        nameof(SystemSettings.FounderMonthlyPrice),
+        nameof(SystemSettings.FounderAnnualPrice),
+        nameof(SystemSettings.FounderSlots),
+        nameof(SystemSettings.TrialDays),
+        nameof(SystemSettings.GraceDays),
+        nameof(SystemSettings.FreeMonthlyPaidLimit),
+        nameof(SystemSettings.FreeMonthlyGeneratedLimit),
+        nameof(SystemSettings.FreeHistoryDays),
+        nameof(SystemSettings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.ReferralRewardDays),
+        nameof(SystemSettings.ReferralRewardsPerYear),
+        nameof(SystemSettings.ReferralWelcomeDiscountRate),
+    };
+
+    /// <summary>Todos los parámetros editables, en el orden de la pantalla.</summary>
+    public static readonly IReadOnlyList<string> Fields =
+    [
+        nameof(SystemSettings.MonthlyPrice),
+        nameof(SystemSettings.AnnualPrice),
+        nameof(SystemSettings.FounderMonthlyPrice),
+        nameof(SystemSettings.FounderAnnualPrice),
+        nameof(SystemSettings.FounderSlots),
+        nameof(SystemSettings.TrialDays),
+        nameof(SystemSettings.GraceDays),
+        nameof(SystemSettings.FreeMonthlyPaidLimit),
+        nameof(SystemSettings.FreeMonthlyGeneratedLimit),
+        nameof(SystemSettings.FreeHistoryDays),
+        nameof(SystemSettings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.ReferralRewardDays),
+        nameof(SystemSettings.ReferralRewardsPerYear),
+        nameof(SystemSettings.ReferralWelcomeDiscountRate),
+        nameof(SystemSettings.VatRate),
+        nameof(SystemSettings.SaleQrExpirationSeconds),
+        nameof(SystemSettings.ReferenceTerminalFeeRate),
+    ];
+
+    /// <param name="assignedFounders">Lugares de fundador ya asignados: no se puede bajar de ahí.</param>
+    public static IReadOnlyList<SettingsError> Validate(SystemSettings settings, int assignedFounders)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var errors = new List<SettingsError>();
+
+        Price(errors, nameof(SystemSettings.MonthlyPrice), settings.MonthlyPrice);
+        Price(errors, nameof(SystemSettings.AnnualPrice), settings.AnnualPrice);
+        Price(errors, nameof(SystemSettings.FounderMonthlyPrice), settings.FounderMonthlyPrice);
+        Price(errors, nameof(SystemSettings.FounderAnnualPrice), settings.FounderAnnualPrice);
+        if (settings.FounderMonthlyPrice > settings.MonthlyPrice)
+        {
+            errors.Add(new(nameof(SystemSettings.FounderMonthlyPrice), "El precio de fundador no puede ser mayor que el normal."));
+        }
+
+        if (settings.FounderAnnualPrice > settings.AnnualPrice)
+        {
+            errors.Add(new(nameof(SystemSettings.FounderAnnualPrice), "El precio de fundador no puede ser mayor que el normal."));
+        }
+
+        Range(errors, nameof(SystemSettings.FounderSlots), settings.FounderSlots, 0, MaxCount);
+        if (settings.FounderSlots < assignedFounders)
+        {
+            errors.Add(new(nameof(SystemSettings.FounderSlots),
+                $"Ya hay {assignedFounders.ToString(CultureInfo.InvariantCulture)} fundadores: no puede haber menos lugares."));
+        }
+
+        Range(errors, nameof(SystemSettings.TrialDays), settings.TrialDays, 1, MaxTrialDays);
+        Range(errors, nameof(SystemSettings.GraceDays), settings.GraceDays, 0, MaxGraceDays);
+        Range(errors, nameof(SystemSettings.FreeMonthlyPaidLimit), settings.FreeMonthlyPaidLimit, 1, MaxCount);
+        Range(errors, nameof(SystemSettings.FreeMonthlyGeneratedLimit), settings.FreeMonthlyGeneratedLimit, 1, MaxCount);
+        if (settings.FreeMonthlyGeneratedLimit < settings.FreeMonthlyPaidLimit)
+        {
+            errors.Add(new(nameof(SystemSettings.FreeMonthlyGeneratedLimit),
+                "El tope de cobros generados no puede ser menor que el límite de cobros concretados."));
+        }
+
+        Range(errors, nameof(SystemSettings.FreeHistoryDays), settings.FreeHistoryDays, 1, MaxHistoryDays);
+        Range(errors, nameof(SystemSettings.ProFairUseMonthlyPaid), settings.ProFairUseMonthlyPaid, 1, MaxCount);
+        Range(errors, nameof(SystemSettings.ReferralRewardDays), settings.ReferralRewardDays, 1, MaxRewardDays);
+        Range(errors, nameof(SystemSettings.ReferralRewardsPerYear), settings.ReferralRewardsPerYear, 0, MaxRewardsPerYear);
+        Rate(errors, nameof(SystemSettings.ReferralWelcomeDiscountRate), settings.ReferralWelcomeDiscountRate, MaxWelcomeDiscountRate);
+        Rate(errors, nameof(SystemSettings.VatRate), settings.VatRate, MaxVatRate);
+        Range(errors, nameof(SystemSettings.SaleQrExpirationSeconds), settings.SaleQrExpirationSeconds,
+            MinSaleQrExpirationSeconds, MaxSaleQrExpirationSeconds);
+        Rate(errors, nameof(SystemSettings.ReferenceTerminalFeeRate), settings.ReferenceTerminalFeeRate, MaxTerminalFeeRate);
+        return errors;
+    }
+
+    /// <summary>Los parámetros editables que difieren, en el orden de <see cref="Fields"/>.</summary>
+    public static IReadOnlyList<SettingsChange> Changes(SystemSettings before, SystemSettings after)
+    {
+        ArgumentNullException.ThrowIfNull(before);
+        ArgumentNullException.ThrowIfNull(after);
+        var changes = new List<SettingsChange>();
+        foreach (var field in Fields)
+        {
+            var oldValue = ValueOf(before, field);
+            var newValue = ValueOf(after, field);
+            if (oldValue != newValue)
+            {
+                changes.Add(new(field, oldValue, newValue));
+            }
+        }
+
+        return changes;
+    }
+
+    /// <summary>Copia los parámetros editables (no el id).</summary>
+    public static void CopyValues(SystemSettings from, SystemSettings to)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
+        to.MonthlyPrice = from.MonthlyPrice;
+        to.AnnualPrice = from.AnnualPrice;
+        to.FounderMonthlyPrice = from.FounderMonthlyPrice;
+        to.FounderAnnualPrice = from.FounderAnnualPrice;
+        to.FounderSlots = from.FounderSlots;
+        to.TrialDays = from.TrialDays;
+        to.GraceDays = from.GraceDays;
+        to.FreeMonthlyPaidLimit = from.FreeMonthlyPaidLimit;
+        to.FreeMonthlyGeneratedLimit = from.FreeMonthlyGeneratedLimit;
+        to.FreeHistoryDays = from.FreeHistoryDays;
+        to.ProFairUseMonthlyPaid = from.ProFairUseMonthlyPaid;
+        to.ReferralRewardDays = from.ReferralRewardDays;
+        to.ReferralRewardsPerYear = from.ReferralRewardsPerYear;
+        to.ReferralWelcomeDiscountRate = from.ReferralWelcomeDiscountRate;
+        to.VatRate = from.VatRate;
+        to.SaleQrExpirationSeconds = from.SaleQrExpirationSeconds;
+        to.ReferenceTerminalFeeRate = from.ReferenceTerminalFeeRate;
+    }
+
+    /// <summary>Valor en texto invariante (los decimales sin ceros de sobra: 199, 0.3).</summary>
+    public static string ValueOf(SystemSettings settings, string field) => field switch
+    {
+        nameof(SystemSettings.MonthlyPrice) => Text(settings.MonthlyPrice),
+        nameof(SystemSettings.AnnualPrice) => Text(settings.AnnualPrice),
+        nameof(SystemSettings.FounderMonthlyPrice) => Text(settings.FounderMonthlyPrice),
+        nameof(SystemSettings.FounderAnnualPrice) => Text(settings.FounderAnnualPrice),
+        nameof(SystemSettings.FounderSlots) => Text(settings.FounderSlots),
+        nameof(SystemSettings.TrialDays) => Text(settings.TrialDays),
+        nameof(SystemSettings.GraceDays) => Text(settings.GraceDays),
+        nameof(SystemSettings.FreeMonthlyPaidLimit) => Text(settings.FreeMonthlyPaidLimit),
+        nameof(SystemSettings.FreeMonthlyGeneratedLimit) => Text(settings.FreeMonthlyGeneratedLimit),
+        nameof(SystemSettings.FreeHistoryDays) => Text(settings.FreeHistoryDays),
+        nameof(SystemSettings.ProFairUseMonthlyPaid) => Text(settings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.ReferralRewardDays) => Text(settings.ReferralRewardDays),
+        nameof(SystemSettings.ReferralRewardsPerYear) => Text(settings.ReferralRewardsPerYear),
+        nameof(SystemSettings.ReferralWelcomeDiscountRate) => Text(settings.ReferralWelcomeDiscountRate),
+        nameof(SystemSettings.VatRate) => Text(settings.VatRate),
+        nameof(SystemSettings.SaleQrExpirationSeconds) => Text(settings.SaleQrExpirationSeconds),
+        nameof(SystemSettings.ReferenceTerminalFeeRate) => Text(settings.ReferenceTerminalFeeRate),
+        _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Parámetro desconocido."),
+    };
+
+    private static string Text(decimal value) => value.ToString("0.####", CultureInfo.InvariantCulture);
+
+    private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static void Price(List<SettingsError> errors, string field, decimal value)
+    {
+        if (value < MinPrice || value > MaxPrice)
+        {
+            errors.Add(new(field, $"Escribe un precio entre {MinPrice.ToString(CultureInfo.InvariantCulture)} y {MaxPrice.ToString("#,0.00", CultureInfo.InvariantCulture)}."));
+        }
+        else if (decimal.Round(value, 2) != value)
+        {
+            errors.Add(new(field, "El precio admite hasta 2 decimales."));
+        }
+    }
+
+    private static void Range(List<SettingsError> errors, string field, int value, int min, int max)
+    {
+        if (value < min || value > max)
+        {
+            errors.Add(new(field, $"Escribe un número entre {min.ToString("#,0", CultureInfo.InvariantCulture)} y {max.ToString("#,0", CultureInfo.InvariantCulture)}."));
+        }
+    }
+
+    private static void Rate(List<SettingsError> errors, string field, decimal value, decimal max)
+    {
+        if (value < 0 || value > max)
+        {
+            errors.Add(new(field, $"Escribe un porcentaje entre 0 y {(max * 100).ToString("0.##", CultureInfo.InvariantCulture)} %."));
+        }
+        else if (decimal.Round(value, 4) != value)
+        {
+            errors.Add(new(field, "El porcentaje admite hasta 2 decimales."));
+        }
+    }
+}

@@ -353,17 +353,3 @@ public sealed class CustomerSalesViewModel
         return query.Count == 0 ? path : $"{path}?{string.Join('&', query)}";
     }
 }
-
-/// <summary>Pestaña Plan (6.1: solo el resumen; periodos, cargos y acciones en la 6.2).</summary>
-public sealed record CustomerPlanViewModel(
-    CustomerHeaderViewModel Header,
-    PlanStatus Status,
-    string? PlanDateText,
-    int? DaysLeft,
-    string? TrialStartedText,
-    string? ProUntilText,
-    string? GraceUntilText,
-    bool IsFounder,
-    int? FounderNumber,
-    SubscriptionPackage? LastPackage,
-    string? LockedAnnualPriceText);

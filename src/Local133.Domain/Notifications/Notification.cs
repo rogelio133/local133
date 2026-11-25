@@ -34,6 +34,9 @@ public enum NotificationType
 
     /// <summary>Resumen del mes que terminó: lo cobrado y la comisión que se ahorró (5.10).</summary>
     MonthlySummary,
+
+    /// <summary>El admin le regaló días de Pro (6.2).</summary>
+    ProDaysGranted,
 }
 
 /// <summary>

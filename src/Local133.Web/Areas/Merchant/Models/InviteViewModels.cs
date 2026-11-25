@@ -96,6 +96,7 @@ public sealed record ReferralRow(string Name, string RegisteredText, ReferralRow
         var (state, text) = referral switch
         {
             { QualifiedAt: null } => (ReferralRowState.NotPaid, "Aún no paga"),
+            { RevokedAt: not null } => (ReferralRowState.Skipped, "Pagó · premio anulado"),
             { RewardedAt: not null } => (ReferralRowState.Rewarded,
                 daysEarned is { } d ? $"Pagó · ganaste {DaysText(d)}" : "Pagó · ganaste días de Pro"),
             { SkippedReason: ReferralSkipReason.RewardCap } => (ReferralRowState.Skipped,

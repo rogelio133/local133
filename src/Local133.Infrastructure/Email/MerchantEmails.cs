@@ -240,6 +240,29 @@ public static class MerchantEmails
             new NotificationEmail(subject, body, title, paragraphs, "Ver mis invitaciones", InvitePath, ReminderFooter));
     }
 
+    /// <summary>
+    /// Aviso y correo cuando el admin le regala días de Pro (6.2). El motivo que escribió el admin no va aquí.
+    /// </summary>
+    /// <param name="lastProDay">Último día con Pro después del regalo (en México).</param>
+    public static SubscriptionReminderMessage ProDaysGranted(string? greetingName, int days, DateOnly lastProDay)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(days);
+        var daysText = days == 1 ? "1 día" : $"{days.ToString(Mexico)} días";
+        var title = $"Te regalamos {daysText} de Pro";
+        var body = $"Ahora tienes Pro hasta el {LongDate(lastProDay)}.";
+        return new SubscriptionReminderMessage(
+            title,
+            body,
+            new NotificationEmail(
+                $"{title} · Local133",
+                body,
+                title,
+                [Greeting(greetingName), $"Te regalamos {daysText} de Pro. {body}", "Gracias por cobrar con Local133."],
+                "Ver mi plan",
+                PlanPath,
+                ReminderFooter));
+    }
+
     /// <summary>Ruta del botón del resumen mensual en Pro: el historial de ventas.</summary>
     public const string SalesPath = "/app/ventas";
 

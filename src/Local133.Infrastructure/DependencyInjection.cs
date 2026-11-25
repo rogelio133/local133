@@ -5,6 +5,7 @@ using Local133.Application.Payments;
 using Local133.Application.Products;
 using Local133.Application.Sales;
 using Local133.Application.Storage;
+using Local133.Application.Admin;
 using Local133.Application.Subscriptions;
 using Local133.Application.Tenancy;
 using Local133.Application.Webhooks;
@@ -19,6 +20,7 @@ using Local133.Infrastructure.Pey;
 using Local133.Infrastructure.Products;
 using Local133.Infrastructure.Sales;
 using Local133.Infrastructure.Storage;
+using Local133.Infrastructure.Admin;
 using Local133.Infrastructure.Subscriptions;
 using Local133.Infrastructure.Webhooks;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -90,6 +92,7 @@ public static class DependencyInjection
         services.TryAddSingleton<IChargeLimitNotifier, LoggingChargeLimitNotifier>();
         // Pago de la suscripción con link de Pey (5.6): checkout, abono (webhook y conciliación) y correo.
         services.AddScoped<ISubscriptionCheckout, SubscriptionCheckout>();
+        services.AddScoped<SubscriptionCrediting>();
         services.AddScoped<ISubscriptionPaymentRecorder, SubscriptionPaymentRecorder>();
         services.AddScoped<ReferralRewardNotifier>();
         services.AddScoped<ISubscriptionPaymentReconciliation, SubscriptionPaymentReconciliation>();
@@ -100,6 +103,9 @@ public static class DependencyInjection
         // las pruebas la usen aunque cambien la interfaz por un registrador.
         services.AddScoped<MonthlySummaryNotifier>();
         services.AddScoped<IMonthlySummaryNotifier>(sp => sp.GetRequiredService<MonthlySummaryNotifier>());
+        // Admin (6.2): acciones sobre el plan de un vendedor y parámetros globales, con auditoría.
+        services.AddScoped<IAdminPlanActions, AdminPlanActions>();
+        services.AddScoped<ISystemSettingsEditor, SystemSettingsEditor>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();
 

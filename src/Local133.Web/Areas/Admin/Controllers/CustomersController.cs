@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Claims;
+using Local133.Application.Admin;
 using Local133.Application.Auth;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Admin.Models;
@@ -12,14 +14,21 @@ namespace Local133.Web.Areas.Admin.Controllers;
 
 /// <summary>
 /// Clientes del admin (/admin/clientes, 6.1): listado con búsqueda y filtros, y detalle con pestañas General, Cuenta,
-/// Ventas y Plan. Solo lectura.
+/// Ventas y Plan. Las acciones del plan (regalar días, abonar a mano, anular un premio) son de la 6.2.
 /// </summary>
 [Area("Admin")]
 [Authorize(Roles = Roles.Admin)]
 [Route("admin/clientes")]
 [ApiExplorerSettings(IgnoreApi = true)]
-public class CustomersController(AppDbContext db, CustomerDetailQuery details, TimeProvider clock) : Controller
+public class CustomersController(
+    AppDbContext db, CustomerDetailQuery details, IAdminPlanActions planActions, TimeProvider clock) : Controller
 {
+    /// <summary>Mensaje del resultado de una acción del plan (6.2).</summary>
+    public const string PlanNoticeKey = "admin-plan-notice";
+
+    /// <summary>La acción del plan no se pudo hacer.</summary>
+    public const string PlanErrorKey = "admin-plan-error";
+
     [HttpGet("")]
     public async Task<IActionResult> Index(
         [FromQuery(Name = "q")] string? q,
@@ -64,6 +73,79 @@ public class CustomersController(AppDbContext db, CustomerDetailQuery details, T
     [HttpGet("{id:int}/plan")]
     public async Task<IActionResult> Plan(int id, CancellationToken cancellationToken) =>
         Show(await details.PlanAsync(id, cancellationToken));
+
+    [HttpPost("{id:int}/plan/regalar-dias")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GrantDays(
+        int id, [Bind(Prefix = "Grant")] GrantDaysInput input, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return await PlanWithErrorsAsync(id, input, cancellationToken);
+        }
+
+        // Un rechazo del servicio (p. ej. sin prueba, cuando el formulario ni se muestra) va como aviso de la pestaña.
+        return AfterAction(id, await planActions.GrantDaysAsync(id, input.Days!.Value, input.Note!, input.Notify, Actor, cancellationToken));
+    }
+
+    [HttpPost("{id:int}/plan/cargos/{chargeId:int}/abonar")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreditCharge(
+        int id, int chargeId, [Bind(Prefix = "Confirm")] PlanNoteInput input, CancellationToken cancellationToken) =>
+        AfterAction(id, ModelState.IsValid
+            ? await planActions.CreditChargeAsync(id, chargeId, input.Note!, Actor, cancellationToken)
+            : InvalidNote());
+
+    [HttpPost("{id:int}/plan/referidos/{referralId:int}/anular")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RevokeReferral(
+        int id, int referralId, [Bind(Prefix = "Confirm")] PlanNoteInput input, CancellationToken cancellationToken) =>
+        AfterAction(id, ModelState.IsValid
+            ? await planActions.RevokeReferralRewardAsync(id, referralId, input.Note!, Actor, cancellationToken)
+            : InvalidNote());
+
+    [HttpPost("{id:int}/plan/referidos/premios-pendientes")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> GrantPendingRewards(int id, CancellationToken cancellationToken) =>
+        AfterAction(id, await planActions.GrantPendingReferralRewardsAsync(id, Actor, cancellationToken));
+
+    private AdminActor Actor => new(
+        User.FindFirstValue(ClaimTypes.NameIdentifier)!,
+        User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? string.Empty);
+
+    private AdminPlanResult InvalidNote() =>
+        new AdminPlanResult.Rejected(ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).FirstOrDefault()
+            ?? "Escribe el motivo.");
+
+    /// <summary>PRG: de regreso a la pestaña Plan con el mensaje del resultado.</summary>
+    private IActionResult AfterAction(int id, AdminPlanResult result)
+    {
+        switch (result)
+        {
+            case AdminPlanResult.NotFound:
+                return NotFound();
+            case AdminPlanResult.Done done:
+                TempData[PlanNoticeKey] = done.Message;
+                break;
+            case AdminPlanResult.Rejected rejected:
+                TempData[PlanErrorKey] = rejected.Message;
+                break;
+        }
+
+        return Redirect(Url.Content("~" + CustomerUrls.Tab(id, CustomerTab.Plan)));
+    }
+
+    private async Task<IActionResult> PlanWithErrorsAsync(int id, GrantDaysInput input, CancellationToken cancellationToken)
+    {
+        var model = await details.PlanAsync(id, cancellationToken);
+        if (model is null)
+        {
+            return NotFound();
+        }
+
+        model.Grant = input;
+        return View(nameof(Plan), model);
+    }
 
     private IActionResult Show(object? model) => model is null ? NotFound() : View(model);
 

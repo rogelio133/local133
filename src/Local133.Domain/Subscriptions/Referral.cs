@@ -38,8 +38,17 @@ public class Referral : Entity
 
     public ReferralSkipReason? SkippedReason { get; set; }
 
+    /// <summary>El admin anuló el premio (6.2): ya no se da, y si se dio, ya no cuenta para el tope.</summary>
+    public DateTimeOffset? RevokedAt { get; set; }
+
     /// <summary>Calificó y su premio espera a que quien invitó tenga suscripción (empiece su prueba).</summary>
-    public bool IsPendingReward => QualifiedAt is not null && RewardedAt is null && SkippedReason is null;
+    public bool IsPendingReward => QualifiedAt is not null && RewardedAt is null && SkippedReason is null && RevokedAt is null;
+
+    /// <summary>Se dio el premio y no se ha anulado.</summary>
+    public bool IsRewardActive => RewardedAt is not null && RevokedAt is null;
+
+    /// <summary>El admin puede anularlo: premio pendiente u otorgado y sin anular.</summary>
+    public bool CanBeRevoked => IsPendingReward || IsRewardActive;
 
     public static Referral Create(int referrerMerchantId, int referredMerchantId, string code, DateTimeOffset now)
     {
@@ -94,5 +103,19 @@ public class Referral : Entity
         }
 
         SkippedReason = reason;
+    }
+
+    /// <summary>
+    /// El admin anula el premio (6.2). Si estaba pendiente, ya no se dará; si se dio, quien llama quita los días que no
+    /// se han usado (<c>Subscription.RemoveUnusedDays</c>).
+    /// </summary>
+    public void Revoke(DateTimeOffset now)
+    {
+        if (!CanBeRevoked)
+        {
+            throw new InvalidOperationException("Solo se anula un premio pendiente u otorgado que no se haya anulado.");
+        }
+
+        RevokedAt = now;
     }
 }
