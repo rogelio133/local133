@@ -11,6 +11,7 @@ public class SharedAssetsTests
     [InlineData("favicon.ico")]
     [InlineData("apple-touch-icon.png")]
     [InlineData("js/rotating-word.js")]
+    [InlineData("img/local133-invertido.svg")]
     public void La_copia_de_la_portada_es_igual_a_la_de_Local133_Web(string path)
     {
         var root = RepositoryRoot();

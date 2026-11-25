@@ -1,0 +1,45 @@
+@model LandingViewModel
+@{
+    (string Href, string Text)[] sections =
+    [
+        ("#como-funciona", "Cómo funciona"),
+        ("#funciones", "Herramientas"),
+        ("#precios", "Precios"),
+        ("#preguntas", "Preguntas"),
+    ];
+}
+@* Escritorio (lg+): enlaces en la barra. Celular y tablet: botón ☰ y panel debajo (landing.js). Sin JS, el panel
+   se ve abierto y el botón se oculta (@@media (scripting: none) en _landing-header.scss). *@
+<header class="site-header">
+    <nav class="landing-container site-nav" aria-label="Principal">
+        <a class="brand" href="#inicio">
+            <span class="logo-tile logo-tile-sm"><img src="~/img/local133-invertido.svg" alt="" width="973" height="740" asp-append-version="true" /></span>
+            <span class="brand-word">Local<span class="brand-number">133</span></span>
+        </a>
+        <div class="site-nav-links">
+            @foreach (var (href, text) in sections)
+            {
+                <a class="site-nav-link" href="@href">@text</a>
+            }
+            <a class="site-nav-link site-nav-login" href="@Model.LoginUrl">Iniciar sesión</a>
+            <a class="btn btn-landing btn-landing-primary btn-landing-sm" href="@Model.AppUrl">Prueba 30 días gratis</a>
+        </div>
+        <button type="button" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-movil"
+                data-menu-toggle data-label-open="Abrir menú" data-label-close="Cerrar menú">
+            <svg class="menu-icon menu-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            <svg class="menu-icon menu-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+    </nav>
+    <div id="menu-movil" class="mobile-menu" data-menu-panel>
+        <div class="mobile-menu-inner">
+            <div class="landing-container mobile-menu-links">
+                @foreach (var (href, text) in sections)
+                {
+                    <a class="mobile-menu-link" href="@href">@text</a>
+                }
+                <a class="mobile-menu-link mobile-menu-login" href="@Model.LoginUrl">Iniciar sesión</a>
+                <a class="btn btn-landing btn-landing-primary mobile-menu-cta" href="@Model.AppUrl">Prueba 30 días gratis</a>
+            </div>
+        </div>
+    </div>
+</header>

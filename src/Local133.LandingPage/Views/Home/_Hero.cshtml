@@ -1,0 +1,26 @@
+@model LandingViewModel
+<section id="inicio" class="hero">
+    <div class="hero-pattern" aria-hidden="true"></div>
+    <div class="landing-container hero-inner">
+        <p class="hero-badge">30 días de Pro gratis</p>
+        <div class="hero-copy">
+            @* Tres renglones; la palabra va sola en el suyo, con alto fijo para que nada brinque cuando queda vacía. *@
+            <h1 class="hero-title">
+                <span class="d-block">Cobra con CoDi<sup class="trademark">®</sup> desde tu</span>
+                <partial name="_RotatingWord" model='RotatingWordViewModel.For(Model, "hero-word")' />
+                <span class="d-block">sin terminal ni efectivo.</span>
+            </h1>
+            <p class="hero-lead">Escribe el monto y muestra el QR, o manda el cobro al celular de tu cliente. El dinero llega completo a tu cuenta, <strong>sin comisión por venta</strong>, y tu pantalla avisa «Pago recibido» al instante.</p>
+            <div class="hero-ctas">
+                <a class="btn btn-landing btn-landing-white btn-landing-lg" href="@Model.AppUrl">Crear mi cuenta gratis</a>
+                <a class="btn btn-landing btn-landing-outline-white btn-landing-lg" href="#como-funciona">Ver cómo funciona</a>
+            </div>
+            <p class="hero-note">Regístrate con tu correo, Google o Facebook. Solo necesitas tu CLABE y un celular.</p>
+        </div>
+        <div class="hero-visual">
+            @* Maqueta de la pantalla de cobro. Se reemplazará por un video del proceso (escaneo → pago recibido):
+               <video autoplay muted loop playsinline> en lugar de este parcial. *@
+            <partial name="_HeroPhone" />
+        </div>
+    </div>
+</section>

@@ -1,0 +1,509 @@
+// Cómo funciona, Herramientas, Tu dinero, Invita y gana, Preguntas y pie.
+
+// --- Cómo funciona --------------------------------------------------
+// Celular: carrusel que llega hasta las orillas (cada tarjeta al 86 % para que se asome la siguiente).
+// Desde md: las tres tarjetas en fila.
+.steps {
+  display: flex;
+  gap: 14px;
+  padding: 0 $landing-gutter;
+  margin: 0 (-$landing-gutter);
+  overflow-x: auto;
+  list-style: none;
+  scroll-padding-inline: $landing-gutter;
+  scroll-snap-type: x mandatory;
+
+  @include media-breakpoint-up(md) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+  }
+}
+
+.step-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 0 0 86%;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 32px 88px;
+  overflow: hidden;
+  background-color: $landing-tint;
+  border-radius: 28px;
+  scroll-snap-align: start;
+
+  @include media-breakpoint-only(md) {
+    padding-inline: 24px;
+  }
+}
+
+// Ilustración de líneas en la esquina inferior derecha, detrás del texto y recortada por la tarjeta.
+.step-art {
+  position: absolute;
+  right: -28px;
+  bottom: -34px;
+  z-index: -1;
+  width: 220px;
+  height: 220px;
+  stroke: $landing-dot;
+  opacity: .3;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  font-family: $headings-font-family;
+  font-size: 28px;
+  font-weight: 800;
+  color: $white;
+  background-color: $primary;
+  border-radius: 18px;
+}
+
+.step-title {
+  margin: 0;
+  font-size: 26px;
+}
+
+.step-text {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: $landing-text;
+}
+
+.steps-dots {
+  margin-top: 4px;
+
+  @include media-breakpoint-up(md) {
+    display: none;
+  }
+}
+
+// --- Herramientas -----------------------------------------------------
+.tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  padding: 0;
+  margin: 0 0 44px;
+  list-style: none;
+
+  @include media-breakpoint-up(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include media-breakpoint-up(lg) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  background-color: $landing-card-dark;
+  border-radius: 24px;
+  transition: box-shadow .25s ease;
+
+  &:hover {
+    box-shadow: inset 0 0 0 999px rgba($landing-pink-light, .08);
+  }
+}
+
+.tool-icon {
+  stroke: $landing-pink-light;
+  transform-origin: left bottom;
+  transition: transform .25s ease;
+
+  .tool-card:hover & {
+    transform: translateY(-4px) scale(1.1);
+  }
+}
+
+.tool-title {
+  margin: 0;
+  font-size: 24px;
+}
+
+.tool-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: $landing-text-on-dark;
+}
+
+.coming-soon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.coming-soon-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: $landing-text-on-dark;
+}
+
+.coming-soon-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.coming-soon-pill {
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  background-color: $landing-card-dark;
+  border-radius: $landing-pill;
+}
+
+// --- Tu dinero es tuyo --------------------------------------------------
+.money {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+
+  @include media-breakpoint-up(lg) {
+    flex-direction: row;
+    align-items: center;
+    gap: 56px;
+  }
+}
+
+.money-copy {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.money-list {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.money-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: $landing-text;
+  background-color: $landing-tint;
+  border-radius: 20px;
+}
+
+.money-check {
+  flex: none;
+  stroke: $landing-pink-text;
+}
+
+.money-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.money-item-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: $landing-ink;
+}
+
+// --- Invita y gana ------------------------------------------------------
+.referral-section {
+  padding-top: 64px;
+  padding-bottom: 48px;
+
+  @include media-breakpoint-up(sm) {
+    padding-top: 96px;
+    padding-bottom: 72px;
+  }
+}
+
+.referral {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  padding: 28px 22px;
+  color: $white;
+  background-color: $landing-ink;
+  border-radius: 24px;
+
+  @include media-breakpoint-up(sm) {
+    padding: 48px;
+    border-radius: 32px;
+  }
+
+  @include media-breakpoint-up(lg) {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .eyebrow {
+    color: $landing-pink-light;
+  }
+
+  .brand-number {
+    color: $landing-pink-light;
+  }
+
+  .section-lead {
+    line-height: 1.55;
+    color: $landing-text-on-dark;
+  }
+}
+
+.referral-copy {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.referral-title {
+  @include media-breakpoint-up(sm) {
+    font-size: 42px;
+  }
+}
+
+.referral-cards {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+// Celular: el número en un renglón y el texto en otro.
+.referral-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 20px 24px;
+  background-color: $landing-card-dark;
+  border-radius: 20px;
+
+  @include media-breakpoint-up(sm) {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+}
+
+.referral-number {
+  flex: none;
+  font-family: $headings-font-family;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: $landing-pink-light;
+
+  @include media-breakpoint-up(sm) {
+    width: 84px;
+  }
+}
+
+.referral-text {
+  font-size: 17px;
+  color: $landing-text-on-dark;
+
+  strong {
+    color: $white;
+  }
+}
+
+// --- Preguntas frecuentes -------------------------------------------------
+.faq-section {
+  padding-top: 24px;
+  padding-bottom: 64px;
+
+  @include media-breakpoint-up(sm) {
+    padding-bottom: 96px;
+  }
+}
+
+.faq {
+  max-width: 820px;
+
+  .section-head {
+    margin-bottom: 32px;
+  }
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+// Apertura animada donde hay soporte (interpolate-size + ::details-content); si no, abre al instante.
+.faq-item {
+  padding: 22px 26px;
+  background-color: $landing-tint;
+  border-radius: 20px;
+  interpolate-size: allow-keywords;
+
+  &::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: block-size .35s ease, opacity .35s ease, content-visibility .35s allow-discrete;
+  }
+
+  &[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 18px;
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus-visible {
+    border-radius: 8px;
+    outline: 3px solid $landing-ink;
+    outline-offset: 6px;
+  }
+}
+
+.faq-plus {
+  flex: none;
+  font-size: 28px;
+  line-height: 1;
+  color: $landing-pink-text;
+  transition: transform .2s ease;
+
+  .faq-item[open] & {
+    transform: rotate(45deg);
+  }
+}
+
+.faq-answer {
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: $landing-text;
+}
+
+// --- Pie --------------------------------------------------------------------
+.site-footer {
+  color: $landing-text-on-dark;
+  background-color: $landing-ink;
+
+  .brand-number {
+    color: $landing-pink-light;
+  }
+}
+
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 32px;
+  padding-block: 48px;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+}
+
+.footer-brand-word {
+  font-family: $headings-font-family;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: $white;
+}
+
+.footer-tagline {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.footer-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  font-size: 15px;
+}
+
+.footer-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-column-title {
+  margin: 0 0 4px;
+  font-family: $font-family-sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+  color: $white;
+}
+
+.footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: $landing-text-on-dark;
+  text-decoration: none;
+
+  &:hover {
+    color: $white;
+    text-decoration: underline;
+  }
+}
+
+.footer-bottom {
+  border-top: 1px solid $landing-nav-text;
+}
+
+.footer-copyright {
+  padding-block: 20px;
+  margin-block: 0;
+  font-size: 14px;
+  color: $landing-footer-small;
+}

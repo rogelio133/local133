@@ -1,0 +1,37 @@
+@* Celular: carrusel (scroll-snap) que avanza solo cada 5 s, con puntos y barra de progreso (landing.js).
+   Desde md: las tres tarjetas en fila, sin puntos. *@
+<section id="como-funciona" class="landing-section">
+    <div class="landing-container">
+        <div class="section-head">
+            <p class="eyebrow">Cómo funciona</p>
+            <h2 class="section-title">Empieza a cobrar en tres pasos</h2>
+        </div>
+        <div class="carousel" data-carousel data-carousel-autoplay="5000">
+            <ol class="steps carousel-track" data-carousel-track>
+                <li class="step-card">
+                    <svg class="step-art" viewBox="0 0 120 120" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="28" y="8" width="64" height="104" rx="12" /><path d="M52 100h16" /><circle cx="60" cy="40" r="11" /><path d="M42 70c3-10 10-15 18-15s15 5 18 15" /><path d="M42 84h36" /></svg>
+                    <span class="step-number" aria-hidden="true">1</span>
+                    <h3 class="step-title">Regístrate</h3>
+                    <p class="step-text">Crea tu cuenta con tu correo, Google o Facebook y llena los datos de tu negocio.</p>
+                </li>
+                <li class="step-card">
+                    <svg class="step-art" viewBox="0 0 120 120" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 46L60 18l46 28z" /><path d="M22 54v36M42 54v36M62 54v20M82 54v12" /><path d="M12 100h52" /><circle cx="90" cy="90" r="20" /><path d="M90 79v11l7 5" /></svg>
+                    <span class="step-number" aria-hidden="true">2</span>
+                    <h3 class="step-title">Da de alta tu CLABE</h3>
+                    <p class="step-text">Banxico revisa tu cuenta para CoDi®; puede tardar hasta 5 días hábiles. Mientras, puedes armar tu catálogo.</p>
+                </li>
+                <li class="step-card">
+                    <svg class="step-art" viewBox="0 0 120 120" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="12" y="12" width="28" height="28" rx="4" /><rect x="60" y="12" width="28" height="28" rx="4" /><rect x="12" y="60" width="28" height="28" rx="4" /><path d="M60 60h10v10M80 60h8M60 80h6" /><circle cx="88" cy="88" r="22" /><path d="M78 88l7 7 13-14" /></svg>
+                    <span class="step-number" aria-hidden="true">3</span>
+                    <h3 class="step-title">Cobra con CoDi<sup class="trademark">®</sup></h3>
+                    <p class="step-text">Te avisamos por correo cuando tu cuenta queda activa. Ese día empiezan tus 30 días de Pro gratis.</p>
+                </li>
+            </ol>
+            <div class="carousel-dots steps-dots">
+                <button type="button" class="carousel-dot is-active" aria-label="Paso 1: Regístrate" aria-current="true" data-carousel-dot="0"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Paso 2: Da de alta tu CLABE" aria-current="false" data-carousel-dot="1"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Paso 3: Cobra con CoDi®" aria-current="false" data-carousel-dot="2"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+            </div>
+        </div>
+    </div>
+</section>

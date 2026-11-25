@@ -1,0 +1,87 @@
+// Cierre (#registro) y festones del toldo.
+
+.closing {
+  color: $white;
+  text-align: center;
+  background-color: $primary;
+}
+
+.closing-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  max-width: 1000px;
+  padding-top: 64px;
+  padding-bottom: 40px;
+
+  @include media-breakpoint-up(sm) {
+    padding-top: 88px;
+    padding-bottom: 64px;
+  }
+}
+
+.closing-copy {
+  display: flex;
+  flex: 1 1 420px;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.closing-title {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.02;
+
+  @include media-breakpoint-up(sm) {
+    font-size: 50px;
+  }
+}
+
+// «Tu [palabra]» no se parte.
+.closing-line {
+  display: block;
+  white-space: nowrap;
+}
+
+// Caja de ancho fijo: ::before es la palabra más larga, invisible, más el ancho del cursor de _rotating-word.scss
+// (.12em + .06em de margen); la palabra visible va encima, alineada a la izquierda.
+.closing-word {
+  display: inline-grid;
+  color: $landing-ink;
+  text-align: left;
+
+  &::before {
+    grid-area: 1 / 1;
+    padding-right: .18em;
+    visibility: hidden;
+    content: attr(data-longest);
+  }
+
+  > .rotating-word {
+    grid-area: 1 / 1;
+  }
+}
+
+.closing-text {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.55;
+}
+
+.closing-copy .btn {
+  margin-bottom: 24px;
+}
+
+// Festones (semicírculos de 88 × 44) que cuelgan sobre el pie, como la orilla de un toldo.
+.awning-edge {
+  height: 44px;
+  background-color: $landing-ink;
+  background-image: radial-gradient(circle at 50% 0, $primary 0, $primary 43px, transparent 44px);
+  background-repeat: repeat-x;
+  background-position: center top;
+  background-size: 88px 44px;
+}

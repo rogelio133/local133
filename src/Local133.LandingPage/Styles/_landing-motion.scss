@@ -1,0 +1,22 @@
+// «Reducir movimiento»: sin transiciones ni animaciones en la portada. La palabra no rota (rotating-word.js) y el
+// carrusel no avanza solo (landing.js).
+@media (prefers-reduced-motion: reduce) {
+  .btn-landing,
+  .mobile-menu,
+  .tool-card,
+  .tool-icon,
+  .carousel-dot-bar,
+  .faq-plus,
+  .faq-item::details-content {
+    transition: none;
+  }
+
+  .btn-landing:hover,
+  .tool-card:hover .tool-icon {
+    transform: none;
+  }
+
+  .carousel-dot.is-running .carousel-dot-fill {
+    animation: none;
+  }
+}

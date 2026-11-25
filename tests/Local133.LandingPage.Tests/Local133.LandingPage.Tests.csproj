@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Local133.LandingPage\Local133.LandingPage.csproj" />
+    <!-- Solo para comparar los precios escritos en la portada con SystemSettings.Default* (la portada no tiene base). -->
+    <ProjectReference Include="..\..\src\Local133.Domain\Local133.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

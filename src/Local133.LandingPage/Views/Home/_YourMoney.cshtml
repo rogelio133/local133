@@ -1,0 +1,30 @@
+@{
+    (string Title, string Text)[] points =
+    [
+        ("Sin terminal ni equipo extra", "Funciona en el navegador de tu celular, tablet o computadora."),
+        ("Sin comisión por venta", "Cobres $50 o $5,000, Local133 no se queda con nada de tu venta."),
+        ("Tus clientes pagan con su banco", "Usan la app bancaria que ya tienen, con CoDi® de Banxico."),
+        ("Sin retenciones", "El dinero es tuyo desde el primer segundo: sin saldos congelados ni montos mínimos para retirar."),
+    ];
+}
+<section id="tu-dinero" class="landing-section">
+    <div class="landing-container money">
+        <div class="money-copy">
+            <p class="eyebrow">Tu dinero es tuyo</p>
+            <h2 class="section-title">Local<span class="brand-number">133</span> nunca toca tu dinero</h2>
+            <p class="section-lead">Cada pago se deposita directo en la CLABE que registraste. No cobramos comisión por venta: solo pagas tu plan.</p>
+        </div>
+        <ul class="money-list">
+            @foreach (var (title, text) in points)
+            {
+                <li class="money-item">
+                    <svg class="money-check" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                    <div class="money-item-text">
+                        <span class="money-item-title">@title</span>
+                        <span>@text</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+</section>

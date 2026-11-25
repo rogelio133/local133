@@ -1,0 +1,26 @@
+@model LandingViewModel
+@* Pendiente: columna «Contacto» (correo y WhatsApp) hasta tener un buzón que reciba correo. *@
+<footer class="site-footer">
+    <div class="landing-container footer-inner">
+        <div class="footer-brand">
+            <span class="footer-brand-word">Local<span class="brand-number">133</span></span>
+            <p class="footer-tagline">Cobros con CoDi® para vendedores de tianguis, mercados y pequeños negocios de México.</p>
+        </div>
+        <div class="footer-columns">
+            <nav class="footer-column" aria-labelledby="pie-producto">
+                <h2 id="pie-producto" class="footer-column-title">Producto</h2>
+                <a class="footer-link" href="#funciones">Herramientas</a>
+                <a class="footer-link" href="#precios">Precios</a>
+                <a class="footer-link" href="#preguntas">Preguntas</a>
+            </nav>
+            <nav class="footer-column" aria-labelledby="pie-legal">
+                <h2 id="pie-legal" class="footer-column-title">Legal</h2>
+                <a class="footer-link" href="@Model.TermsUrl">Términos y condiciones</a>
+                <a class="footer-link" href="@Model.PrivacyUrl">Aviso de privacidad</a>
+            </nav>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p class="landing-container footer-copyright">© 2026 Local133. CoDi® es una marca del Banco de México.</p>
+    </div>
+</footer>
