@@ -54,6 +54,12 @@ public class WebhookEvent : Entity
     /// <summary>Ya terminó: otra entrega con el mismo id no se vuelve a procesar.</summary>
     public bool IsSettled => Status is WebhookEventStatus.Processed or WebhookEventStatus.Ignored;
 
+    /// <summary>
+    /// El admin puede reprocesarlo (6.4): todo salvo <see cref="WebhookEventStatus.Processed"/>. Un ignorado también
+    /// (p. ej. el pago de un QR fijo cuando ya haya manejador).
+    /// </summary>
+    public bool CanReprocess => Status != WebhookEventStatus.Processed;
+
     public static WebhookEvent Receive(
         string webhookId, string? eventType, string payload, DateTimeOffset webhookTimestamp, DateTimeOffset now)
     {
@@ -77,6 +83,17 @@ public class WebhookEvent : Entity
 
     /// <summary>Empieza un intento de procesamiento (una entrega de Pey).</summary>
     public void StartAttempt() => Attempts++;
+
+    /// <summary>Empieza un reproceso pedido por el admin: cuenta como un intento más.</summary>
+    public void StartReprocess()
+    {
+        if (!CanReprocess)
+        {
+            throw new InvalidOperationException("Un webhook procesado no se reprocesa.");
+        }
+
+        Attempts++;
+    }
 
     public void MarkProcessed(DateTimeOffset now) => Settle(WebhookEventStatus.Processed, null, now);
 

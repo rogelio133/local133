@@ -1,0 +1,233 @@
+@using Local133.Web.Areas.Admin.Controllers
+@using Local133.Web.Areas.Admin.Services
+@using Local133.Domain.Merchants
+@using Local133.Domain.Subscriptions
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Tablero";
+    var current = Model.CurrentMonth;
+    var previous = Model.PreviousMonth;
+    var maxGmv = Model.MaxMonthGmv;
+    var maxRevenue = Model.MaxMonthRevenue;
+    var founderPercent = DashboardViewModel.BarPercent(Model.FoundersAssigned, Model.FounderSlots);
+}
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-3">
+    <h1 class="h4 mb-0 me-auto">Tablero</h1>
+    <span class="small text-body-secondary" data-dashboard-generated-at="@Model.GeneratedAt.ToUnixTimeSeconds()">
+        Datos de las @SaleFormats.Time(Model.GeneratedAt) · se renuevan cada @((int)DashboardCache.Duration.TotalMinutes) min
+    </span>
+    <a class="btn btn-sm btn-outline-primary" href="@Url.Content($"~{HomeController.DashboardUrl}?{HomeController.RefreshKey}=true")" data-dashboard-refresh>
+        <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Actualizar
+    </a>
+</div>
+
+@if (Model.FailedWebhooks > 0 || Model.StuckWebhooks > 0)
+{
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2" role="alert" data-dashboard-webhook-alert>
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        <span class="me-auto">Hay webhooks de Pey que revisar.</span>
+        @if (Model.FailedWebhooks > 0)
+        {
+            <a class="btn btn-sm btn-outline-dark" href="@Url.Content("~" + WebhookUrls.WithStatus(WebhookStatusFilter.Failed))" data-dashboard-failed-webhooks="@Model.FailedWebhooks">
+                @(Model.FailedWebhooks == 1 ? "1 fallido" : $"{DashboardViewModel.Count(Model.FailedWebhooks)} fallidos")
+            </a>
+        }
+        @if (Model.StuckWebhooks > 0)
+        {
+            <a class="btn btn-sm btn-outline-dark" href="@Url.Content("~" + WebhookUrls.WithStatus(WebhookStatusFilter.Stuck))" data-dashboard-stuck-webhooks="@Model.StuckWebhooks">
+                @(Model.StuckWebhooks == 1 ? "1 atorado" : $"{DashboardViewModel.Count(Model.StuckWebhooks)} atorados")
+            </a>
+        }
+    </div>
+}
+
+<section class="mb-4" aria-labelledby="dashboard-gmv-title">
+    <h2 class="h6 text-body-secondary text-uppercase mb-2" id="dashboard-gmv-title">Cobrado por los vendedores (GMV)</h2>
+    <div class="row g-2">
+        <div class="col-12 col-sm-4">
+            <div class="card h-100"><div class="card-body py-2">
+                <div class="small text-body-secondary">Hoy</div>
+                <div class="fs-5 fw-bold text-nowrap" data-dashboard-gmv-today>@SaleQrViewModel.FormatAmount(Model.GmvToday.Amount)</div>
+                <div class="small text-body-secondary">@SalesText(Model.GmvToday.Sales)</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-sm-4">
+            <div class="card h-100"><div class="card-body py-2">
+                <div class="small text-body-secondary">Este mes</div>
+                <div class="fs-5 fw-bold text-nowrap" data-dashboard-gmv-month>@SaleQrViewModel.FormatAmount(current.Gmv.Amount)</div>
+                <div class="small text-body-secondary" data-dashboard-gmv-month-sales="@current.Gmv.Sales">@SalesText(current.Gmv.Sales)</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-sm-4">
+            <div class="card h-100"><div class="card-body py-2">
+                <div class="small text-body-secondary">Mes anterior</div>
+                <div class="fs-5 fw-bold text-nowrap" data-dashboard-gmv-previous>@SaleQrViewModel.FormatAmount(previous.Gmv.Amount)</div>
+                <div class="small text-body-secondary">@SalesText(previous.Gmv.Sales)</div>
+            </div></div>
+        </div>
+    </div>
+</section>
+
+<section class="mb-4" aria-labelledby="dashboard-revenue-title">
+    <h2 class="h6 text-body-secondary text-uppercase mb-2" id="dashboard-revenue-title">Ingresos por suscripción</h2>
+    <div class="row g-2">
+        @foreach (var (label, month, key) in new[] { ("Este mes", current, "month"), ("Mes anterior", previous, "previous") })
+        {
+            <div class="col-12 col-sm-6">
+                <div class="card h-100"><div class="card-body py-2">
+                    <div class="small text-body-secondary">@label</div>
+                    <div class="fs-5 fw-bold text-nowrap" data-dashboard-revenue="@key">@SaleQrViewModel.FormatAmount(month.Revenue.Amount)</div>
+                    <div class="small text-body-secondary">
+                        @SaleQrViewModel.FormatAmount(month.Revenue.Base) sin IVA · IVA @SaleQrViewModel.FormatAmount(month.Revenue.Vat)
+                    </div>
+                    <div class="small text-body-secondary" data-dashboard-revenue-charges="@month.Revenue.Charges" data-dashboard-revenue-manual="@month.Revenue.CreditedManually">
+                        @(month.Revenue.Charges == 1 ? "1 cargo pagado" : $"{DashboardViewModel.Count(month.Revenue.Charges)} cargos pagados")@(month.Revenue.CreditedManually > 0 ? $" ({DashboardViewModel.Count(month.Revenue.CreditedManually)} a mano)" : null)
+                    </div>
+                </div></div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="card mb-4" aria-labelledby="dashboard-months-title">
+    <div class="card-body">
+        <h2 class="h6 text-body-secondary text-uppercase mb-3" id="dashboard-months-title">Últimos @DashboardViewModel.MonthsShown meses</h2>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0" data-dashboard-months>
+                <thead>
+                    <tr>
+                        <th scope="col">Mes</th>
+                        <th scope="col" class="text-end">GMV</th>
+                        <th scope="col" class="d-none d-md-table-cell w-25"><span class="visually-hidden">Barra del GMV</span></th>
+                        <th scope="col" class="text-end">Suscripción</th>
+                        <th scope="col" class="d-none d-md-table-cell w-25"><span class="visually-hidden">Barra de la suscripción</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var month in Model.Months.Reverse())
+                    {
+                        <tr data-dashboard-month="@SaleFormats.IsoDate(month.Month)">
+                            <th scope="row" class="fw-normal text-nowrap">@month.Label</th>
+                            <td class="text-end text-nowrap">
+                                @SaleQrViewModel.FormatAmount(month.Gmv.Amount)
+                                <div class="small text-body-secondary">@SalesText(month.Gmv.Sales)</div>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <div class="progress" role="presentation" style="height: .75rem">
+                                    <div class="progress-bar bg-primary" style="width: @DashboardViewModel.BarPercent(month.Gmv.Amount, maxGmv)%"></div>
+                                </div>
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @SaleQrViewModel.FormatAmount(month.Revenue.Amount)
+                                <div class="small text-body-secondary">@(month.Revenue.Charges == 1 ? "1 cargo" : $"{DashboardViewModel.Count(month.Revenue.Charges)} cargos")</div>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <div class="progress" role="presentation" style="height: .75rem">
+                                    <div class="progress-bar bg-secondary" style="width: @DashboardViewModel.BarPercent(month.Revenue.Amount, maxRevenue)%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3 mb-4">
+    <section class="col-12 col-lg-6" aria-labelledby="dashboard-plans-title">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-body-secondary text-uppercase mb-3" id="dashboard-plans-title">Vendedores por plan</h2>
+            <div class="list-group list-group-flush">
+                @foreach (var tier in PlanTierFilters.All)
+                {
+                    var count = Model.ByPlan.GetValueOrDefault(tier);
+                    <a class="list-group-item list-group-item-action d-flex align-items-center px-0" data-plan-count="@tier" data-count="@count"
+                       href="@Url.Content("~" + CustomerUrls.List + new CustomerFilters(Plan: tier).QueryString())">
+                        <span class="badge @AdminLabels.PlanBadge(tier) me-2">@AdminLabels.Plan(tier)</span>
+                        <span class="ms-auto fw-semibold">@DashboardViewModel.Count(count)</span>
+                    </a>
+                }
+            </div>
+        </div></div>
+    </section>
+
+    <section class="col-12 col-lg-6" aria-labelledby="dashboard-status-title">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-body-secondary text-uppercase mb-3" id="dashboard-status-title">
+                Vendedores por estatus <span class="text-body-secondary fw-normal" data-dashboard-total-merchants="@Model.TotalMerchants">· @DashboardViewModel.Count(Model.TotalMerchants) en total</span>
+            </h2>
+            <div class="list-group list-group-flush">
+                @foreach (var status in MerchantStatusFilters.All)
+                {
+                    var count = Model.ByStatus.GetValueOrDefault(status);
+                    <a class="list-group-item list-group-item-action d-flex align-items-center px-0" data-status-count="@status" data-count="@count"
+                       href="@Url.Content("~" + CustomerUrls.List + new CustomerFilters(Status: status).QueryString())">
+                        <span class="badge @AdminLabels.StatusBadge(status) me-2">@AdminLabels.Status(status)</span>
+                        <span class="ms-auto fw-semibold">@DashboardViewModel.Count(count)</span>
+                    </a>
+                }
+            </div>
+        </div></div>
+    </section>
+
+    <section class="col-12 col-md-6" aria-labelledby="dashboard-conversion-title">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-body-secondary text-uppercase mb-3" id="dashboard-conversion-title">Conversión de prueba a pago</h2>
+            <div class="d-flex flex-wrap gap-4">
+                <div data-dashboard-conversion data-ended="@Model.Conversion.Ended" data-paid="@Model.Conversion.Paid">
+                    <div class="fs-4 fw-bold">@DashboardViewModel.Percent(Model.Conversion.Percent)</div>
+                    <div class="small text-body-secondary">Histórico: pagaron @DashboardViewModel.Count(Model.Conversion.Paid) de @DashboardViewModel.Count(Model.Conversion.Ended)</div>
+                </div>
+                <div data-dashboard-recent-conversion data-ended="@Model.RecentConversion.Ended" data-paid="@Model.RecentConversion.Paid">
+                    <div class="fs-4 fw-bold">@DashboardViewModel.Percent(Model.RecentConversion.Percent)</div>
+                    <div class="small text-body-secondary">Pruebas que terminaron en los últimos @DashboardViewModel.RecentTrialDays días: @DashboardViewModel.Count(Model.RecentConversion.Paid) de @DashboardViewModel.Count(Model.RecentConversion.Ended)</div>
+                </div>
+            </div>
+            <p class="small text-body-secondary mt-3 mb-0">Cuenta a quien pagó al menos un cargo, también antes de terminar la prueba o abonado a mano.</p>
+        </div></div>
+    </section>
+
+    <section class="col-12 col-md-6" aria-labelledby="dashboard-founders-title">
+        <div class="card h-100"><div class="card-body">
+            <h2 class="h6 text-body-secondary text-uppercase mb-3" id="dashboard-founders-title">Lugares de fundador</h2>
+            <div class="fs-4 fw-bold" data-dashboard-founders data-assigned="@Model.FoundersAssigned" data-slots="@Model.FounderSlots">
+                @DashboardViewModel.Count(Model.FoundersAssigned) <span class="fs-6 fw-normal text-body-secondary">de @DashboardViewModel.Count(Model.FounderSlots)</span>
+            </div>
+            <div class="progress my-2" role="progressbar" aria-label="Lugares de fundador asignados" aria-valuenow="@founderPercent" aria-valuemin="0" aria-valuemax="100" style="height: .75rem">
+                <div class="progress-bar bg-warning" style="width: @founderPercent%"></div>
+            </div>
+            <div class="small text-body-secondary" data-dashboard-founders-left="@Model.FoundersLeft">
+                @(Model.FoundersLeft == 1 ? "Queda 1 lugar." : Model.FoundersLeft == 0 ? "No quedan lugares." : $"Quedan {DashboardViewModel.Count(Model.FoundersLeft)} lugares.")
+            </div>
+        </div></div>
+    </section>
+</div>
+
+<section class="card mb-4" aria-labelledby="dashboard-fair-use-title" data-dashboard-fair-use="@Model.FairUse.Count">
+    <div class="card-body">
+        <h2 class="h6 text-body-secondary text-uppercase mb-1" id="dashboard-fair-use-title">Uso justo de Pro</h2>
+        <p class="small text-body-secondary">Vendedores con @DashboardViewModel.Count(Model.FairUseLimit) cobros concretados o más este mes. Es solo una alerta: no se les bloquea.</p>
+        @if (Model.FairUse.Count == 0)
+        {
+            <p class="mb-0" data-dashboard-fair-use-empty>Nadie ha llegado al uso justo este mes.</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var row in Model.FairUse)
+                {
+                    <a class="list-group-item list-group-item-action d-flex align-items-center px-0" data-fair-use-merchant="@row.MerchantId"
+                       href="@Url.Content("~" + CustomerUrls.Tab(row.MerchantId, CustomerTab.Sales))">
+                        <span class="text-break">@row.Name@(row.BusinessName is { } b ? $" · {b}" : null)</span>
+                        <span class="ms-auto fw-semibold text-nowrap ps-2">@DashboardViewModel.Count(row.PaidCount) cobros</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+@functions {
+    private static string SalesText(int sales) => sales == 1 ? "1 venta" : $"{DashboardViewModel.Count(sales)} ventas";
+}

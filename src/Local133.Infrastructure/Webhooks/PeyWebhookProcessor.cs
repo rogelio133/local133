@@ -16,7 +16,8 @@ namespace Local133.Infrastructure.Webhooks;
 /// <summary>
 /// Webhook de Pey con la firma ya verificada: se guarda en <c>WebhookEvents</c> (único por <c>webhook-id</c>) y se
 /// procesa en la misma petición. Un id ya procesado (o ignorado) no se repite; uno fallido o a medias se reprocesa
-/// cuando Pey lo reintenta. Nunca se loguea el body (trae la CLABE del pagador).
+/// cuando Pey lo reintenta, o cuando el admin lo pide desde la bitácora (6.4, <see cref="ReprocessAsync"/>). Nunca se
+/// loguea el body (trae la CLABE del pagador).
 /// </summary>
 internal sealed class PeyWebhookProcessor(
     AppDbContext db,
@@ -44,6 +45,44 @@ internal sealed class PeyWebhookProcessor(
         webhook.StartAttempt();
         await db.SaveChangesAsync(cancellationToken);
 
+        var (result, _) = await ProcessAsync(webhook, type, body, cancellationToken);
+        return result;
+    }
+
+    public async Task<WebhookReprocessResult> ReprocessAsync(int webhookEventId, CancellationToken cancellationToken = default)
+    {
+        var webhook = await db.WebhookEvents.SingleOrDefaultAsync(e => e.Id == webhookEventId, cancellationToken);
+        if (webhook is null)
+        {
+            return new WebhookReprocessResult.NotFound();
+        }
+
+        if (!webhook.CanReprocess)
+        {
+            return new WebhookReprocessResult.NotAllowed();
+        }
+
+        var before = webhook.Status;
+        var webhookId = webhook.WebhookId;
+        var eventType = webhook.EventType;
+        webhook.StartReprocess();
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Reproceso del webhook {WebhookId} ({EventType}) pedido por el admin; estaba {Status}", webhookId, eventType, before);
+
+        var (result, reason) = await ProcessAsync(webhook, TryReadType(webhook.Payload), webhook.Payload, cancellationToken);
+        var after = await db.WebhookEvents.AsNoTracking()
+            .Where(e => e.Id == webhookEventId).Select(e => new { e.Status, e.Attempts }).SingleAsync(CancellationToken.None);
+        return new WebhookReprocessResult.Done(webhookId, eventType, before, after.Status, result, reason, after.Attempts);
+    }
+
+    /// <summary>
+    /// Despacha un evento con su intento ya contado y guarda cómo quedó. Una falla transitoria lo deja en
+    /// <see cref="WebhookEventStatus.Received"/> (Pey lo reintenta con el mismo id).
+    /// </summary>
+    private async Task<(WebhookHandlingResult Result, string? Reason)> ProcessAsync(
+        WebhookEvent webhook, string? type, string body, CancellationToken cancellationToken)
+    {
+        var webhookId = webhook.WebhookId;
         Outcome outcome;
         try
         {
@@ -56,9 +95,10 @@ internal sealed class PeyWebhookProcessor(
             // Lo que haya quedado a medias en el contexto se descarta; el evento se vuelve a leer.
             db.ChangeTracker.Clear();
             var retry = await db.WebhookEvents.SingleAsync(e => e.WebhookId == webhookId, CancellationToken.None);
-            retry.MarkRetryable($"{ex.GetType().Name}: {ex.Message}");
+            var error = $"{ex.GetType().Name}: {ex.Message}";
+            retry.MarkRetryable(error);
             await db.SaveChangesAsync(CancellationToken.None);
-            return WebhookHandlingResult.RetryLater;
+            return (WebhookHandlingResult.RetryLater, error);
         }
 
         if (db.Entry(webhook).State == EntityState.Detached)
@@ -92,7 +132,7 @@ internal sealed class PeyWebhookProcessor(
             logger.LogInformation("Webhook {WebhookId} ({EventType}): {Result} {Reason}", webhookId, type, outcome.Result, outcome.Reason);
         }
 
-        return outcome.Result;
+        return (outcome.Result, outcome.Reason);
     }
 
     /// <summary>Guarda el evento; si el id ya existe (reintento o entrega simultánea) devuelve el existente.</summary>

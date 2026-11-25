@@ -24,5 +24,8 @@ public class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         // Historial de cambios de un vendedor (pestaña Plan) y de los parámetros globales.
         builder.HasIndex(a => new { a.MerchantId, a.OccurredAt });
         builder.HasIndex(a => new { a.Action, a.OccurredAt });
+
+        // Reprocesos de un webhook (detalle de la bitácora, 6.4). Sin llave foránea: la bitácora de webhooks es aparte.
+        builder.HasIndex(a => a.WebhookEventId).HasFilter("[WebhookEventId] IS NOT NULL");
     }
 }

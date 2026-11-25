@@ -110,11 +110,8 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             // Notificador real de SignalR envuelto: las pruebas ven a quién se avisó.
             services.RemoveAll<ISaleNotifier>();
             services.AddSingleton<SignalRSaleNotifier>();
-            services.AddSingleton<ISaleNotifier>(sp =>
-            {
-                Notifier.Inner = sp.GetRequiredService<SignalRSaleNotifier>();
-                return Notifier;
-            });
+            // Uno por sitio: un sitio derivado (WithWebHostBuilder) no le quita los avisos al de la fábrica.
+            services.AddSingleton<ISaleNotifier>(sp => Notifier.ForHost(sp.GetRequiredService<SignalRSaleNotifier>()));
 
             services.RemoveAll<IChargeLimitNotifier>();
             services.AddSingleton<IChargeLimitNotifier>(LimitNotifier);
@@ -158,6 +155,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         LimitNotifier.Reset();
         MonthlySummaries.Reset();
         Clock.Reset();
+        Services.GetRequiredService<Local133.Web.Areas.Admin.Services.DashboardCache>().Clear();
         var defaults = new FakeExternalUser();
         ExternalUser.ProviderKey = defaults.ProviderKey;
         ExternalUser.Email = defaults.Email;

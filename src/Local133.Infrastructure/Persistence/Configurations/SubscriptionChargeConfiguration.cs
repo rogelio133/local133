@@ -40,6 +40,9 @@ public class SubscriptionChargeConfiguration : IEntityTypeConfiguration<Subscrip
         builder.HasIndex(c => new { c.MerchantId, c.CreatedAt });
         // Conciliación: cargos sin abonar.
         builder.HasIndex(c => new { c.Status, c.CreatedAt });
+
+        // Ingresos por suscripción del tablero del admin (6.4).
+        builder.HasIndex(c => new { c.Status, c.PaidAt });
     }
 }
 
@@ -60,5 +63,8 @@ public class SubscriptionPaymentConfiguration : IEntityTypeConfiguration<Subscri
 
         // Idempotencia: la misma transacción (webhook repetido, conciliación) nunca se registra dos veces.
         builder.HasIndex(p => p.PeyTransactionId).IsUnique();
+
+        // Pagos de la suscripción en las transacciones globales del admin (6.4).
+        builder.HasIndex(p => p.PaidAt);
     }
 }

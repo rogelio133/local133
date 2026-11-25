@@ -21,7 +21,7 @@ public class AdminSeederTests(Local133WebFactory factory) : WebTestBase(factory)
 
         await AssertAdminAsync(AdminEmail);
         var client = CreateClient();
-        Assert.Equal("/admin", Location(await LoginAsync(client, AdminEmail)));
+        Assert.Equal("/admin/clientes", Location(await LoginAsync(client, AdminEmail)));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class AdminSeederTests(Local133WebFactory factory) : WebTestBase(factory)
         using var scope = Factory.Services.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         Assert.Single(users.Users, u => u.Email == AdminEmail);
-        Assert.Equal("/admin", Location(await LoginAsync(CreateClient(), AdminEmail, Password)));
+        Assert.Equal("/admin/clientes", Location(await LoginAsync(CreateClient(), AdminEmail, Password)));
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class AdminSeederTests(Local133WebFactory factory) : WebTestBase(factory)
         var client = seeded.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
         await AssertAdminAsync(AdminEmail);
-        Assert.Equal("/admin", Location(await LoginAsync(client, AdminEmail)));
+        Assert.Equal("/admin/clientes", Location(await LoginAsync(client, AdminEmail)));
     }
 
     private async Task<AdminSeedResult> SeedAsync(string email, string password)

@@ -1,0 +1,136 @@
+@model TransactionSaleDetailViewModel
+@{
+    ViewData["Title"] = $"Venta {Model.Folio} · {Model.MerchantName}";
+}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <a class="small d-inline-block mb-2" href="@Url.Content("~" + TransactionUrls.Sales)"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Transacciones</a>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+            <h1 class="h4 mb-0 text-break">Venta @Model.Folio</h1>
+            <span class="badge @SaleStatusText.BadgeClass(Model.Status)" data-sale-status="@Model.Status">@SaleStatusText.Label(Model.Status)</span>
+            <span class="ms-auto fs-5 fw-bold text-nowrap">@Model.AmountText</span>
+        </div>
+
+        <div class="card mb-3" data-sale-detail="@Model.Id">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Cliente</dt>
+                    <dd class="col-sm-8 text-break">
+                        <a href="@Url.Content("~" + CustomerUrls.Tab(Model.MerchantId, CustomerTab.Sales))" data-sale-merchant="@Model.MerchantId">@Model.MerchantName</a>
+                        @if (Model.BusinessName is { } business)
+                        {
+                            <span class="text-body-secondary">· @business</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Concepto</dt>
+                    <dd class="col-sm-8 text-break">@(Model.ConceptText ?? "Sin concepto")</dd>
+                    <dt class="col-sm-4">Método</dt>
+                    <dd class="col-sm-8">
+                        <i class="bi @SaleStatusText.MethodIcon(Model.Method, Model.Source) me-1" aria-hidden="true"></i>@SaleStatusText.MethodLabel(Model.Method, Model.Source)@(Model.MaskedPhone is { } phone ? $" · {phone}" : null)
+                    </dd>
+                    <dt class="col-sm-4">Creada</dt>
+                    <dd class="col-sm-8">@Model.CreatedAtText</dd>
+                    @if (Model.ExpiresAtText is { } expires)
+                    {
+                        <dt class="col-sm-4">Vence</dt>
+                        <dd class="col-sm-8">@expires</dd>
+                    }
+                    @if (Model.PaidAtText is { } paid)
+                    {
+                        <dt class="col-sm-4">Pagada</dt>
+                        <dd class="col-sm-8">@paid</dd>
+                    }
+                    @if (Model.CancelledAtText is { } cancelled)
+                    {
+                        <dt class="col-sm-4">Cancelada</dt>
+                        <dd class="col-sm-8">@cancelled</dd>
+                    }
+                    @if (Model.PeyQrId is { } qrId)
+                    {
+                        <dt class="col-sm-4">QR en Pey</dt>
+                        <dd class="col-sm-8 font-monospace small text-break">@qrId</dd>
+                    }
+                    @if (Model.PeyTransactionId is { } transactionId)
+                    {
+                        <dt class="col-sm-4">Transacción del push</dt>
+                        <dd class="col-sm-8 font-monospace small text-break">@transactionId</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        @if (Model.Items.Count > 0)
+        {
+            <section class="card mb-3" aria-labelledby="sale-items-title">
+                <div class="card-body">
+                    <h2 class="h6 mb-2" id="sale-items-title">Productos</h2>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" data-sale-items>
+                            <thead><tr><th scope="col">Producto</th><th scope="col" class="text-end">Cant.</th><th scope="col" class="text-end">Precio</th><th scope="col" class="text-end">Subtotal</th></tr></thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr><td class="text-break">@item.Name</td><td class="text-end">@item.Quantity</td><td class="text-end text-nowrap">@item.UnitPriceText</td><td class="text-end text-nowrap">@item.SubtotalText</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        }
+
+        <section class="card mb-3" aria-labelledby="sale-payments-title">
+            <div class="card-body">
+                <h2 class="h6 mb-2" id="sale-payments-title">Pagos</h2>
+                @if (Model.Payments.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary" data-sale-no-payments>Sin pagos registrados.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" data-sale-payments>
+                            <thead><tr><th scope="col">Fecha</th><th scope="col" class="text-end">Monto</th><th scope="col">Transacción</th><th scope="col">Clave de rastreo</th><th scope="col">Banco</th></tr></thead>
+                            <tbody>
+                                @foreach (var payment in Model.Payments)
+                                {
+                                    <tr data-sale-payment="@payment.PeyTransactionId">
+                                        <td class="text-nowrap">@payment.PaidAtText</td>
+                                        <td class="text-end text-nowrap">@payment.AmountText</td>
+                                        <td class="font-monospace small text-break">@payment.PeyTransactionId</td>
+                                        <td class="font-monospace small text-break">@(payment.TrackingKey ?? "—")</td>
+                                        <td>@(payment.PayerBankCode?.ToString() ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="card mb-3" aria-labelledby="sale-webhooks-title">
+            <div class="card-body">
+                <h2 class="h6 mb-2" id="sale-webhooks-title">Webhooks relacionados</h2>
+                @if (Model.Webhooks.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary" data-sale-no-webhooks>No hay webhooks que mencionen esta venta.</p>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var webhook in Model.Webhooks)
+                        {
+                            <a class="list-group-item list-group-item-action d-flex flex-wrap align-items-center gap-2 px-0"
+                               href="@Url.Content("~" + WebhookUrls.Detail(webhook.Id))" data-sale-webhook="@webhook.Id">
+                                <span>#@webhook.Id · @webhook.TypeLabel</span>
+                                <span class="small text-body-secondary">@webhook.ReceivedAtText</span>
+                                <span class="badge @WebhookLog.StatusBadge(webhook.Status, false) ms-auto">@WebhookLog.StatusText(webhook.Status, false)</span>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+</div>

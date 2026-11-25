@@ -105,6 +105,7 @@ public static class DependencyInjection
         services.AddScoped<IMonthlySummaryNotifier>(sp => sp.GetRequiredService<MonthlySummaryNotifier>());
         // Admin (6.2): acciones sobre el plan de un vendedor y parámetros globales, con auditoría.
         services.AddScoped<IAdminPlanActions, AdminPlanActions>();
+        services.AddScoped<IAdminWebhookActions, AdminWebhookActions>();
         services.AddScoped<ISystemSettingsEditor, SystemSettingsEditor>();
         // Tiempo real: el sitio registra el de SignalR antes; aquí solo el vacío para jobs y dotnet ef.
         services.TryAddSingleton<ISaleNotifier, NullSaleNotifier>();

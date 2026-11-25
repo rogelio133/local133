@@ -65,11 +65,17 @@ body {
   }
 }
 
-/* Admin: sidebar fijo en ≥lg; en móvil el mismo bloque es un Offcanvas. */
+/* Admin: sidebar fijo en ≥lg; en móvil el mismo bloque es un Offcanvas. El contenido ancho (tablas del tablero) no
+   lo encoge: se desplaza dentro de su table-responsive. */
 @media (min-width: 992px) {
   .admin-sidebar {
     width: 15rem;
+    flex-shrink: 0;
     min-height: calc(100vh - 3.5rem);
+  }
+
+  .admin-main {
+    min-width: 0;
   }
 }
 

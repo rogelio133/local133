@@ -63,7 +63,13 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("WebhookEventId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("WebhookEventId")
+                        .HasFilter("[WebhookEventId] IS NOT NULL");
 
                     b.HasIndex("Action", "OccurredAt");
 
@@ -311,6 +317,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PaidAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("PaidAt"), new[] { "Amount", "SaleId" });
+
                     b.HasIndex("PeyTransactionId")
                         .IsUnique();
 
@@ -458,6 +468,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("PeyQrId")
                         .IsUnique()
@@ -825,6 +837,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Status", "CreatedAt");
 
+                    b.HasIndex("Status", "PaidAt");
+
                     b.ToTable("SubscriptionCharges", null, t =>
                         {
                             t.HasCheckConstraint("CK_SubscriptionCharges_Amount", "[Amount] > 0 AND [Amount] = [ListPrice] - [DiscountAmount]");
@@ -883,6 +897,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MerchantId");
+
+                    b.HasIndex("PaidAt");
 
                     b.HasIndex("PeyTransactionId")
                         .IsUnique();
@@ -985,6 +1001,8 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAt");
 
                     b.HasIndex("WebhookId")
                         .IsUnique();
