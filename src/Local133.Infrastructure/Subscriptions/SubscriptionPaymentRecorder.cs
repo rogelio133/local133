@@ -25,8 +25,7 @@ namespace Local133.Infrastructure.Subscriptions;
 /// </summary>
 internal sealed class SubscriptionPaymentRecorder(
     AppDbContext db,
-    ISubscriptionPaymentNotifier notifier,
-    ReferralRewardNotifier referralNotifier,
+    SubscriptionCrediting crediting,
     TimeProvider clock,
     ILogger<SubscriptionPaymentRecorder> logger) : ISubscriptionPaymentRecorder
 {
@@ -57,17 +56,14 @@ internal sealed class SubscriptionPaymentRecorder(
         }
 
         var now = clock.GetUtcNow();
-        SubscriptionPaymentCredited? credited = null;
-        ReferralQualification? referral = null;
+        SubscriptionCredit? credit = null;
         SubscriptionPaymentResult result;
 
         await using (var transaction = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             // Candado de la suscripción del vendedor: serializa los abonos (y su encadenamiento) del mismo vendedor.
             // Se toma antes de leer el cargo, para leerlo ya serializado.
-            await db.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT 1 FROM [Subscriptions] WITH (UPDLOCK, HOLDLOCK) WHERE [MerchantId] = {match.MerchantId}",
-                cancellationToken);
+            await crediting.LockAsync(match.MerchantId, cancellationToken);
             var charge = await db.SubscriptionCharges.IgnoreQueryFilters()
                 .Include(c => c.Payments)
                 .SingleAsync(c => c.Id == chargeId, cancellationToken);
@@ -86,7 +82,8 @@ internal sealed class SubscriptionPaymentRecorder(
             }
             else if (update.Status == PeyPaymentLinkStatus.Paid && charge.IsCoveredBy(charge.Payments.Sum(p => p.Base)))
             {
-                (result, credited, referral) = await CreditAsync(charge, now, cancellationToken);
+                credit = await crediting.CreditAsync(charge, now, manual: false, cancellationToken);
+                result = credit.Result;
             }
             else if (update.Status is PeyPaymentLinkStatus.Paid or PeyPaymentLinkStatus.Partial)
             {
@@ -106,81 +103,12 @@ internal sealed class SubscriptionPaymentRecorder(
             await transaction.CommitAsync(cancellationToken);
         }
 
-        if (credited is not null)
+        if (credit is not null)
         {
-            await notifier.PaymentCreditedAsync(credited, CancellationToken.None);
-        }
-
-        if (referral is not null)
-        {
-            await referralNotifier.NotifyAsync(referral, CancellationToken.None);
+            await crediting.NotifyAsync(credit);
         }
 
         return result;
-    }
-
-    private async Task<(SubscriptionPaymentResult, SubscriptionPaymentCredited?, ReferralQualification?)> CreditAsync(
-        SubscriptionCharge charge, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var subscription = await db.Subscriptions.IgnoreQueryFilters()
-            .Include(s => s.Periods)
-            .SingleOrDefaultAsync(s => s.MerchantId == charge.MerchantId, cancellationToken)
-            ?? throw new InvalidOperationException($"El vendedor {charge.MerchantId} tiene el cargo {charge.Id} pero no tiene suscripción.");
-        var settings = await db.SystemSettings.AsNoTracking().SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
-
-        // El periodo se encadena desde el momento del pago (no desde que nos enteramos), sin pasar de ahora.
-        var paidAt = charge.Payments.Max(p => (DateTimeOffset?)p.PaidAt) is { } last && last < now ? last : now;
-        var extendsPaidPro = subscription.Periods.Any(p => p.Kind == SubscriptionPeriodKind.Paid && p.EndsAt > paidAt);
-
-        charge.MarkPaid(paidAt);
-        var period = subscription.AddPaidPeriod(charge.Package, paidAt, settings.GraceDays, charge.Id);
-        if (charge.Package == SubscriptionPackage.Annual)
-        {
-            subscription.LockAnnualPrice(charge.ListPrice);
-        }
-
-        int? founderNumber = null;
-        if (charge.IsFounderPrice && !subscription.IsFounder)
-        {
-            founderNumber = await NextFounderNumberAsync(settings, cancellationToken);
-            if (founderNumber is { } number)
-            {
-                subscription.AssignFounder(number);
-            }
-            else
-            {
-                logger.LogWarning("El cargo {ChargeId} del vendedor {MerchantId} se cotizó como fundador pero ya no quedan lugares; se abona sin número",
-                    charge.Id, charge.MerchantId);
-            }
-        }
-
-        // Primer pago de un referido (5.8): califica y quien lo invitó gana sus días (o quedan pendientes, o se omiten).
-        var referral = await ReferralRewarder.QualifyAsync(db, charge.MerchantId, now, settings, cancellationToken);
-
-        await db.SaveChangesAsync(cancellationToken); // para tener el id del periodo
-
-        logger.LogInformation("Cargo {ChargeId} del vendedor {MerchantId} abonado: {Package} de {StartsAt:o} a {EndsAt:o}{Founder}",
-            charge.Id, charge.MerchantId, charge.Package, period.StartsAt, period.EndsAt,
-            founderNumber is { } n ? $", fundador {n.ToString(CultureInfo.InvariantCulture)}" : string.Empty);
-        if (referral is not null)
-        {
-            logger.LogInformation("Referido {ReferralId} calificó: premio {Decision} ({Reason}) para el vendedor {ReferrerId}",
-                referral.ReferralId, referral.Decision, referral.Reason, referral.ReferrerMerchantId);
-        }
-
-        return (new SubscriptionPaymentResult.Credited(charge.Id, period.Id, subscription.ProUntil, founderNumber),
-            new SubscriptionPaymentCredited(charge.MerchantId, charge.Id, charge.Package, charge.Amount, subscription.ProUntil,
-                extendsPaidPro, founderNumber),
-            referral);
-    }
-
-    /// <summary>Siguiente lugar de fundador, o <c>null</c> si ya no quedan. Candado de rango sobre los asignados.</summary>
-    private async Task<int?> NextFounderNumberAsync(SystemSettings settings, CancellationToken cancellationToken)
-    {
-        var assigned = (await db.Database.SqlQueryRaw<FounderSlots>(
-                "SELECT COUNT(*) AS [Count], MAX([FounderNumber]) AS [MaxNumber] FROM [Subscriptions] WITH (UPDLOCK, HOLDLOCK) WHERE [FounderNumber] IS NOT NULL")
-            .ToListAsync(cancellationToken)).Single();
-        return assigned.Count < settings.FounderSlots ? (assigned.MaxNumber ?? 0) + 1 : null;
     }
 
     private SubscriptionPaymentResult AlreadyCredited(SubscriptionCharge charge, int newPayments)
@@ -282,5 +210,4 @@ internal sealed class SubscriptionPaymentRecorder(
         public static ChargeMatch None(string reason) => new(null, 0, reason);
     }
 
-    private sealed record FounderSlots(int Count, int? MaxNumber);
 }

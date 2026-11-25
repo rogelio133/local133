@@ -1,4 +1,5 @@
 using Local133.Application.Tenancy;
+using Local133.Domain.Audit;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Domain.Notifications;
@@ -57,6 +58,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
 
     /// <summary>Avisos al vendedor en el sitio (únicos por vendedor y <c>DedupKey</c>).</summary>
     public DbSet<Notification> Notifications => Set<Notification>();
+
+    /// <summary>Bitácora de cambios del admin (6.2; sin filtro: no la lee ningún vendedor).</summary>
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     /// <summary>Bitácora de webhooks de Pey (sin filtro: no es de un vendedor).</summary>
     public DbSet<WebhookEvent> WebhookEvents => Set<WebhookEvent>();

@@ -218,3 +218,9 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Sin cambios para Azure: solo cambia el texto de `/terminos` y `/aviso-de-privacidad`, la versión en `LegalDocuments` (código, sin migración) y un estilo en `site.scss`.
 - El aviso de privacidad nombra a Microsoft Azure como hospedaje y a Resend como envío de correo. Si se cambia de proveedor, actualizar el aviso y subir su versión.
 - La sección «Planes» de la portada quedó pendiente: no cambia el App Service de la portada.
+
+### Fase 6.2 — Plan por cliente y parámetros globales (admin)
+- **Migración `AdminPlanActions`** (no destructiva): crea la tabla `AuditLogs` (bitácora de cambios del admin, FK opcional a `Merchants`, índices `(MerchantId, OccurredAt)` y `(Action, OccurredAt)`) y agrega las columnas nulas `Referrals.RevokedAt` y `SubscriptionCharges.CreditedManuallyAt`. Se aplica sola al arrancar.
+- **Parámetros desde el admin** (`/admin/parametros`): los precios, la prueba, la gracia, los límites del gratuito, los referidos, el IVA y la expiración del QR se editan en la base (`SystemSettings`), no en App Settings. En la base de Azure, un cambio ahí afecta a ese ambiente de inmediato (los cargos ya creados conservan su monto). Para la prueba real con $0.01 ya no hace falta tocar SQL: se cambia el precio desde esa pantalla y se regresa después.
+- **Correo**: un aviso más cuando el admin regala días con la casilla «Avisar al vendedor». Mismo Resend.
+- Sin recursos, App Settings ni secretos nuevos.

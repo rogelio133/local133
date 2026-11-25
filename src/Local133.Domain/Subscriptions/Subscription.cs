@@ -129,6 +129,59 @@ public class Subscription : Entity
         return period;
     }
 
+    /// <summary>
+    /// Quita los días que todavía no se usan de un premio de referido que el admin anuló (6.2): todo el periodo si no
+    /// ha empezado (<c>RemovePeriod</c>: quien llama lo borra de la base), o desde <paramref name="now"/> si está en
+    /// curso. Los periodos que venían después se recorren hacia atrás por la misma duración, para no dejar un hueco.
+    /// Los días ya usados no se recuperan: si el premio ya terminó, no cambia nada.
+    /// </summary>
+    /// <returns>Lo que se quitó y si el periodo se quitó completo.</returns>
+    public (TimeSpan Removed, bool RemovePeriod) RemoveUnusedDays(SubscriptionPeriod period, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(period);
+        if (period.Kind != SubscriptionPeriodKind.ReferralReward)
+        {
+            throw new ArgumentException("Solo se quitan los días de un premio de referido.", nameof(period));
+        }
+
+        if (!Periods.Contains(period))
+        {
+            throw new ArgumentException("El periodo no es de esta suscripción.", nameof(period));
+        }
+
+        var from = period.StartsAt > now ? period.StartsAt : now;
+        var originalEnd = period.EndsAt;
+        if (from >= originalEnd)
+        {
+            return (TimeSpan.Zero, false);
+        }
+
+        var removed = originalEnd - from;
+        var removePeriod = from == period.StartsAt;
+        if (removePeriod)
+        {
+            Periods.Remove(period);
+        }
+        else
+        {
+            period.EndsAt = from;
+        }
+
+        foreach (var later in Periods.Where(p => p != period && p.StartsAt >= originalEnd))
+        {
+            later.StartsAt -= removed;
+            later.EndsAt -= removed;
+        }
+
+        var last = Periods
+            .OrderBy(p => p.EndsAt)
+            .ThenBy(p => p.CreatedAt)
+            .Last();
+        ProUntil = last.EndsAt;
+        LastPeriodKind = last.Kind;
+        return (removed, removePeriod);
+    }
+
     private SubscriptionPeriod Add(SubscriptionPeriodKind kind, DateTimeOffset start, DateTimeOffset end, DateTimeOffset now)
     {
         var period = SubscriptionPeriod.Create(MerchantId, kind, start, end, now);

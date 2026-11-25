@@ -74,7 +74,7 @@ internal static class ReferralRewarder
     {
         var pending = await db.Referrals.IgnoreQueryFilters()
             .Where(r => r.ReferrerMerchantId == subscription.MerchantId
-                && r.QualifiedAt != null && r.RewardedAt == null && r.SkippedReason == null)
+                && r.QualifiedAt != null && r.RewardedAt == null && r.SkippedReason == null && r.RevokedAt == null)
             .OrderBy(r => r.QualifiedAt).ThenBy(r => r.Id)
             .ToListAsync(cancellationToken);
         if (pending.Count == 0)
@@ -120,7 +120,7 @@ internal static class ReferralRewarder
     {
         var since = ReferralRewardPolicy.WindowStart(now);
         return db.Referrals.IgnoreQueryFilters()
-            .CountAsync(r => r.ReferrerMerchantId == referrerId && r.RewardedAt >= since, cancellationToken);
+            .CountAsync(r => r.ReferrerMerchantId == referrerId && r.RewardedAt >= since && r.RevokedAt == null, cancellationToken);
     }
 }
 

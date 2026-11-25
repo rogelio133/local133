@@ -111,6 +111,8 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
             ["gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-62), now.AddDays(-32)), (SubscriptionPeriodKind.Paid, now.AddDays(-32), now.AddHours(-1))],
             ["fin-gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-80), now.AddDays(-50)), (SubscriptionPeriodKind.Paid, now.AddDays(-50), now.AddDays(-graceDays).AddHours(-1))],
             ["gratuito@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10))],
+            // Premio anulado en curso (6.2): se cortó y el regalo que seguía se recorrió hasta el corte, sin hueco.
+            ["premio-cortado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-10), now.AddHours(-1)), (SubscriptionPeriodKind.AdminGrant, now.AddHours(-1), now.AddDays(4))],
             ["premio-vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-50), now.AddDays(-20)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-20), now.AddDays(-1))],
         };
 
@@ -254,7 +256,7 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
         var plan = await GetHtmlAsync(admin, $"{ListUrl}/{id}/plan");
         Assert.Contains("data-plan-tier=\"Trial\"", plan);
         Assert.Contains("data-days-left=\"23\"", plan);
-        Assert.Contains("data-plan-coming-soon", plan);
+        Assert.Contains("data-plan-periods", plan); // 6.2: periodos, cargos y acciones
 
         Assert.Contains("data-customer-sales-summary", await GetHtmlAsync(admin, $"{ListUrl}/{id}/ventas"));
 

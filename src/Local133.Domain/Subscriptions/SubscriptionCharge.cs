@@ -60,6 +60,9 @@ public class SubscriptionCharge : Entity
 
     public DateTimeOffset? PaidAt { get; set; }
 
+    /// <summary>El admin lo abonó a mano (6.2), sin que Pey lo confirmara; motivo y autor en <c>AuditLogs</c>.</summary>
+    public DateTimeOffset? CreditedManuallyAt { get; set; }
+
     /// <summary>Última consulta a Pey del estado del link (conciliación).</summary>
     public DateTimeOffset? PaymentCheckedAt { get; set; }
 
@@ -175,7 +178,8 @@ public class SubscriptionCharge : Entity
     }
 
     /// <summary>El pago manda: también desde <see cref="SubscriptionChargeStatus.Failed"/> o <c>Partial</c>.</summary>
-    public void MarkPaid(DateTimeOffset paidAt)
+    /// <param name="creditedManuallyAt">Cuándo lo abonó el admin a mano (6.2); <c>null</c> si lo confirmó Pey.</param>
+    public void MarkPaid(DateTimeOffset paidAt, DateTimeOffset? creditedManuallyAt = null)
     {
         if (Status == SubscriptionChargeStatus.Paid)
         {
@@ -184,6 +188,7 @@ public class SubscriptionCharge : Entity
 
         Status = SubscriptionChargeStatus.Paid;
         PaidAt = paidAt;
+        CreditedManuallyAt = creditedManuallyAt;
         FailureReason = null;
     }
 

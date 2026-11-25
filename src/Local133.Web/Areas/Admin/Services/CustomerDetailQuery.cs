@@ -2,6 +2,8 @@ using Local133.Application.Subscriptions;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Common;
 using Local133.Domain.Sales;
+using Local133.Domain.Settings;
+using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Admin.Models;
 using Local133.Web.Areas.Merchant.Models;
@@ -133,6 +135,8 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
         };
     }
 
+    public const int AuditRows = 20;
+
     public async Task<CustomerPlanViewModel?> PlanAsync(int id, CancellationToken cancellationToken)
     {
         var header = await HeaderAsync(id, CustomerTab.Plan, cancellationToken);
@@ -145,19 +149,123 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
         var today = MexicoTime.Today(now);
         var status = (await plans.GetForMerchantAsync(id, cancellationToken)).Status;
         var subscription = await db.Subscriptions.AsNoTracking().SingleOrDefaultAsync(s => s.MerchantId == id, cancellationToken);
-        return new CustomerPlanViewModel(
-            header,
-            status,
-            AdminLabels.PlanDate(status, today),
-            status.DaysLeft(now),
-            subscription is null ? null : SaleFormats.DateTime(subscription.TrialStartedAt, today),
-            status.LastProDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
-            status.LastGraceDay is { } lastGrace ? SaleFormats.Date(lastGrace, today) : null,
-            subscription?.IsFounder ?? false,
-            subscription?.FounderNumber,
-            subscription?.LastPackage,
-            subscription?.LockedAnnualPrice is { } locked ? SaleQrViewModel.FormatAmount(locked) : null);
+        var settings = await db.SystemSettings.AsNoTracking().SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
+
+        var periods = await db.SubscriptionPeriods.AsNoTracking()
+            .Where(p => p.MerchantId == id)
+            .OrderByDescending(p => p.StartsAt).ThenByDescending(p => p.Id)
+            .ToListAsync(cancellationToken);
+
+        var charges = await db.SubscriptionCharges.AsNoTracking()
+            .Where(c => c.MerchantId == id)
+            .Include(c => c.Payments)
+            .OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.Id)
+            .ToListAsync(cancellationToken);
+
+        var referrals = await db.Referrals.AsNoTracking()
+            .Where(r => r.ReferrerMerchantId == id || r.ReferredMerchantId == id)
+            .OrderByDescending(r => r.RegisteredAt).ThenByDescending(r => r.Id)
+            .ToListAsync(cancellationToken);
+        var otherIds = referrals.Select(r => r.ReferrerMerchantId == id ? r.ReferredMerchantId : r.ReferrerMerchantId).Distinct().ToList();
+        var names = (await (
+                from m in db.Merchants.AsNoTracking()
+                join u in db.Users on m.UserId equals u.Id
+                where otherIds.Contains(m.Id)
+                select new { m.Id, m.OwnerName, m.BusinessName, u.Email })
+            .ToListAsync(cancellationToken))
+            .ToDictionary(m => m.Id, m => CustomerListQuery.NamesOf(m.OwnerName, m.BusinessName, m.Email).Name);
+        var rewardPeriods = periods.Where(p => p.ReferralId is not null).ToDictionary(p => p.ReferralId!.Value);
+        var windowStart = ReferralRewardPolicy.WindowStart(now);
+
+        var audit = await db.AuditLogs.AsNoTracking()
+            .Where(a => a.MerchantId == id)
+            .OrderByDescending(a => a.OccurredAt).ThenByDescending(a => a.Id)
+            .Take(AuditRows)
+            .ToListAsync(cancellationToken);
+
+        var referredBy = referrals.SingleOrDefault(r => r.ReferredMerchantId == id);
+        return new CustomerPlanViewModel
+        {
+            Header = header,
+            Status = status,
+            PlanDateText = AdminLabels.PlanDate(status, today),
+            DaysLeft = status.DaysLeft(now),
+            TrialStartedText = subscription is null ? null : SaleFormats.DateTime(subscription.TrialStartedAt, today),
+            ProUntilText = status.LastProDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
+            GraceUntilText = status.LastGraceDay is { } lastGrace ? SaleFormats.Date(lastGrace, today) : null,
+            IsFounder = subscription?.IsFounder ?? false,
+            FounderNumber = subscription?.FounderNumber,
+            LastPackage = subscription?.LastPackage,
+            LockedAnnualPriceText = subscription?.LockedAnnualPrice is { } locked ? SaleQrViewModel.FormatAmount(locked) : null,
+            HasSubscription = subscription is not null,
+            Periods = periods.Select(p => new PlanPeriodRow(
+                    p.Id,
+                    p.Kind,
+                    SaleFormats.Date(MexicoTime.DateOf(p.StartsAt), today),
+                    SaleFormats.Date(LastDay(p.EndsAt), today),
+                    (int)Math.Round((p.EndsAt - p.StartsAt).TotalDays),
+                    p.Covers(now),
+                    p.StartsAt > now,
+                    p.SubscriptionChargeId,
+                    p.ReferralId))
+                .ToList(),
+            Charges = charges.Select(c => new PlanChargeRow(
+                    c.Id,
+                    SaleFormats.DateTime(c.CreatedAt, today),
+                    c.Package,
+                    SaleQrViewModel.FormatAmount(c.ListPrice),
+                    c.DiscountAmount > 0 ? SaleQrViewModel.FormatAmount(c.DiscountAmount) : null,
+                    SaleQrViewModel.FormatAmount(c.Amount),
+                    c.Status,
+                    c.IsFounderPrice,
+                    c.PaidAt is { } paidAt ? SaleFormats.DateTime(paidAt, today) : null,
+                    c.CreditedManuallyAt is not null,
+                    c.PeyPaymentLinkId,
+                    c.FailureReason,
+                    c.Payments.OrderBy(p => p.PaidAt).Select(p => new PlanPaymentRow(
+                            p.PeyTransactionId,
+                            p.PaymentMethod,
+                            SaleQrViewModel.FormatAmount(p.Amount),
+                            SaleQrViewModel.FormatAmount(p.Base),
+                            p.Fee is { } fee ? SaleQrViewModel.FormatAmount(fee) : null,
+                            SaleFormats.DateTime(p.PaidAt, today)))
+                        .ToList()))
+                .ToList(),
+            ReferredBy = referredBy is null
+                ? null
+                : new ReferredByView(
+                    referredBy.ReferrerMerchantId,
+                    names.GetValueOrDefault(referredBy.ReferrerMerchantId) ?? $"#{referredBy.ReferrerMerchantId}",
+                    referredBy.Code,
+                    PlanLabels.ReferralState(referredBy, settings.ReferralRewardsPerYear).Text),
+            Referrals = referrals.Where(r => r.ReferrerMerchantId == id).Select(r =>
+                {
+                    var (state, text) = PlanLabels.ReferralState(r, settings.ReferralRewardsPerYear);
+                    var period = rewardPeriods.GetValueOrDefault(r.Id);
+                    return new ReferralAdminRow(
+                        r.Id,
+                        r.ReferredMerchantId,
+                        names.GetValueOrDefault(r.ReferredMerchantId) ?? $"#{r.ReferredMerchantId}",
+                        SaleFormats.Date(MexicoTime.DateOf(r.RegisteredAt), today),
+                        r.QualifiedAt is { } qualified ? SaleFormats.Date(MexicoTime.DateOf(qualified), today) : null,
+                        state,
+                        text,
+                        period is null
+                            ? null
+                            : $"{SaleFormats.Date(MexicoTime.DateOf(period.StartsAt), today)} al {SaleFormats.Date(LastDay(period.EndsAt), today)}",
+                        r.CanBeRevoked);
+                })
+                .ToList(),
+            RewardsInWindow = referrals.Count(r => r.ReferrerMerchantId == id && r.RewardedAt >= windowStart && r.RevokedAt == null),
+            RewardsPerYear = settings.ReferralRewardsPerYear,
+            Audit = audit.Select(a => new AuditRow(
+                    SaleFormats.DateTime(a.OccurredAt, today), a.ActorEmail, a.Action, a.Summary, a.Note))
+                .ToList(),
+        };
     }
+
+    /// <summary>Último día (en México) de un fin excluido.</summary>
+    private static DateOnly LastDay(DateTimeOffset end) => MexicoTime.DateOf(end.AddTicks(-1));
 
     private DateOnly Today => MexicoTime.Today(clock.GetUtcNow());
 

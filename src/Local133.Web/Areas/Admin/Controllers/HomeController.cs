@@ -16,7 +16,4 @@ public class HomeController : Controller
 
     [HttpGet("transacciones")]
     public IActionResult Transactions() => View();
-
-    [HttpGet("parametros")]
-    public IActionResult Settings() => View();
 }

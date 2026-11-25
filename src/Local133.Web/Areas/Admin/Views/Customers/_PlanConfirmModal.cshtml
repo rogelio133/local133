@@ -1,0 +1,28 @@
+@using Local133.Application.Admin
+@model PlanConfirmModalViewModel
+@* Modal con el motivo obligatorio. Los campos se escriben a mano (sin asp-for) para que cada modal tenga sus propios
+   ids; jQuery Validation busca el mensaje dentro de su formulario. *@
+<div class="modal fade" id="@Model.Id" tabindex="-1" aria-labelledby="@Model.Id-title" aria-hidden="true" data-plan-confirm="@Model.Id">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="@Url.Content("~" + Model.Action)" data-disable-on-submit>
+            @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h2 class="modal-title fs-5 text-break" id="@Model.Id-title">@Model.Title</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>@Model.Message</p>
+                <label class="form-label" for="@Model.Id-note">Motivo (solo lo ve el admin)</label>
+                <textarea class="form-control" id="@Model.Id-note" name="Confirm.Note" rows="2" maxlength="@AdminPlanLimits.NoteMaxLength"
+                          data-val="true" data-val-required="Escribe el motivo." data-val-trim
+                          data-val-length="El motivo admite hasta 500 caracteres." data-val-length-max="@AdminPlanLimits.NoteMaxLength"></textarea>
+                <span class="d-block text-danger small mt-1" data-valmsg-for="Confirm.Note" data-valmsg-replace="true"></span>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No, regresar</button>
+                <button type="submit" class="btn @Model.SubmitClass">@Model.SubmitText</button>
+            </div>
+        </form>
+    </div>
+</div>

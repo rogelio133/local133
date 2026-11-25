@@ -1,12 +1,26 @@
+@using Local133.Application.Admin
 @using Local133.Domain.Subscriptions
+@using Local133.Web.Areas.Admin.Controllers
 @model CustomerPlanViewModel
 @{
     ViewData["Title"] = $"{Model.Header.Name} · Plan";
     var status = Model.Status;
+    var id = Model.Header.Id;
+    var notice = TempData[CustomersController.PlanNoticeKey] as string;
+    var error = TempData[CustomersController.PlanErrorKey] as string;
 }
 <div class="row justify-content-center">
     <div class="col-xl-10">
         <partial name="_CustomerHeader" model="Model.Header" />
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-plan-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        @if (error is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-plan-error><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @error</div>
+        }
 
         <div class="card mb-3" data-customer-plan-summary data-plan-tier="@status.Tier">
             <div class="card-body">
@@ -37,7 +51,7 @@
                         <dd class="col-sm-8">@(Model.TrialStartedText ?? "—")</dd>
 
                         <dt class="col-sm-4">Último día de Pro</dt>
-                        <dd class="col-sm-8">@(Model.ProUntilText ?? "—")</dd>
+                        <dd class="col-sm-8" data-pro-until>@(Model.ProUntilText ?? "—")</dd>
 
                         @if (Model.GraceUntilText is { } grace)
                         {
@@ -61,10 +75,300 @@
             </div>
         </div>
 
-        <div class="card" data-plan-coming-soon>
-            <div class="card-body text-body-secondary">
-                Periodos, cargos, pagos y acciones del plan (regalar días, pago manual). <span class="badge text-bg-light border">Fase 6.2</span>
+        @* --- Regalar días ----------------------------------------------------------------------------------------- *@
+        @if (Model.HasSubscription)
+        {
+            <div class="card mb-3" data-grant-days>
+                <div class="card-body">
+                    <h2 class="h6 card-title"><i class="bi bi-gift me-1" aria-hidden="true"></i> Regalar días de Pro</h2>
+                    <p class="small text-body-secondary">Se suman al final de su Pro (o desde hoy si está en el gratuito), como un premio.</p>
+                    <form method="post" action="@Url.Content("~" + CustomerPlanUrls.GrantDays(id))" data-grant-days-form data-disable-on-submit>
+                        @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                        <div class="row g-3">
+                            <div class="col-sm-4 col-lg-3">
+                                <label asp-for="Grant.Days" class="form-label"></label>
+                                <input asp-for="Grant.Days" type="number" inputmode="numeric" min="1" max="@AdminPlanLimits.MaxGrantDays" step="1" class="form-control" />
+                                <span asp-validation-for="Grant.Days" class="d-block text-danger small mt-1"></span>
+                            </div>
+                            <div class="col-sm-8 col-lg-9">
+                                <label asp-for="Grant.Note" class="form-label"></label>
+                                <input asp-for="Grant.Note" type="text" maxlength="@AdminPlanLimits.NoteMaxLength" class="form-control" placeholder="Ej. Compensación por la falla del 20 de noviembre" data-val-trim />
+                                <span asp-validation-for="Grant.Note" class="d-block text-danger small mt-1"></span>
+                            </div>
+                        </div>
+                        <div class="form-check mt-3">
+                            <input asp-for="Grant.Notify" class="form-check-input" type="checkbox" />
+                            <label asp-for="Grant.Notify" class="form-check-label"></label>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">Regalar días</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @* --- Periodos --------------------------------------------------------------------------------------------- *@
+        <div class="card mb-3" data-plan-periods>
+            <div class="card-body">
+                <h2 class="h6 card-title">Periodos de Pro</h2>
+                @if (Model.Periods.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary">Todavía no tiene periodos.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">Desde</th>
+                                    <th scope="col">Último día</th>
+                                    <th scope="col" class="text-end">Días</th>
+                                    <th scope="col">Origen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.Periods)
+                                {
+                                    <tr data-plan-period="@p.Id" data-period-kind="@p.Kind">
+                                        <td class="text-nowrap">
+                                            <span class="badge @PlanLabels.PeriodBadge(p.Kind)">@PlanLabels.PeriodKind(p.Kind)</span>
+                                            @if (p.IsCurrent)
+                                            {
+                                                <span class="badge text-bg-light border" data-period-current>En curso</span>
+                                            }
+                                            else if (p.IsFuture)
+                                            {
+                                                <span class="badge text-bg-light border">Por empezar</span>
+                                            }
+                                        </td>
+                                        <td class="text-nowrap">@p.StartsText</td>
+                                        <td class="text-nowrap">@p.LastDayText</td>
+                                        <td class="text-end">@p.Days</td>
+                                        <td class="text-nowrap small">
+                                            @if (p.ChargeId is { } chargeId)
+                                            {
+                                                <a href="#cargo-@chargeId">Cargo #@chargeId</a>
+                                            }
+                                            else if (p.ReferralId is { } referralId)
+                                            {
+                                                <a href="#referido-@referralId">Referido #@referralId</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-body-secondary">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* --- Cargos ----------------------------------------------------------------------------------------------- *@
+        <div class="card mb-3" data-plan-charges>
+            <div class="card-body">
+                <h2 class="h6 card-title">Cargos de la suscripción</h2>
+                @if (Model.Charges.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary">No ha generado links de pago.</p>
+                }
+                else
+                {
+                    <p class="small text-body-secondary">
+                        Un cargo por link de pago de Pey. «Abonar a mano» cuenta igual que un pago confirmado por Pey: abona el
+                        periodo, asigna el lugar de fundador, congela el anual, da el premio a quien lo invitó y manda el correo.
+                    </p>
+                    <ul class="list-group">
+                        @foreach (var c in Model.Charges)
+                        {
+                            <li class="list-group-item" id="cargo-@c.Id" data-plan-charge="@c.Id" data-charge-status="@c.Status">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <strong>#@c.Id</strong>
+                                    <span>@c.Package.Label()</span>
+                                    <span class="fw-semibold">@c.AmountText</span>
+                                    <span class="badge @PlanLabels.ChargeBadge(c.Status)">@PlanLabels.ChargeStatus(c.Status)</span>
+                                    @if (c.IsFounderPrice)
+                                    {
+                                        <span class="badge text-bg-light border">Fundador</span>
+                                    }
+                                    @if (c.CreditedManually)
+                                    {
+                                        <span class="badge text-bg-warning" data-charge-manual>Abonado a mano</span>
+                                    }
+                                    @if (c.CanCredit)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-primary ms-sm-auto" data-bs-toggle="modal"
+                                                data-bs-target="#credit-charge-@c.Id" data-credit-charge="@c.Id">
+                                            Abonar a mano
+                                        </button>
+                                    }
+                                </div>
+                                <div class="small text-body-secondary mt-1">
+                                    Creado @c.CreatedText · lista @c.ListPriceText@(c.DiscountText is { } discount ? $" · descuento {discount}" : null)
+                                    @if (c.PaidText is { } paid)
+                                    {
+                                        <span> · pagado @paid</span>
+                                    }
+                                </div>
+                                @if (c.PeyPaymentLinkId is { } linkId)
+                                {
+                                    <div class="small text-body-secondary font-monospace text-break">Link @linkId</div>
+                                }
+                                @if (c.FailureReason is { } failure)
+                                {
+                                    <div class="small text-danger text-break">@failure</div>
+                                }
+                                @if (c.Payments.Count > 0)
+                                {
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm small mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">Transacción</th>
+                                                    <th scope="col">Método</th>
+                                                    <th scope="col" class="text-end">Total</th>
+                                                    <th scope="col" class="text-end">Base</th>
+                                                    <th scope="col" class="text-end">Comisión</th>
+                                                    <th scope="col">Fecha</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var p in c.Payments)
+                                                {
+                                                    <tr>
+                                                        <td class="font-monospace text-nowrap">@p.TransactionId</td>
+                                                        <td>@(p.Method ?? "—")</td>
+                                                        <td class="text-end text-nowrap">@p.AmountText</td>
+                                                        <td class="text-end text-nowrap">@p.BaseText</td>
+                                                        <td class="text-end text-nowrap">@(p.FeeText ?? "—")</td>
+                                                        <td class="text-nowrap">@p.PaidText</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @* --- Referidos -------------------------------------------------------------------------------------------- *@
+        <div class="card mb-3" data-plan-referrals>
+            <div class="card-body">
+                <h2 class="h6 card-title">Referidos</h2>
+                <p class="small mb-2" data-referred-by>
+                    @if (Model.ReferredBy is { } by)
+                    {
+                        <span>Lo invitó <a href="@Url.Content("~" + CustomerUrls.Tab(by.ReferrerMerchantId, CustomerTab.Plan))">@by.ReferrerName</a> con el código <span class="font-monospace">@by.Code</span> · @by.StateText</span>
+                    }
+                    else
+                    {
+                        <span class="text-body-secondary">Se registró sin código de invitación.</span>
+                    }
+                </p>
+                <p class="small mb-3" data-rewards-in-window>Premios en los últimos 12 meses: <strong>@Model.RewardsInWindow de @Model.RewardsPerYear</strong></p>
+
+                @if (Model.Referrals.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary">No ha invitado a nadie.</p>
+                }
+                else
+                {
+                    @if (Model.HasPendingRewards && Model.HasSubscription)
+                    {
+                        <form method="post" action="@Url.Content("~" + CustomerPlanUrls.GrantPendingRewards(id))" class="mb-3" data-grant-pending-form data-disable-on-submit>
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Dar premios pendientes</button>
+                            <span class="small text-body-secondary ms-1">Respetan el tope de premios.</span>
+                        </form>
+                    }
+                    <ul class="list-group">
+                        @foreach (var r in Model.Referrals)
+                        {
+                            <li class="list-group-item" id="referido-@r.Id" data-plan-referral="@r.Id" data-referral-state="@r.State">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <a class="text-break" href="@Url.Content("~" + CustomerUrls.Tab(r.ReferredMerchantId, CustomerTab.Plan))">@r.ReferredName</a>
+                                    <span class="badge @PlanLabels.ReferralBadge(r.State)">@r.StateText</span>
+                                    @if (r.CanRevoke)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger ms-sm-auto" data-bs-toggle="modal"
+                                                data-bs-target="#revoke-referral-@r.Id" data-revoke-referral="@r.Id">
+                                            Anular premio
+                                        </button>
+                                    }
+                                </div>
+                                <div class="small text-body-secondary mt-1">
+                                    Se registró el @r.RegisteredText@(r.QualifiedText is { } q ? $" · primer pago el {q}" : null)@(r.RewardPeriodText is { } period ? $" · días: {period}" : null)
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @* --- Historial de cambios --------------------------------------------------------------------------------- *@
+        <div class="card" data-plan-audit>
+            <div class="card-body">
+                <h2 class="h6 card-title">Historial de cambios del admin</h2>
+                @if (Model.Audit.Count == 0)
+                {
+                    <p class="mb-0 text-body-secondary">Sin cambios.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var a in Model.Audit)
+                        {
+                            <li class="border-top py-2" data-audit-entry="@a.Action">
+                                <div class="small text-body-secondary">@a.WhenText · @a.ActorEmail · @PlanLabels.Audit(a.Action)</div>
+                                <div class="text-break">@a.Summary</div>
+                                @if (a.Note is { } note)
+                                {
+                                    <div class="small fst-italic text-break">Motivo: @note</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
             </div>
         </div>
     </div>
 </div>
+
+@* Modales de confirmación: uno por cargo sin pagar y por premio que se puede anular. *@
+@foreach (var c in Model.Charges.Where(c => c.CanCredit))
+{
+    <partial name="_PlanConfirmModal" model='new PlanConfirmModalViewModel(
+        $"credit-charge-{c.Id}",
+        $"¿Abonar a mano el cargo #{c.Id}?",
+        $"Se abonará {c.Package.Label()} por {c.AmountText} como si Pey hubiera confirmado el pago. Úsalo solo si confirmaste el pago en el portal de Pey o con el vendedor.",
+        CustomerPlanUrls.CreditCharge(id, c.Id),
+        "Sí, abonar",
+        "btn-primary")' />
+}
+@foreach (var r in Model.Referrals.Where(r => r.CanRevoke))
+{
+    <partial name="_PlanConfirmModal" model='new PlanConfirmModalViewModel(
+        $"revoke-referral-{r.Id}",
+        $"¿Anular el premio por {r.ReferredName}?",
+        r.State == ReferralAdminState.PendingReward
+            ? "El premio pendiente ya no se dará."
+            : "Se quitan los días del premio que todavía no se usan, y lo que venía después se recorre. Los días ya usados no se recuperan.",
+        CustomerPlanUrls.RevokeReferral(id, r.Id),
+        "Sí, anular",
+        "btn-danger")' />
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -53,7 +53,7 @@ public class InviteController(AppDbContext db, IOptions<PublicSiteOptions> site,
 
         var windowStart = ReferralRewardPolicy.WindowStart(now);
         var rewardsInWindow = await db.Referrals.AsNoTracking()
-            .CountAsync(r => r.ReferrerMerchantId == merchant.Id && r.RewardedAt >= windowStart, cancellationToken);
+            .CountAsync(r => r.ReferrerMerchantId == merchant.Id && r.RewardedAt >= windowStart && r.RevokedAt == null, cancellationToken);
 
         var url = site.Value.BaseUrlFor(Request) + ReferralCode.PathFor(merchant.ReferralCode);
         return View(InviteViewModel.Create(
