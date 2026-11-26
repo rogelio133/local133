@@ -4,6 +4,10 @@
        Marca (SCSS) y limpieza de las palabras se comparten por enlace. Logo, íconos y rotating-word.js son copias
        de Local133.Web/wwwroot (los static web assets no sirven archivos enlazados); SharedAssetsTests falla si difieren. -->
 
+  <PropertyGroup>
+    <UserSecretsId>5ce24b76-6f2a-40ba-b0d7-6afc99fc1257</UserSecretsId>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AspNetCore.SassCompiler" />
   </ItemGroup>

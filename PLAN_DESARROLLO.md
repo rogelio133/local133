@@ -11,6 +11,7 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 - **SQL Server** con EF Core 10.
 - **Correo con Resend** (SDK oficial .NET, HTML armado en el código, llave de solo envío). Sin `Resend:ApiKey` los correos se guardan en disco. *(Cambio 2026-11-17, [bitácora](log_plan/mantenimiento-resend.md).)*
 - **Correo «Tu cuenta ya está activa»** al pasar el vendedor a activo (alta, webhook, sondeo o botón), uno por vendedor, y layout de marca para todos los correos. *(Cambio 2026-11-18, [bitácora](log_plan/mantenimiento-correo-cuenta-activa.md).)*
+- **Formularios de Identity a prueba de doble envío** (botón deshabilitado al enviar y, si el login llega dos veces con la sesión ya iniciada, redirección en vez del 400). *(Corrección 2026-11-26 por un error en producción, [bitácora](log_plan/mantenimiento-doble-envio-login.md).)*
 - La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
 - **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
@@ -291,6 +292,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - revisar en un celular real los carruseles, el menú y las fuentes.
 - [6.4](log_plan/fase-6.4-tablero-y-webhooks.md): la búsqueda dentro del payload de la bitácora no tiene índice (columnas propias para los ids de Pey si se vuelve lenta).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
+- [Doble envío del login](log_plan/mantenimiento-doble-envio-login.md): correr la suite de integración completa sin `--artifacts-path` (se probó compilando fuera del repo porque Visual Studio tenía bloqueado `bin/Debug`).
 
 ---
 

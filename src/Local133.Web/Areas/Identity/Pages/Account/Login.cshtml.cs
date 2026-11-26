@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace Local133.Web.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
+[SignedInAntiforgeryRedirect]
 public class LoginModel(
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,

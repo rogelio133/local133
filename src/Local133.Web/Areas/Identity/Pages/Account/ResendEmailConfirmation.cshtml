@@ -11,7 +11,7 @@
         {
             <div class="alert alert-success" role="status">Si hay una cuenta pendiente de confirmar con ese correo, te enviamos la liga.</div>
         }
-        <form method="post">
+        <form method="post" data-disable-on-submit>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
             <div class="form-floating mb-3">
                 <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="nombre@ejemplo.com" />
