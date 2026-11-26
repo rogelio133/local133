@@ -27,7 +27,24 @@ tests/
 ```
 Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa desde Infrastructure detrás de `IPaymentGateway`.
 
-**Portada (`Local133.LandingPage`)**: una sola página (`/`) con el logo, «Cobra con CoDi desde tu …» (palabras de `Home:RotatingWords`), el texto del lead y el botón «Empieza a cobrar» a `Landing:AppUrl` (`https://app.local133.com.mx`; en Development `http://localhost:5231`) en pestaña nueva. Arranca con `dotnet run --project src/Local133.LandingPage` → `http://localhost:5241`. Comparte con `Local133.Web` sin copiar: el SCSS (`Styles/landing.scss` importa `../../Local133.Web/Styles/_custom`, el Bootstrap de `Styles/vendor` y `_rotating-word.scss`) y `HomeHeroOptions.cs` (`Compile Link`). `local133.svg`, `favicon.ico`, `apple-touch-icon.png` y `js/rotating-word.js` sí son **copias** en su `wwwroot` (los static web assets no sirven archivos enlazados): al cambiar el original, copiarlo también; `SharedAssetsTests` falla si difieren. `wwwroot/css/landing.css` es generado (no se versiona).
+**Portada (`Local133.LandingPage`)**: landing de una sola página (`/`), hecha el 2026-11-25 con base en el diseño de Claude Design. Bitácora: `log_plan/portada-nueva.md`.
+- Arranca con `dotnet run --project src/Local133.LandingPage` → `http://localhost:5241`.
+- **Secciones**: parciales en `Views/Home/`, de `_Header` a `_Footer`.
+- **Ligas**:
+  - los botones de registro van a `LandingViewModel.AppUrl`: `Landing:AppUrl` (`https://app.local133.com.mx`; en Development `http://localhost:5231`), o `{AppUrl}/r/{código}` con `?codigo=` (`HomeController.SignUpUrl`). Van en la misma pestaña;
+  - «Iniciar sesión», `/terminos` y `/aviso-de-privacidad` usan `HomeController.PortalUrl` y nunca llevan el código.
+- **Palabras**: `Home:RotatingWords` alimenta el hero, el cierre (caja de ancho fijo con `data-longest`) y «Hecho para» (`MadeForLabels.Plural`).
+- **Precios**: escritos a mano en `_Pricing.cshtml`, porque la portada no tiene base. `LandingPageTests` los compara con `SystemSettings.Default*` (por eso las pruebas referencian `Local133.Domain`). «Quedan N lugares» de fundador y la columna Contacto están pendientes.
+- **Estilos**:
+  - fuentes propias de la portada: Baloo 2 + Nunito Sans. `Styles/_landing-variables.scss` las reasigna después de `_custom` y antes de Bootstrap;
+  - los componentes son clases propias en `Styles/_landing-*.scss`, celular primero; menú en la barra desde `lg`;
+  - sin JS, `@media (scripting: none)` deja abierto el menú y oculta los puntos.
+- **JS**: `wwwroot/js/landing.js`, con el menú y los carruseles `[data-carousel]`. Los pasos avanzan cada 5 s, nunca con «reducir movimiento».
+- **Compartido con `Local133.Web` sin copiar**:
+  - el SCSS: `Styles/landing.scss` importa `../../Local133.Web/Styles/_custom`, el Bootstrap de `Styles/vendor` y `_rotating-word.scss`;
+  - `HomeHeroOptions.cs` (`Compile Link`).
+- **Copias** en su `wwwroot` (los static web assets no sirven archivos enlazados): `local133.svg`, `favicon.ico`, `apple-touch-icon.png`, `img/local133-invertido.svg` (el logo del cuadro rosa) y `js/rotating-word.js`. Al cambiar el original hay que copiarlo también; `SharedAssetsTests` falla si difieren.
+- `wwwroot/css/landing.css` es generado (no se versiona).
 
 ## Comandos (una vez creado el scaffold de Fase 0)
 - Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings: `dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web` y `dotnet user-secrets set "Pey:WebhookSecret" "whsec_<secreto>" --project src/Local133.Web`; sin la API key el sitio arranca y solo fallan las llamadas a Pey; sin el secreto el webhook responde 500).
