@@ -1,7 +1,9 @@
+extern alias DomainAssembly;
+
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
-using Local133.Domain.Settings;
+using DomainAssembly::Local133.Domain.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -101,15 +103,16 @@ public class LandingPageTests
     }
 
     [Fact]
-    public async Task Iniciar_sesion_y_ligas_legales_van_al_portal_sin_el_codigo()
+    public async Task Iniciar_sesion_va_al_portal_y_las_ligas_legales_a_la_portada_sin_el_codigo()
     {
         var html = await GetHomeAsync("?codigo=ABC234");
 
         var login = HrefsOf(html, "Iniciar sesión").ToList();
         Assert.Equal(2, login.Count);
         Assert.All(login, href => Assert.Equal(AppUrl + "/Identity/Account/Login", href));
-        Assert.Equal(new[] { AppUrl + "/terminos" }, HrefsOf(html, "Términos y condiciones"));
-        Assert.Equal(new[] { AppUrl + "/aviso-de-privacidad" }, HrefsOf(html, "Aviso de privacidad"));
+        // Los textos legales viven en la portada desde el 2026-11-25 (LegalController).
+        Assert.Equal(new[] { "/terminos" }, HrefsOf(html, "Términos y condiciones"));
+        Assert.Equal(new[] { "/aviso-de-privacidad" }, HrefsOf(html, "Aviso de privacidad"));
     }
 
     [Fact]
@@ -217,6 +220,7 @@ public class LandingPageTests
     [InlineData("/img/local133-invertido.svg")]
     [InlineData("/img/toldo-patron.svg")]
     [InlineData("/js/landing.js")]
+    [InlineData("/js/section-index.js")]
     [InlineData("/css/landing.css")]
     public async Task Sirve_los_archivos_de_la_portada(string path)
     {

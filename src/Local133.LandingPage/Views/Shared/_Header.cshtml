@@ -1,18 +1,19 @@
-@model LandingViewModel
+@model SiteChromeViewModel
 @{
     (string Href, string Text)[] sections =
     [
-        ("#como-funciona", "Cómo funciona"),
-        ("#funciones", "Herramientas"),
-        ("#precios", "Precios"),
-        ("#preguntas", "Preguntas"),
+        (Model.Section("como-funciona"), "Cómo funciona"),
+        (Model.Section("funciones"), "Herramientas"),
+        (Model.Section("precios"), "Precios"),
+        (Model.Section("preguntas"), "Preguntas"),
     ];
 }
-@* Escritorio (lg+): enlaces en la barra. Celular y tablet: botón ☰ y panel debajo (landing.js). Sin JS, el panel
-   se ve abierto y el botón se oculta (@@media (scripting: none) en _landing-header.scss). *@
+@* Portada y páginas legales (SiteChromeViewModel). Escritorio (lg+): enlaces en la barra. Celular y tablet: botón ☰
+   y panel debajo (landing.js). Sin JS, el panel se ve abierto y el botón se oculta (@@media (scripting: none) en
+   _landing-header.scss). *@
 <header class="site-header">
     <nav class="landing-container site-nav" aria-label="Principal">
-        <a class="brand" href="#inicio">
+        <a class="brand" href="@Model.BrandUrl">
             <span class="logo-tile logo-tile-sm"><img src="~/img/local133-invertido.svg" alt="" width="973" height="740" asp-append-version="true" /></span>
             <span class="brand-word">Local<span class="brand-number">133</span></span>
         </a>
@@ -22,7 +23,7 @@
                 <a class="site-nav-link" href="@href">@text</a>
             }
             <a class="site-nav-link site-nav-login" href="@Model.LoginUrl">Iniciar sesión</a>
-            <a class="btn btn-landing btn-landing-primary btn-landing-sm" href="@Model.AppUrl">Prueba 30 días gratis</a>
+            <a class="btn btn-landing btn-landing-primary btn-landing-sm" href="@Model.SignUpUrl">Prueba 30 días gratis</a>
         </div>
         <button type="button" class="menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-movil"
                 data-menu-toggle data-label-open="Abrir menú" data-label-close="Cerrar menú">
@@ -38,7 +39,7 @@
                     <a class="mobile-menu-link" href="@href">@text</a>
                 }
                 <a class="mobile-menu-link mobile-menu-login" href="@Model.LoginUrl">Iniciar sesión</a>
-                <a class="btn btn-landing btn-landing-primary mobile-menu-cta" href="@Model.AppUrl">Prueba 30 días gratis</a>
+                <a class="btn btn-landing btn-landing-primary mobile-menu-cta" href="@Model.SignUpUrl">Prueba 30 días gratis</a>
             </div>
         </div>
     </div>

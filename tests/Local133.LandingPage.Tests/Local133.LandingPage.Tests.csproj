@@ -9,8 +9,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Local133.LandingPage\Local133.LandingPage.csproj" />
-    <!-- Solo para comparar los precios escritos en la portada con SystemSettings.Default* (la portada no tiene base). -->
-    <ProjectReference Include="..\..\src\Local133.Domain\Local133.Domain.csproj" />
+    <!-- Solo para comparar los precios escritos en la portada y en los Términos con SystemSettings.Default* (la portada
+         no tiene base). Con alias (extern alias DomainAssembly): la portada enlaza ReferralCode y LegalDocuments, que
+         también están en Domain, y sin él serían ambiguos (CS0433). -->
+    <ProjectReference Include="..\..\src\Local133.Domain\Local133.Domain.csproj" Aliases="DomainAssembly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Nombre y duración de la cookie de invitación, que el Aviso de privacidad trae escritos (LegalPagesTests). -->
+    <Compile Include="..\..\src\Local133.Web\Identity\ReferralCookie.cs" Link="Shared\ReferralCookie.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -25,6 +32,8 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- La tiene implícita el SDK web (ReferralCookie.cs), no el de pruebas. -->
+    <Using Include="Microsoft.AspNetCore.Http" />
   </ItemGroup>
 
 </Project>

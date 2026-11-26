@@ -6,15 +6,11 @@ namespace Local133.LandingPage.Models;
 /// <param name="AppUrl">
 /// Destino de los botones de registro: el portal, o su liga <c>/r/{código}</c> si llegó un código (5.10).
 /// </param>
-/// <param name="LoginUrl">«Iniciar sesión» en el portal; nunca lleva el código.</param>
-/// <param name="TermsUrl">Términos y condiciones del portal.</param>
-/// <param name="PrivacyUrl">Aviso de privacidad del portal.</param>
+/// <param name="Chrome">Encabezado y pie (los mismos de las páginas legales).</param>
 public sealed record LandingViewModel(
     IReadOnlyList<string> Words,
     string AppUrl,
-    string LoginUrl,
-    string TermsUrl,
-    string PrivacyUrl)
+    SiteChromeViewModel Chrome)
 {
     /// <summary>«Hecho para»: las mismas palabras en plural y con mayúscula inicial.</summary>
     public IReadOnlyList<string> MadeFor { get; } = MadeForLabels.For(Words);

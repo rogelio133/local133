@@ -96,6 +96,27 @@ Sitio en `http://localhost:5241` (Development, `Sass__Watch=false`). Capturas en
   - se corrigió la alineación del © del pie.
 - **`/?codigo=ABC234`**: los 7 botones van a `{AppUrl}/r/ABC234` e «Iniciar sesión» a `/Identity/Account/Login` sin código.
 
+## Textos legales en la portada (2026-11-25)
+- **Qué se hizo**: Términos y Aviso de privacidad se movieron de `Local133.Web` a la portada.
+  - Vistas en `Views/Legal/` y `LegalController`. El texto no cambió, así que la versión sigue en `2026-11-24`.
+  - Llevan la tipografía (Baloo 2 + Nunito Sans), el encabezado y el pie de la portada, que pasaron a `Views/Shared` con `SiteChromeViewModel`.
+  - Estilos en `_landing-legal.scss`. `section-index.js` se movió a la portada.
+  - La portada enlaza `LegalDocuments.cs`.
+- **Portal**:
+  - el pie del `_Layout` y la casilla `_AcceptLegalCheckbox` van a `PublicSiteOptions.TermsUrl` / `PrivacyNoticeUrl` (`App:LandingUrl`);
+  - `/terminos` y `/aviso-de-privacidad` responden 301 a la portada;
+  - se quitó `.legal-document` de `site.scss`.
+- **Pruebas**:
+  - `LegalPagesTests` pasó a `Local133.LandingPage.Tests` y ahora corre en CI. Revisa además el encabezado, el pie, la fuente y las ligas;
+  - `LegalLinksTests` (portal): los 301 y las ligas del pie;
+  - `MerchantRegistrationTests`: la casilla enlaza a la portada.
+- **Revisión en navegador** (Edge, portada en 5242 y portal en 5231 con `App__LandingUrl` apuntando a ella):
+  - 375, 768 y 1280 px sin scroll horizontal, consola limpia y todos los recursos en 200;
+  - el menú ☰ abre y «Precios» lleva a `/#precios`;
+  - el índice salta a «Cookies» y deja el foco en el título;
+  - el pie se ve al final;
+  - `:5231/terminos` llega a `:5242/terminos`, y la casilla del registro y el pie del portal enlazan a la portada.
+
 ## Pendientes
 - **Lugares de fundador**: «Quedan [N] lugares» está oculto, porque la portada no tiene ese dato. Necesita una fuente: una API pública del portal o un valor en la configuración.
 - **Precios a mano**: si cambian en `SystemSettings` (admin, 6.2), hay que cambiar `_Pricing.cshtml`, las preguntas y la prueba.

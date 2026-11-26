@@ -3,7 +3,7 @@
     ViewData["Title"] = "Cobra con CoDi®";
     ViewData["Description"] = "Escribe el monto y muestra el QR, o manda el cobro al celular de tu cliente. El dinero llega completo a tu cuenta, sin comisión por venta, y tu pantalla avisa «Pago recibido» al instante.";
 }
-<partial name="_Header" />
+<partial name="_Header" model="Model.Chrome" />
 
 <main>
     <partial name="_Hero" />
@@ -17,7 +17,7 @@
     <partial name="_Closing" />
 </main>
 
-<partial name="_Footer" />
+<partial name="_Footer" model="Model.Chrome" />
 
 @section Scripts {
     <script src="~/js/landing.js" asp-append-version="true" defer></script>

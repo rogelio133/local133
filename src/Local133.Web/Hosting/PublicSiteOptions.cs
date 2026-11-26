@@ -23,11 +23,24 @@ public sealed class PublicSiteOptions
     /// Portada con el código de invitación del vendedor: <c>{LandingUrl}/?codigo=ABC234</c>. Su botón «Empieza a cobrar»
     /// lleva a <c>/r/{código}</c> (registro con el código).
     /// </summary>
-    public string LandingUrlFor(string referralCode)
-    {
-        var landing = string.IsNullOrWhiteSpace(LandingUrl) ? DefaultLandingUrl : LandingUrl.Trim().TrimEnd('/');
-        return $"{landing}/?codigo={Uri.EscapeDataString(referralCode)}";
-    }
+    public string LandingUrlFor(string referralCode) => $"{Landing}/?codigo={Uri.EscapeDataString(referralCode)}";
+
+    /// <summary>Rutas de los textos legales en la portada (<c>Local133.LandingPage/Controllers/LegalController</c>).</summary>
+    public const string TermsPath = "/terminos";
+    public const string PrivacyNoticePath = "/aviso-de-privacidad";
+
+    /// <summary>
+    /// Términos y condiciones, en la portada desde el 2026-11-25. A ella van el pie del portal, la casilla del registro
+    /// y la ruta vieja <c>/terminos</c> del portal (301).
+    /// </summary>
+    public string TermsUrl => Landing + TermsPath;
+
+    /// <summary>Aviso de privacidad, en la portada (igual que <see cref="TermsUrl"/>).</summary>
+    public string PrivacyNoticeUrl => Landing + PrivacyNoticePath;
+
+    /// <summary><see cref="LandingUrl"/> sin espacios ni diagonal final; la de producción si viene vacía.</summary>
+    private string Landing =>
+        string.IsNullOrWhiteSpace(LandingUrl) ? DefaultLandingUrl : LandingUrl.Trim().TrimEnd('/');
 
     /// <summary>
     /// Base absoluta de las ligas que salen del sitio (sin diagonal final): <see cref="PublicBaseUrl"/> si está

@@ -225,6 +225,12 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Los precios van escritos en la vista: si se cambian en la base de Azure desde `/admin/parametros`, hay que publicar la portada con los precios nuevos.
 - Las fuentes vienen de Google Fonts (Baloo 2 y Nunito Sans), igual que antes: no hay CSP que ajustar.
 
+### Portada 2026-11-25 — Textos legales en la portada
+- `/terminos` y `/aviso-de-privacidad` los sirve ahora el App Service de la **portada** (`Local133.LandingPage`). No hay recursos, App Settings ni secretos nuevos.
+- En el portal, `App__LandingUrl` ya no solo arma «Cobrado con Local133»: también es el destino de las ligas legales (pie y casilla del registro) y de los **301** de `/terminos` y `/aviso-de-privacidad`. En producción debe apuntar a la portada real (`https://local133.com.mx`, el valor por defecto). Si apunta a otro lado, el registro enlaza a unos Términos que no existen.
+- Publicar en orden: primero la portada (para que existan las páginas) y después el portal (que empieza a redirigir).
+- Cambiar el texto legal implica publicar la portada. Si además cambia la versión (`LegalDocuments`), hay que publicar también el portal, que la guarda al registrar.
+
 ### Fase 6.2 — Plan por cliente y parámetros globales (admin)
 - **Migración `AdminPlanActions`** (no destructiva): crea la tabla `AuditLogs` (bitácora de cambios del admin, FK opcional a `Merchants`, índices `(MerchantId, OccurredAt)` y `(Action, OccurredAt)`) y agrega las columnas nulas `Referrals.RevokedAt` y `SubscriptionCharges.CreditedManuallyAt`. Se aplica sola al arrancar.
 - **Parámetros desde el admin** (`/admin/parametros`): los precios, la prueba, la gracia, los límites del gratuito, los referidos, el IVA y la expiración del QR se editan en la base (`SystemSettings`), no en App Settings. En la base de Azure, un cambio ahí afecta a ese ambiente de inmediato (los cargos ya creados conservan su monto). Para la prueba real con $0.01 ya no hace falta tocar SQL: se cambia el precio desde esa pantalla y se regresa después.
