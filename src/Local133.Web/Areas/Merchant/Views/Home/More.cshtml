@@ -1,41 +1,68 @@
 @{
     ViewData["Title"] = "Más";
 }
-<div class="list-group mb-3">
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/mi-informacion" data-more-profile>
-        <i class="bi bi-person-vcard fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Mi información</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/plan" data-more-plan>
-        <i class="bi bi-stars fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Mi plan</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/productos" data-more-products>
-        <i class="bi bi-box-seam fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Productos</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/tienda" data-more-storefront>
-        <i class="bi bi-shop fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Catálogo en línea</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/cuenta-bancaria">
-        <i class="bi bi-bank fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Cuenta bancaria</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    <a class="list-group-item list-group-item-action d-flex align-items-center gap-3" href="~/app/invita" data-more-invite>
-        <i class="bi bi-gift fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">Invita y gana</span>
-        <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
-    </a>
-    @* QR impreso del puesto (2.7): función de Pro anunciada, todavía no existe. *@
-    <div class="list-group-item d-flex align-items-center gap-3 text-body-secondary" data-more-static-qr>
-        <i class="bi bi-qr-code fs-5" aria-hidden="true"></i>
-        <span class="flex-grow-1">QR de tu puesto</span>
-        <partial name="_ComingSoonBadge" />
-    </div>
-</div>
+@* «Más» con tarjetas (ajustes 2026-11-26, punto 11): 2 por fila en el celular y 3 desde md. Cada tarjeta es la liga
+   completa; el color del ícono de la esquina sale de $more-card-colors (Styles/site.scss). «Instalar app» entra con la PWA (punto 12). *@
+<h1 class="h4 mb-3">Más</h1>
+<ul class="row row-cols-2 row-cols-md-3 g-3 list-unstyled mb-3" data-more-cards>
+    <li class="col">
+        <a class="more-card more-card-profile" href="~/app/mi-informacion" data-more-profile>
+            <i class="bi bi-person-vcard more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Mi información</span>
+            <span class="more-card-text">Tu nombre, tu negocio y tu logo.</span>
+        </a>
+    </li>
+    <li class="col">
+        <a class="more-card more-card-plan" href="~/app/plan" data-more-plan>
+            <i class="bi bi-stars more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Mi plan</span>
+            <span class="more-card-text">Tu plan y lo que incluye Pro.</span>
+        </a>
+    </li>
+    <li class="col">
+        <a class="more-card more-card-products" href="~/app/productos" data-more-products>
+            <i class="bi bi-box-seam more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Productos</span>
+            <span class="more-card-text">Tu catálogo con precios y fotos.</span>
+        </a>
+    </li>
+    <li class="col">
+        <a class="more-card more-card-storefront" href="~/app/tienda" data-more-storefront>
+            <i class="bi bi-shop more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Catálogo en línea</span>
+            <span class="more-card-text">Comparte tus productos con una liga.</span>
+        </a>
+    </li>
+    <li class="col">
+        <a class="more-card more-card-bank-account" href="~/app/cuenta-bancaria" data-more-bank-account>
+            <i class="bi bi-bank more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Cuenta bancaria</span>
+            <span class="more-card-text">La CLABE donde recibes tus cobros.</span>
+        </a>
+    </li>
+    <li class="col">
+        <a class="more-card more-card-invite" href="~/app/invita" data-more-invite>
+            <i class="bi bi-gift more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Invita y gana</span>
+            <span class="more-card-text">Gana días de Pro por cada invitado.</span>
+        </a>
+    </li>
+    <li class="col">
+        @* Única entrada del vendedor a «Mi cuenta» (punto 4): ChangePassword manda a SetPassword si la cuenta no tiene
+           contraseña, y su menú trae «Cuentas externas». *@
+        <a class="more-card more-card-account" href="~/Identity/Account/Manage/ChangePassword" data-more-account>
+            <i class="bi bi-shield-lock more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Contraseña y acceso</span>
+            <span class="more-card-text">Cambia tu contraseña y tus cuentas ligadas.</span>
+        </a>
+    </li>
+    <li class="col">
+        @* QR impreso del puesto (2.7): función de Pro anunciada, todavía no existe. *@
+        <div class="more-card is-disabled" data-more-static-qr>
+            <i class="bi bi-qr-code more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">QR de tu puesto</span>
+            <span class="more-card-text">Un QR impreso para tu puesto.</span>
+            <span><partial name="_ComingSoonBadge" /></span>
+        </div>
+    </li>
+</ul>

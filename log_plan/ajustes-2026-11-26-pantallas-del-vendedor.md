@@ -1,8 +1,8 @@
 # Ajustes 2026-11-26 — Bloque 3: pantallas del vendedor
 
-**Estado:** 🚧 en curso (puntos 9 y 10 ✅ 2026-11-26) · [← Plan](../PLAN_DESARROLLO.md) · [Documento de los ajustes](../actualizaciones/ajustes_2026_11_26.md)
+**Estado:** ✅ terminado 2026-11-26 (puntos 9, 10 y 11) · [← Plan](../PLAN_DESARROLLO.md) · [Documento de los ajustes](../actualizaciones/ajustes_2026_11_26.md)
 
-Puntos 9 (recibo tipo ticket), 10 (Ventas: resumen del día y paginación) y 11 («Más» con tarjetas). Esta bitácora se completa conforme se termina cada punto.
+Puntos 9 (recibo tipo ticket), 10 (Ventas: resumen del día y paginación) y 11 («Más» con tarjetas).
 
 ## 9. Recibo tipo ticket ✅
 
@@ -87,5 +87,76 @@ Sitio en Debug en `http://localhost:5231` con `Jobs__Enabled=false Pey__ApiKey= 
 ### Pendientes
 - Ninguno del punto 10.
 
-## 11. «Más» con tarjetas
-Pendiente.
+## 11. «Más» con tarjetas ✅
+
+### Qué se hizo
+- **Vista** (`Areas/Merchant/Views/Home/More.cshtml`):
+  - el título «Más» (`h1.h4`);
+  - `ul.row.row-cols-2.row-cols-md-3.g-3` (`data-more-cards`) con una tarjeta por `li`, en lugar del `list-group`;
+  - cada tarjeta es la liga completa: título, una línea de descripción y un ícono grande y tenue en la esquina (ver el ajuste de abajo).
+- **Tarjetas**: Mi información, Mi plan, Productos, Catálogo en línea, Cuenta bancaria, Invita y gana, **Contraseña y acceso** (nueva, punto 4) y QR de tu puesto.
+  - «Contraseña y acceso» va a `/Identity/Account/Manage/ChangePassword` (`data-more-account`). Si la cuenta no tiene contraseña, esa página redirige a `SetPassword`, y su menú trae «Cuentas externas».
+  - QR de tu puesto sigue apagada: un `div.more-card.is-disabled` con la insignia «Próximamente».
+  - Se conservan todos los `data-more-*`. «Cuenta bancaria» estrena `data-more-bank-account`.
+- **Estilos** (`Styles/site.scss`, sección «"Más" con tarjetas»). Es un componente propio con las proporciones de `.step-card` de la portada, sin copiar su SCSS:
+  - fondo `$rosa-papel` y radio de 1.5rem;
+  - `height: 100%`, para que las alturas queden parejas por fila;
+  - hover un poco más rosa y anillo de foco de Bootstrap;
+  - transición solo sin «reducir movimiento».
+- **Colores**: el mapa `$more-card-colors` genera `.more-card-{clave}` con `--more-card-color`: rosa mexicano, cempasúchil, azul lona, verde nopal, morado `#6F42C1`, naranja `#C2410C` y turquesa `#0E7C86`.
+- **Fuera de este punto**: «Instalar app» entra con la PWA (punto 12) y la liga a «Categorías», con el punto 14.
+
+### Pruebas
+- `Merchants/MoreTests` (nueva):
+  - cada `data-more-*` liga a su ruta (7 casos);
+  - la rejilla es `row-cols-2 row-cols-md-3` y ya no hay `list-group`;
+  - el QR del puesto es un `div` con `data-coming-soon`;
+  - `/Identity/Account/Manage/ChangePassword` con sesión de vendedor ⇒ 200.
+- Las que ya revisaban `/app/mas` siguen pasando: `ProfileTests`, `StorefrontTests`, `FreePlanLimitsTests` y `ReferralTests` (99 ✅ con el filtro).
+- `dotnet test` completo: 702 unitarias + 61 de la portada + 884 de integración ✅.
+
+### Revisión en navegador (Playwright, Edge)
+Sitio en Debug en `http://localhost:5231`, arrancado desde Bash con `Jobs__Enabled=false Pey__ApiKey= Resend__ApiKey=`, con un vendedor nuevo (`mas11@prueba.mx`) confirmado con el correo de `App_Data/emails`:
+- **375 px**:
+  - 2 columnas de 168 px con alturas parejas por fila;
+  - «Contraseña y acceso» y «Catálogo en línea» parten el título en dos renglones;
+  - sin scroll horizontal (`scrollWidth` = `clientWidth` = 375);
+  - al final de la página, la última fila queda 32 px arriba de la `.tabbar`;
+  - pestaña «Más» activa.
+- **768 px**: 3 columnas, con las pestañas en la barra superior y «Más» subrayada. Con Tab, el anillo de foco se ve en la tarjeta.
+- **1280 px**: 3 columnas.
+- **Contraste** del ícono contra su cuadro (primera versión; el cuadro se quitó después), calculado en la página: de 4.58:1 (rosa mexicano) a 9.05:1 (azul lona); todos pasan 3:1. El QR apagado da 4.69:1.
+- «Contraseña y acceso» abre «Mi cuenta › Cambiar contraseña».
+- Consola sin errores ni advertencias. Ningún 404, error ni advertencia en el log del sitio.
+
+### Ajuste pedido después de la revisión (2026-11-26)
+- Borde rosa (`$rosa-mexicano`, 2 px) en cada tarjeta.
+- Sin el cuadro del ícono arriba (`.more-card-icon` se quitó): el color de cada tarjeta queda solo en el ícono de la esquina. `$more-card-colors` ahora es un color por clave.
+- Título más grande (1.25rem; 1.375rem desde `md`) y centrado. La descripción sigue alineada a la izquierda.
+- El ícono de la esquina crece (`scale(1.25)` desde la esquina inferior derecha) y pasa de `.12` a `.3` de opacidad al pasar el mouse o con el foco del teclado. La transición (.25 s) solo va sin «reducir movimiento»; con él, el cambio es inmediato. La tarjeta apagada no tiene el efecto.
+- Revisión en Playwright:
+  - 375 px: título de 20 px centrado y sin scroll horizontal;
+  - 768 px: 3 columnas y título de 22 px;
+  - 1280 px: con hover en Productos, opacidad .3 y `matrix(1.25…)`; las demás tarjetas siguen en .12;
+  - consola sin errores y log sin 404;
+  - `MoreTests` 10 ✅.
+
+### Segundo ajuste pedido (2026-11-26)
+- **Borde** de 4 px.
+- **Esquinas**: solo la superior derecha y la inferior izquierda van redondeadas (`border-radius: 0 1.5rem`).
+- **Ícono de la esquina**: siempre con opacidad .3, la que antes solo tenía al pasar el mouse. Al pasar el mouse (o con el foco) ya solo crece, y la transición es solo de `transform`.
+- **Título más grande**. Se ajusta al ancho de la tarjeta:
+  - `.more-card` es contenedor (`container-type: inline-size`) y el título usa `min(1.75rem, 17cqi)`, con 1.375rem de respaldo;
+  - la palabra más larga («información») mide ~5.6em, así que ocupa a lo más el 96 % del ancho;
+  - un `clamp` con `vw` no bastaba: en Edge, la barra de desplazamiento deja 345 px a una ventana de 360, y «información» se salía (118 px en 113).
+- El relleno horizontal en el celular bajó a 1rem.
+- **Revisión** en Playwright:
+  - con 345 px útiles: título de 19 px, la línea más ancha en el 96.4 % y sin scroll horizontal;
+  - 375 px: 20.5 px, con las esquinas como se pidieron;
+  - 768 px: 28 px, en el tope;
+  - 1280 px: 28 px, y con hover en «Invita y gana» el ícono crece;
+  - consola sin errores y log sin 404.
+- **Nota**: con opacidad .3, el ícono de la esquina queda debajo del final de algunas descripciones en el celular («tu logo.», «tus cobros.»). Se leen bien, pero queda a la vista del usuario.
+
+### Pendientes
+- Ninguno del punto 11.

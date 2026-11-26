@@ -620,3 +620,107 @@ body {
 .storefront-link {
   word-break: break-all;
 }
+
+// --- «Más» con tarjetas (ajustes 2026-11-26) ---------------------
+// Componente propio con las proporciones de .step-card de la portada: fondo rosa papel con borde rosa grueso, solo las
+// esquinas superior derecha e inferior izquierda redondeadas, título grande centrado y un ícono tenue en la esquina, del
+// color de cada tarjeta. Al pasar el mouse (o con el foco del teclado) ese ícono crece. Toda la tarjeta es la liga;
+// height: 100% empareja las alturas por fila.
+$more-card-colors: (
+  "profile":      $rosa-mexicano,
+  "plan":         $cempasuchil,
+  "products":     $azul-lona,
+  "storefront":   $verde-nopal,
+  "bank-account": #6F42C1,   // morado
+  "invite":       #C2410C,   // naranja
+  "account":      #0E7C86,   // turquesa
+);
+
+.more-card {
+  --more-card-color: #{$rosa-mexicano};
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  height: 100%;
+  padding: 1.25rem 1rem 3rem;
+  overflow: hidden;
+  color: $tinta;
+  text-decoration: none;
+  background-color: $rosa-papel;
+  border: 4px solid $rosa-mexicano;
+  border-radius: 0 1.5rem; // superior izquierda e inferior derecha rectas
+  container-type: inline-size; // para el tamaño del título
+
+  @include media-breakpoint-up(md) {
+    padding: 1.5rem 1.5rem 3.5rem;
+  }
+}
+
+@each $name, $color in $more-card-colors {
+  .more-card-#{$name} {
+    --more-card-color: #{$color};
+  }
+}
+
+a.more-card:hover {
+  color: $tinta;
+  background-color: mix($rosa-mexicano, $rosa-papel, 10%);
+}
+
+a.more-card:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 var(--bs-focus-ring-width) var(--bs-focus-ring-color);
+}
+
+// El tamaño sale del ancho de la tarjeta (contenedor), con tope de 1.75rem: la palabra más larga («información») mide
+// ~5.6em, y con 17cqi ocupa el 96 % del ancho, así que nunca se sale. A 375 px queda en ~22 px; desde md, en el tope.
+.more-card-title {
+  font-size: 1.375rem;
+  font-size: min(1.75rem, 17cqi);
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.more-card-text {
+  font-size: .875rem;
+  line-height: 1.4;
+  color: var(--bs-secondary-color);
+}
+
+// Dibujo tenue en la esquina inferior derecha, detrás del texto y recortado por la tarjeta (como .step-art). Al pasar el
+// mouse crece desde la esquina, así que nunca tapa más que la parte de abajo.
+.more-card-art {
+  position: absolute;
+  right: -.75rem;
+  bottom: -1.25rem;
+  z-index: -1;
+  font-size: 5.5rem;
+  line-height: 1;
+  color: var(--more-card-color);
+  opacity: .3;
+  transform-origin: 100% 100%;
+}
+
+a.more-card:hover .more-card-art,
+a.more-card:focus-visible .more-card-art {
+  transform: scale(1.25);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a.more-card {
+    transition: background-color .15s ease-in-out;
+  }
+
+  .more-card-art {
+    transition: transform .25s ease-out;
+  }
+}
+
+// Función anunciada que todavía no existe: no es liga, va en gris y sin efecto al pasar el mouse.
+.more-card.is-disabled {
+  --more-card-color: #{$gray-600};
+  color: var(--bs-secondary-color);
+}
