@@ -234,11 +234,16 @@ public class LandingPageTests
     }
 
     [Theory]
-    [InlineData("/local133.svg")]
+    [InlineData("/icon-192.png")]
     [InlineData("/favicon.ico")]
     [InlineData("/apple-touch-icon.png")]
     [InlineData("/js/rotating-word.js")]
-    [InlineData("/img/local133-invertido.svg")]
+    [InlineData("/img/local133-logo-48.png")]
+    [InlineData("/img/local133-logo-96.png")]
+    [InlineData("/img/local133-logo-144.png")]
+    [InlineData("/img/local133-logo-160.png")]
+    [InlineData("/img/local133-logo-320.png")]
+    [InlineData("/img/local133-logo-480.png")]
     [InlineData("/img/toldo-patron.svg")]
     [InlineData("/js/landing.js")]
     [InlineData("/js/section-index.js")]

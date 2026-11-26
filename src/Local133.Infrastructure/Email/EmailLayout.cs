@@ -41,14 +41,17 @@ public static class EmailLayout
     public const string PaperPink = "#FFF0F7"; // $rosa-papel
     public const string Muted = "#6B5560";     // tinta aclarada (≈ 6.9:1 sobre blanco)
 
-    /// <summary>Logo para correo (PNG a 2x, fondo rosa): ícono del puesto + «Local133» en Bungee.</summary>
+    /// <summary>
+    /// Logo para correo (<c>tools/brand-assets.ps1</c>): el cuadro rosa del toldo a 2x (192 px, se muestra a 96), con las
+    /// esquinas redondeadas en el PNG (no todos los clientes respetan <c>border-radius</c>) y transparente fuera.
+    /// </summary>
     public const string LogoPath = "/img/email/local133-email-logo.png";
 
     /// <summary>Sube al cambiar el PNG: Gmail guarda en caché las imágenes por URL.</summary>
-    public const string LogoVersion = "1";
+    public const string LogoVersion = "2";
 
-    public const int LogoWidth = 208;
-    public const int LogoHeight = 40;
+    public const int LogoWidth = 96;
+    public const int LogoHeight = 96;
 
     private const string BodyFont = "'Atkinson Hyperlegible', Arial, Helvetica, sans-serif";
     private const string HeadingFont = "'Bungee', 'Arial Black', Arial, Helvetica, sans-serif";

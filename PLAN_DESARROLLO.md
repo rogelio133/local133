@@ -12,6 +12,9 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 - **Correo con Resend** (SDK oficial .NET, HTML armado en el código, llave de solo envío). Sin `Resend:ApiKey` los correos se guardan en disco. *(Cambio 2026-11-17, [bitácora](log_plan/mantenimiento-resend.md).)*
 - **Correo «Tu cuenta ya está activa»** al pasar el vendedor a activo (alta, webhook, sondeo o botón), uno por vendedor, y layout de marca para todos los correos. *(Cambio 2026-11-18, [bitácora](log_plan/mantenimiento-correo-cuenta-activa.md).)*
 - **Formularios de Identity a prueba de doble envío** (botón deshabilitado al enviar y, si el login llega dos veces con la sesión ya iniciada, redirección en vez del 400). *(Corrección 2026-11-26 por un error en producción, [bitácora](log_plan/mantenimiento-doble-envio-login.md).)*
+- **Ajustes 2026-11-26** (marca, navegación con sesión, concepto del cobro, «Mi información», recibo, Ventas, «Más», PWA, menú del admin y categorías), por bloques según el [documento de los ajustes](actualizaciones/ajustes_2026_11_26.md#implementación):
+  - ✅ Bloque 1, marca y navegación (logo `01.png` en Web y en la portada, «Local133» junto al logo, la barra según el rol, `returnUrl` solo del área del rol, `/` con sesión redirige y home sin barra), 2026-11-26, [bitácora](log_plan/ajustes-2026-11-26-marca-y-navegacion.md);
+  - pendientes: bloque 2 (concepto y «Mi información»), 3 (pantallas del vendedor), 4 (PWA), 5 (menú del admin) y 6 (categorías).
 - La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
 - **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
@@ -260,12 +263,11 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [1.4](log_plan/fase-1.4-merchant-y-terminos.md): la validación en cliente bloquea el registro con la casilla de términos sin marcar.
 - [1.5](log_plan/fase-1.5-inicio-y-admin.md): Inicio del vendedor (`/app`) a 375 px.
 - [2.2](log_plan/fase-2.2-cuenta-bancaria.md): formulario de cuenta bancaria (validación de CLABE en cliente) y «Verificar estatus», a 375, 768 y 1280 px con el MCP de Playwright.
-- [Ajustes UI 2026-11-17](actualizaciones/ajustes_2026_11_17_11_54.md#implementación): header del layout de admin (`/admin`) con el icono de usuario más grande. Usa el mismo `_LoginPartial` que ya se revisó en `_Layout` y `_MerchantLayout`, pero no se entró como admin.
 
 **Otros**:
 - [1.3](log_plan/fase-1.3-login-externo.md): prueba real con credenciales de Google/Facebook (crear clientes OAuth y registrar los callbacks `https://localhost:7180/signin-google` y `/signin-facebook`). Con la [4.0](log_plan/fase-4.0-nombre-en-registro.md): ver en el navegador qué nombre propone cada proveedor en el alta.
 - [2.3](log_plan/fase-2.3-webhook-y-sondeo.md): correo de cuenta **rechazada** (Notificaciones). El de cuenta activada ya está hecho ([bitácora](log_plan/mantenimiento-correo-cuenta-activa.md)).
-- [Correo de cuenta activa](log_plan/mantenimiento-correo-cuenta-activa.md): verlo en buzones reales (Gmail en Android y en web, Outlook, modo oscuro), con túnel + `App:PublicBaseUrl` o desde producción, porque el logo no carga desde `localhost`. Requiere confirmación para el envío real.
+- [Correo de cuenta activa](log_plan/mantenimiento-correo-cuenta-activa.md) (con el logo nuevo de los [ajustes 2026-11-26](log_plan/ajustes-2026-11-26-marca-y-navegacion.md), `LogoVersion` 2): verlo en buzones reales (Gmail en Android y en web, Outlook, modo oscuro), con túnel + `App:PublicBaseUrl` o desde producción, porque el logo no carga desde `localhost`. Requiere confirmación para el envío real.
 - [3.1](log_plan/fase-3.1-productos.md): «Tomar foto» en un celular real (Android e iPhone), también la foto del local de la [4.1](log_plan/fase-4.1-mi-informacion.md); confirmar que CI (Ubuntu) carga los binarios nativos de SkiaSharp; en producción, `LocalDiskFileStorage` ⇒ blob (Fase 7).
 - [2.8](log_plan/fase-2.8-historial-y-recibo.md): confirmar en Windows que los botones de WhatsApp abren la app de escritorio (`whatsapp://`); abrir el recibo y los botones de WhatsApp («al cliente» y «a otro contacto») y «Compartir» en un celular real (Android e iPhone); cómo previsualiza WhatsApp la liga. En producción fijar `App:PublicBaseUrl` (ver `azure.md`).
 - [Correo con Resend](log_plan/mantenimiento-resend.md): restringir la llave a `notificaciones.local133.com.mx` en el panel de Resend (la API no cambia permisos), crear la de producción para Key Vault (ver `azure.md`) y repetir el correo real en un buzón propio con remitente `hola@` y liga que no sea `localhost` (túnel o producción); el primero llegó a spam. Decidir el buzón de las respuestas a `hola@` (el dominio no tiene MX).
@@ -292,7 +294,6 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - revisar en un celular real los carruseles, el menú y las fuentes.
 - [6.4](log_plan/fase-6.4-tablero-y-webhooks.md): la búsqueda dentro del payload de la bitácora no tiene índice (columnas propias para los ids de Pey si se vuelve lenta).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
-- [Doble envío del login](log_plan/mantenimiento-doble-envio-login.md): correr la suite de integración completa sin `--artifacts-path` (se probó compilando fuera del repo porque Visual Studio tenía bloqueado `bin/Debug`).
 
 ---
 

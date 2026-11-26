@@ -74,12 +74,9 @@ public class LoginModel(
         if (result.Succeeded)
         {
             logger.LogInformation("Inicio de sesión con contraseña.");
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            {
-                return LocalRedirect(returnUrl);
-            }
+            // El returnUrl solo se respeta si es del área del rol (un vendedor que venía de /admin va a /app).
             var user = await userManager.FindByEmailAsync(Input.Email);
-            return LocalRedirect(await PostLoginRedirect.HomeUrlAsync(userManager, user));
+            return LocalRedirect(await PostLoginRedirect.ResolveAsync(userManager, user, returnUrl, Url.IsLocalUrl));
         }
         if (result.IsLockedOut)
         {

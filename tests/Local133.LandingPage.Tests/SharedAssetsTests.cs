@@ -2,16 +2,22 @@ namespace Local133.LandingPage.Tests;
 
 /// <summary>
 /// Logo, íconos y <c>rotating-word.js</c> de la portada son copias de <c>Local133.Web/wwwroot</c> (los static web
-/// assets no sirven archivos enlazados). Si se cambia el original, hay que copiarlo también a la portada.
+/// assets no sirven archivos enlazados). El logo y los íconos los escribe <c>tools/brand-assets.ps1</c> en las dos apps;
+/// si se cambia otro original, hay que copiarlo también a la portada.
 /// </summary>
 public class SharedAssetsTests
 {
     [Theory]
-    [InlineData("local133.svg")]
     [InlineData("favicon.ico")]
     [InlineData("apple-touch-icon.png")]
+    [InlineData("icon-192.png")]
     [InlineData("js/rotating-word.js")]
-    [InlineData("img/local133-invertido.svg")]
+    [InlineData("img/local133-logo-48.png")]
+    [InlineData("img/local133-logo-96.png")]
+    [InlineData("img/local133-logo-144.png")]
+    [InlineData("img/local133-logo-160.png")]
+    [InlineData("img/local133-logo-320.png")]
+    [InlineData("img/local133-logo-480.png")]
     public void La_copia_de_la_portada_es_igual_a_la_de_Local133_Web(string path)
     {
         var root = RepositoryRoot();

@@ -1,4 +1,3 @@
-@using Local133.Application.Auth
 @using Local133.Web.Hosting
 @using Microsoft.Extensions.Options
 @inject IOptions<PublicSiteOptions> Site
@@ -7,26 +6,20 @@
 <head>
     <partial name="_Head" />
 </head>
-@* Footer siempre al fondo: body en columna con el alto de la ventana (.site-layout) y main que crece. *@
-<body class="d-flex flex-column site-layout">
-    <nav class="navbar navbar-expand bg-primary sticky-top d-print-none" data-bs-theme="dark">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="~/">
-                <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
-            </a>
-            <div class="navbar-nav ms-auto me-2">
-                @if (User.IsInRole(Roles.Merchant))
-                {
-                    <a class="nav-link" href="~/app">Mi puesto</a>
-                }
-                @if (User.IsInRole(Roles.Admin))
-                {
-                    <a class="nav-link" href="~/admin">Admin</a>
-                }
+@* Footer siempre al fondo: body en columna con el alto de la ventana (.site-layout) y main que crece.
+   ViewData["HideNavbar"] = true quita la barra (home sin sesión) y ViewData["BodyClass"] agrega una clase al body. *@
+<body class="d-flex flex-column site-layout @(ViewData["BodyClass"] as string)">
+    @if (ViewData["HideNavbar"] is not true)
+    {
+        <nav class="navbar navbar-expand bg-primary sticky-top d-print-none" data-bs-theme="dark">
+            <div class="container">
+                <partial name="_NavbarBrand" model="NavbarBrandViewModel.ForPublic(User)" />
+                <div class="ms-auto">
+                    <partial name="_LoginPartial" />
+                </div>
             </div>
-            <partial name="_LoginPartial" />
-        </div>
-    </nav>
+        </nav>
+    }
 
     <main class="container py-4 flex-grow-1">
         @RenderBody()

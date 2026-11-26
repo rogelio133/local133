@@ -7,10 +7,10 @@
     <meta name="robots" content="noindex, nofollow" />
 }
 <title>@(ViewData["Title"] is string title ? $"{title} · Local133" : "Local133")</title>
-@* Ícono de la marca: favicon.ico (varios tamaños, respaldo), local133.svg (vectorial, navegadores modernos)
-   y apple-touch-icon.png para la pantalla de inicio de iOS. *@
+@* Ícono de la marca (tools/brand-assets.ps1): favicon.ico (16, 32 y 48 px), icon-192.png para pantallas densas
+   y apple-touch-icon.png para la pantalla de inicio de iOS. No hay SVG del logo. *@
 <link rel="icon" href="~/favicon.ico" sizes="any" />
-<link rel="icon" href="~/local133.svg" type="image/svg+xml" />
+<link rel="icon" href="~/icon-192.png" type="image/png" sizes="192x192" />
 <link rel="apple-touch-icon" href="~/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

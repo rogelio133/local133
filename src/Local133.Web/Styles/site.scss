@@ -363,12 +363,74 @@ body {
   }
 }
 
-// --- Logo de las barras ----------------------------------------
-// img/local133-invertido.svg mide 973×740: se fija a ~32 px de alto para no hacer crecer la barra.
+// --- Home sin sesión (Views/Home/Index, ViewData["BodyClass"] = "home-page") ---------
+// Sin barra, fondo rosa, texto blanco (≈ 4.6:1 sobre $primary) y el contenido centrado en el alto de la ventana.
+// El pie del layout también va en blanco: text-body-secondary lee --bs-secondary-color.
+.home-page {
+  --#{$prefix}secondary-color: #{$white};
+  color: $white;
+  background-color: $primary;
+
+  > main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+// Logo mediano con esquinas redondeadas y anillo blanco, como .logo-tile-lg en el cierre de la portada.
+.home-logo {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 1.5rem;
+  border-radius: 32px;
+  box-shadow: 0 0 0 4px rgba($white, .5);
+}
+
+// «Crear cuenta» sobre rosa: blanco con texto rosa.
+.btn-home-signup {
+  @include button-variant(
+    $white,
+    $white,
+    $color: $rosa-profundo,
+    $hover-background: $rosa-papel,
+    $hover-border: $rosa-papel,
+    $hover-color: $rosa-profundo,
+    $active-background: $rosa-papel,
+    $active-border: $rosa-papel,
+    $active-color: $rosa-profundo
+  );
+}
+
+// --- Marca de las barras (parcial _NavbarBrand) ------------------
+// img/local133-logo-{48,96,144}.png: cuadro de 2.25rem con esquinas al ~22 %. Sobre el rosa de la barra el cuadro
+// (#F40284) apenas se distingue, así que lleva el anillo blanco translúcido de .logo-tile-lg de la portada.
 .navbar-logo {
-  height: 2rem;
-  width: auto;
-  border-radius: .375rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  border-radius: 22%;
+  box-shadow: 0 0 0 2px rgba($white, .5);
+}
+
+// «Local133» en Bungee junto al logo. El tamaño no hace crecer la barra.
+.navbar-wordmark {
+  font-family: $headings-font-family;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: $white;
+}
+
+// Admin: «133» en rosa sobre $tinta. $rosa-mexicano da ~3.8:1 (a 1.25rem no cuenta como texto grande); este rosa
+// aclarado (#EE59AA) da ~5.4:1.
+.navbar-wordmark-number {
+  color: tint-color($rosa-mexicano, 35%);
+}
+
+.navbar-admin-badge {
+  font-family: $font-family-sans-serif;
+  font-size: .7rem;
+  letter-spacing: .02em;
 }
 
 // --- Mi información (4.1): logo y foto del local --------------------

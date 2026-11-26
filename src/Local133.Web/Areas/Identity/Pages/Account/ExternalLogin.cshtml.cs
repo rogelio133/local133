@@ -199,10 +199,6 @@ public class ExternalLoginModel(
     {
         // Ya no se necesita la cookie del proveedor.
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return LocalRedirect(returnUrl);
-        }
-        return LocalRedirect(await PostLoginRedirect.HomeUrlAsync(userManager, user));
+        return LocalRedirect(await PostLoginRedirect.ResolveAsync(userManager, user, returnUrl, Url.IsLocalUrl));
     }
 }
