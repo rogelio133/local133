@@ -94,7 +94,7 @@ body {
   color: $landing-pink-text;
 }
 
-// Logo: cuadro rosa con local133-invertido.svg (toldo blanco), como el ícono de la app.
+// Logo: cuadro rosa con img/local133-logo-*.png (tools/brand-assets.ps1), que ya trae su fondo y su margen.
 .logo-tile {
   display: inline-flex;
   flex: none;
@@ -105,8 +105,8 @@ body {
 
   img {
     display: block;
-    width: 86%;
-    height: auto;
+    width: 100%;
+    height: 100%;
   }
 }
 

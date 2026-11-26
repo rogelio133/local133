@@ -28,7 +28,7 @@ public static class OwnerNameMessages
 {
     public const string Required = "Escribe tu nombre.";
     public const string TooLong = "Tu nombre puede tener hasta {1} caracteres.";
-    public const string Invalid = "Usa solo letras, espacios, punto, guion y apóstrofo.";
+    public const string Invalid = "Escribe solo letras y espacios.";
 }
 
 public static class ReferralCodeMessages

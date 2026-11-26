@@ -17,6 +17,8 @@ public class MerchantConfiguration : IEntityTypeConfiguration<Merchant>
         builder.Property(m => m.OwnerName).HasMaxLength(PersonName.MaxLength);
         // «Mi información» (4.1).
         builder.Property(m => m.Address).HasMaxLength(MerchantAddress.MaxLength);
+        // Concepto por defecto (ajustes 2026-11-26).
+        builder.Property(m => m.DefaultConcept).HasMaxLength(DefaultConcept.MaxLength);
         builder.Property(m => m.LogoKey).HasMaxLength(Merchant.ImageKeyMaxLength).IsUnicode(false);
         builder.Property(m => m.ShopPhotoKey).HasMaxLength(Merchant.ImageKeyMaxLength).IsUnicode(false);
         // Código de invitación (5.8): único; la migración lo genera para los vendedores anteriores.

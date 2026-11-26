@@ -1,4 +1,5 @@
 using Local133.Web.Hosting;
+using Local133.Web.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -8,9 +9,17 @@ namespace Local133.Web.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public class HomeController(IOptions<HomeHeroOptions> heroOptions, IOptions<PublicSiteOptions> site) : Controller
 {
-    /// <summary>Portada; el modelo son las palabras que rotan en el título (la primera la pinta el servidor).</summary>
+    /// <summary>
+    /// Home sin sesión: el modelo son las palabras que rotan en el título (la primera la pinta el servidor). Con sesión
+    /// de vendedor o admin redirige a su inicio, así que a «/» solo se llega antes del login o al cerrar sesión (y la PWA,
+    /// que abre en «/», cae en la pantalla correcta). Con sesión pero sin rol se ve la home.
+    /// </summary>
     [HttpGet("")]
-    public IActionResult Index() => View(heroOptions.Value.GetWords());
+    public IActionResult Index()
+    {
+        var home = PostLoginRedirect.HomeUrlFor(User);
+        return home != "~/" ? LocalRedirect(home) : View(heroOptions.Value.GetWords());
+    }
 
     /// <summary>
     /// Términos y condiciones: viven en la portada desde el 2026-11-25 (<c>App:LandingUrl</c>). La ruta vieja redirige

@@ -190,7 +190,8 @@ internal sealed class SaleCharging(
         var now = clock.GetUtcNow();
         DateTimeOffset? expiresAt = expirationSeconds == PeyLimits.NoExpiration ? null : now.AddSeconds(expirationSeconds);
 
-        var concept = Sale.BuildConcept(merchant.BusinessName, conceptText);
+        // Solo lo que escribió el vendedor (ajustes 2026-11-26): ya no se antepone el nombre del negocio.
+        var concept = conceptText.Trim();
         if (method == ChargeMethod.PushNotification)
         {
             if (expiresAt is not { } pushExpiresAt)

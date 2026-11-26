@@ -30,6 +30,11 @@ public class Merchant : Entity
     /// <summary>Dirección o ubicación del puesto (<see cref="MerchantAddress"/>), opcional; renglones con <c>\n</c>.</summary>
     public string? Address { get; set; }
 
+    /// <summary>
+    /// Concepto que Cobrar › Monto propone (<see cref="Merchants.DefaultConcept"/>, ajustes 2026-11-26), o <c>null</c>.
+    /// </summary>
+    public string? DefaultConcept { get; set; }
+
     /// <summary>Llave base del logo en el almacenamiento (PNG; ver <c>MerchantImageRules</c>), o <c>null</c>.</summary>
     public string? LogoKey { get; set; }
 
@@ -121,10 +126,11 @@ public class Merchant : Entity
     public bool CanEditProfile => Status != MerchantStatus.Disabled;
 
     /// <summary>
-    /// Guarda los datos generales de «Mi información», normalizados. La dirección vacía se guarda como <c>null</c>.
+    /// Guarda los datos generales de «Mi información», normalizados. La dirección y el concepto por defecto vacíos se
+    /// guardan como <c>null</c>.
     /// </summary>
-    /// <exception cref="ArgumentException">Algún dato no cumple <see cref="PersonName"/>, <see cref="Merchants.BusinessName"/> o <see cref="MerchantAddress"/>.</exception>
-    public void UpdateProfile(string ownerName, string businessName, string? address)
+    /// <exception cref="ArgumentException">Algún dato no cumple <see cref="PersonName"/>, <see cref="Merchants.BusinessName"/>, <see cref="MerchantAddress"/> o <see cref="Merchants.DefaultConcept"/>.</exception>
+    public void UpdateProfile(string ownerName, string businessName, string? address, string? defaultConcept)
     {
         if (!PersonName.IsValid(ownerName))
         {
@@ -141,7 +147,13 @@ public class Merchant : Entity
             throw new ArgumentException("La dirección no es válida.", nameof(address));
         }
 
+        if (!Merchants.DefaultConcept.IsValid(defaultConcept))
+        {
+            throw new ArgumentException("El concepto por defecto no es válido.", nameof(defaultConcept));
+        }
+
         OwnerName = PersonName.Normalize(ownerName);
+        DefaultConcept = Merchants.DefaultConcept.Normalize(defaultConcept);
         BusinessName = Merchants.BusinessName.Normalize(businessName);
         var normalizedAddress = MerchantAddress.Normalize(address);
         Address = normalizedAddress.Length == 0 ? null : normalizedAddress;

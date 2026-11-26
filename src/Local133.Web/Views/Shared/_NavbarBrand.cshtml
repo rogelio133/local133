@@ -1,0 +1,19 @@
+@model NavbarBrandViewModel
+@* Marca de las barras: logo (PNG a 1×/2×/3×) + «Local133». El alt va vacío porque el texto ya está escrito, salvo
+   cuando el texto se oculta en celular (barra pública sin sesión). En el admin, «133» en rosa y la insignia «Admin». *@
+<a class="navbar-brand d-flex align-items-center gap-2" href="@Url.Content(Model.Href)">
+    <img class="navbar-logo" src="~/img/local133-logo-48.png" srcset="@Url.Content("~/img/local133-logo-96.png") 2x, @Url.Content("~/img/local133-logo-144.png") 3x" alt="@(Model.HideWordmarkOnPhone ? "Local133" : "")" width="36" height="36" />
+    @if (Model.HideWordmarkOnPhone)
+    {
+        <span class="navbar-wordmark d-none d-sm-inline" aria-hidden="true">Local<span>133</span></span>
+    }
+    else
+    {
+        <span class="navbar-wordmark">Local<span class="@(Model.Variant == NavbarBrandVariant.Admin ? "navbar-wordmark-number" : null)">133</span></span>
+    }
+    @if (Model.Variant == NavbarBrandVariant.Admin)
+    {
+        @* En xs no cabe junto a ☰ y «Salir»: el 133 rosa y la barra oscura ya distinguen el área. *@
+        <span class="badge text-bg-light navbar-admin-badge d-none d-sm-inline-block">Admin</span>
+    }
+</a>

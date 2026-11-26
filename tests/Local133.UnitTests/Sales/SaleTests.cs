@@ -79,22 +79,10 @@ public class SaleTests
         Assert.ThrowsAny<ArgumentException>(
             () => Sale.StartDirect(7, 1, 10, new string('a', Sale.ConceptMaxLength + 1), null, Now));
 
-    [Theory]
-    [InlineData("Tacos Don Ramón", "2 tacos al pastor", "Tacos Don Ramón · 2 tacos al pastor")]
-    [InlineData("  Tacos Don Ramón ", "  2 tacos  ", "Tacos Don Ramón · 2 tacos")]
-    [InlineData(null, "2 tacos", "2 tacos")]
-    [InlineData("   ", " 2 tacos ", "2 tacos")]
-    public void BuildConcept_antepone_el_nombre_del_negocio(string? businessName, string text, string expected) =>
-        Assert.Equal(expected, Sale.BuildConcept(businessName, text));
-
     [Fact]
-    public void El_concepto_mas_largo_posible_cabe_en_la_columna()
-    {
-        var concept = Sale.BuildConcept(
-            new string('n', Domain.Merchants.Merchant.BusinessNameMaxLength), new string('c', Sale.ConceptTextMaxLength));
-
-        Assert.True(concept.Length <= Sale.ConceptMaxLength);
-    }
+    public void El_concepto_mas_largo_posible_cabe_en_la_columna() =>
+        // Desde el 2026-11-26 se guarda solo el concepto del vendedor; la columna conserva las ventas viejas.
+        Assert.True(Sale.ConceptTextMaxLength <= Sale.ConceptMaxLength);
 
     [Theory]
     [InlineData("2 tacos al pastor")]

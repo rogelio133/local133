@@ -1,13 +1,16 @@
-@using Local133.Application.Auth
 @model IReadOnlyList<string>
 @{
     ViewData["Title"] = "Cobra con CoDi";
+    // Solo se ve sin sesión (HomeController.Index redirige a vendedores y admins). Sin barra y sobre rosa (.home-page).
+    ViewData["HideNavbar"] = true;
+    ViewData["BodyClass"] = "home-page";
     // Palabras de Home:RotatingWords (HomeHeroOptions.GetWords, nunca vacía). El servidor pinta la primera: el título
     // queda completo sin JS y para los buscadores; rotating-word.js rota las demás.
     var words = Model;
     var rotatingWords = words.Count > 1 ? System.Text.Json.JsonSerializer.Serialize(words) : null;
 }
-<div class="py-4 text-center">
+<div class="home-hero text-center" data-home-hero>
+    <img class="home-logo" src="~/img/local133-logo-160.png" srcset="@Url.Content("~/img/local133-logo-320.png") 2x, @Url.Content("~/img/local133-logo-480.png") 3x" alt="Local133" width="160" height="160" />
     @* Razor no omite un data-* nulo (lo deja vacío): sin lista, la palabra va sin el atributo. *@
     @if (rotatingWords is not null)
     {
@@ -17,21 +20,10 @@
     {
         <h1 class="display-6 fw-semibold">Cobra con CoDi desde&nbsp;tu <span class="rotating-word">@words[0]</span></h1>
     }
-    <p class="lead text-body-secondary">Genera un QR, tu cliente paga desde su app bancaria y el dinero llega directo a tu cuenta.</p>
+    <p class="lead">Genera un QR, tu cliente paga desde su app bancaria y el dinero llega directo a tu cuenta.</p>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-4">
-        @if (User.IsInRole(Roles.Merchant))
-        {
-            <a class="btn btn-primary btn-lg" href="~/app">Ir a mi puesto</a>
-        }
-        else if (User.IsInRole(Roles.Admin))
-        {
-            <a class="btn btn-primary btn-lg" href="~/admin">Ir a administración</a>
-        }
-        else
-        {
-            <a class="btn btn-primary btn-lg" asp-area="Identity" asp-page="/Account/Register">Crear cuenta</a>
-            <a class="btn btn-outline-secondary btn-lg" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
-        }
+        <a class="btn btn-home-signup btn-lg" asp-area="Identity" asp-page="/Account/Register">Crear cuenta</a>
+        <a class="btn btn-outline-light btn-lg" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
     </div>
 </div>
 

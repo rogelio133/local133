@@ -348,10 +348,6 @@ body {
     background-color: #fff;
   }
 
-  .receipt {
-    box-shadow: none;
-  }
-
   /* Corte de caja (5.9): sin el espacio de la barra inferior ni sombras (las barras y botones llevan d-print-none). */
   .app-main {
     padding-bottom: 0;
@@ -363,12 +359,74 @@ body {
   }
 }
 
-// --- Logo de las barras ----------------------------------------
-// img/local133-invertido.svg mide 973×740: se fija a ~32 px de alto para no hacer crecer la barra.
+// --- Home sin sesión (Views/Home/Index, ViewData["BodyClass"] = "home-page") ---------
+// Sin barra, fondo rosa, texto blanco (≈ 4.6:1 sobre $primary) y el contenido centrado en el alto de la ventana.
+// El pie del layout también va en blanco: text-body-secondary lee --bs-secondary-color.
+.home-page {
+  --#{$prefix}secondary-color: #{$white};
+  color: $white;
+  background-color: $primary;
+
+  > main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+// Logo mediano con esquinas redondeadas y anillo blanco, como .logo-tile-lg en el cierre de la portada.
+.home-logo {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 1.5rem;
+  border-radius: 32px;
+  box-shadow: 0 0 0 4px rgba($white, .5);
+}
+
+// «Crear cuenta» sobre rosa: blanco con texto rosa.
+.btn-home-signup {
+  @include button-variant(
+    $white,
+    $white,
+    $color: $rosa-profundo,
+    $hover-background: $rosa-papel,
+    $hover-border: $rosa-papel,
+    $hover-color: $rosa-profundo,
+    $active-background: $rosa-papel,
+    $active-border: $rosa-papel,
+    $active-color: $rosa-profundo
+  );
+}
+
+// --- Marca de las barras (parcial _NavbarBrand) ------------------
+// img/local133-logo-{48,96,144}.png: cuadro de 2.25rem con esquinas al ~22 %. Sobre el rosa de la barra el cuadro
+// (#F40284) apenas se distingue, así que lleva el anillo blanco translúcido de .logo-tile-lg de la portada.
 .navbar-logo {
-  height: 2rem;
-  width: auto;
-  border-radius: .375rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  border-radius: 22%;
+  box-shadow: 0 0 0 2px rgba($white, .5);
+}
+
+// «Local133» en Bungee junto al logo. El tamaño no hace crecer la barra.
+.navbar-wordmark {
+  font-family: $headings-font-family;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: $white;
+}
+
+// Admin: «133» en rosa sobre $tinta. $rosa-mexicano da ~3.8:1 (a 1.25rem no cuenta como texto grande); este rosa
+// aclarado (#EE59AA) da ~5.4:1.
+.navbar-wordmark-number {
+  color: tint-color($rosa-mexicano, 35%);
+}
+
+.navbar-admin-badge {
+  font-family: $font-family-sans-serif;
+  font-size: .7rem;
+  letter-spacing: .02em;
 }
 
 // --- Mi información (4.1): logo y foto del local --------------------
@@ -419,6 +477,66 @@ body {
   max-height: 6rem;
   max-width: 12rem;
   object-fit: contain;
+}
+
+// --- Recibo tipo ticket (ajustes 2026-11-26) ---------------------
+// Fondo rosa papel para que el ticket blanco y sus dientes se distingan.
+.receipt-page {
+  background-color: $rosa-papel;
+}
+
+// La sombra va en el contenedor: en el mismo elemento, `filter` se aplica antes que `mask` y se perdería. Así sigue el
+// contorno de los dientes.
+.receipt-ticket-wrap {
+  max-width: 26rem;
+  margin-inline: auto;
+  filter: drop-shadow(0 2px 6px rgba($tinta, .18));
+}
+
+// Dientes arriba y abajo: dos zigzag de 90° (conic-gradient en repeat-x), sin imágenes. La profundidad es la mitad del
+// ancho de cada diente, y el relleno vertical la deja fuera del contenido.
+.receipt-ticket {
+  --receipt-tooth: .875rem;
+  $teeth:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--receipt-tooth) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--receipt-tooth) 51% repeat-x;
+  padding: calc(var(--receipt-tooth) / 2) 1.5rem;
+  font-variant-numeric: tabular-nums;
+  background-color: $white;
+  -webkit-mask: $teeth;
+  mask: $teeth;
+}
+
+.receipt-ticket-section {
+  padding-block: 1.25rem;
+
+  + .receipt-ticket-section {
+    border-top: 2px dashed rgba($tinta, .25);
+  }
+}
+
+.receipt-ticket-total {
+  padding-top: .5rem;
+  margin-top: .25rem;
+  border-top: 1px solid rgba($tinta, .15);
+}
+
+.receipt-check {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+// Al imprimir: sobre papel blanco, y la sombra se vuelve un contorno delgado para que los dientes se sigan viendo.
+// Va después de las reglas de pantalla porque pesan lo mismo.
+@media print {
+  .receipt-page {
+    background-color: $white;
+  }
+
+  .receipt-ticket-wrap {
+    filter: drop-shadow(0 0 1px rgba($tinta, .6));
+    break-inside: avoid;
+  }
 }
 
 /* Catálogo público: portada con la foto del local y el logo encima. */

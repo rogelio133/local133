@@ -36,9 +36,10 @@ public class ChargeController(
     /// <summary>Mensaje (TempData) que la vista de la venta muestra una vez.</summary>
     public const string SaleNoticeKey = "SaleNotice";
 
+    /// <summary>Formulario vacío, con el concepto por defecto de «Mi información» si lo hay (ajustes 2026-11-26).</summary>
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken) =>
-        View(await FormAsync(new ChargeInput(), cancellationToken));
+        View(await FormAsync(new ChargeInput(), cancellationToken, prefillConcept: true));
 
     [HttpPost("")]
     [ValidateAntiForgeryToken]
@@ -248,9 +249,18 @@ public class ChargeController(
         }
     }
 
-    private async Task<ChargeFormViewModel> FormAsync(ChargeInput input, CancellationToken cancellationToken)
+    /// <param name="prefillConcept">
+    /// Solo en el <c>GET</c>: propone <c>Merchant.DefaultConcept</c>. Al volver a pintar tras un error se respeta lo enviado.
+    /// </param>
+    private async Task<ChargeFormViewModel> FormAsync(
+        ChargeInput input, CancellationToken cancellationToken, bool prefillConcept = false)
     {
         var (merchant, account) = await MerchantAndAccountAsync(cancellationToken);
+        if (prefillConcept)
+        {
+            input.Concept ??= merchant.DefaultConcept;
+        }
+
         var blocked = ChargeFormViewModel.BlockedNoticeFor(merchant, account);
         var (usageModel, planBlocked) = blocked is null ? await MonthlyUsageAsync(merchant.Id, cancellationToken) : (null, null);
         string? missingCatalog = null;

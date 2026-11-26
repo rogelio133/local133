@@ -12,12 +12,27 @@ public class MerchantProfileTests
     {
         var merchant = NewMerchant();
 
-        merchant.UpdateProfile("  María   José O’Brien ", "  Tacos   Don Ramón ", "  Pasillo 4 \r\n\r\n Mercado Sur ");
+        merchant.UpdateProfile("  María   José Núñez ", "  Tacos   Don Ramón ", "  Pasillo 4 \r\n\r\n Mercado Sur ", "  Consumo  ");
 
-        Assert.Equal("María José O'Brien", merchant.OwnerName);
+        Assert.Equal("María José Núñez", merchant.OwnerName);
         Assert.Equal("Tacos Don Ramón", merchant.BusinessName);
         Assert.Equal("Pasillo 4\nMercado Sur", merchant.Address);
+        Assert.Equal("Consumo", merchant.DefaultConcept);
         Assert.Equal("María", merchant.GreetingName);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateProfile_sin_concepto_por_defecto_lo_guarda_nulo(string? concept)
+    {
+        var merchant = NewMerchant();
+        merchant.DefaultConcept = "Consumo";
+
+        merchant.UpdateProfile("María López", "Tacos Don Ramón", null, concept);
+
+        Assert.Null(merchant.DefaultConcept);
     }
 
     [Theory]
@@ -28,28 +43,38 @@ public class MerchantProfileTests
         var merchant = NewMerchant();
         merchant.Address = "Pasillo 4";
 
-        merchant.UpdateProfile("María López", "Tacos Don Ramón", address);
+        merchant.UpdateProfile("María López", "Tacos Don Ramón", address, null);
 
         Assert.Null(merchant.Address);
     }
 
     [Theory]
-    [InlineData("María 2", "Tacos", null, "ownerName")]
-    [InlineData("María", "", null, "businessName")]
-    [InlineData("María", "Tacos · Don Ramón", null, "businessName")]
-    [InlineData("María", "Tacos", "Uno\nDos\nTres\nCuatro", "address")]
+    [InlineData("María 2", "Tacos", null, null, "ownerName")]
+    [InlineData("O'Brien", "Tacos", null, null, "ownerName")]
+    [InlineData("María", "", null, null, "businessName")]
+    [InlineData("María", "Tacos · Don Ramón", null, null, "businessName")]
+    [InlineData("María", "Tacos", "Uno\nDos\nTres\nCuatro", null, "address")]
+    [InlineData("María", "Tacos", null, "Hola · mundo", "defaultConcept")]
+    [InlineData("María", "Tacos", null, "Taco 🌮", "defaultConcept")]
     public void UpdateProfile_rechaza_datos_invalidos_sin_cambiar_nada(
-        string ownerName, string businessName, string? address, string parameter)
+        string ownerName, string businessName, string? address, string? defaultConcept, string parameter)
     {
         var merchant = NewMerchant();
         merchant.BusinessName = "Negocio";
 
-        var error = Assert.Throws<ArgumentException>(() => merchant.UpdateProfile(ownerName, businessName, address));
+        var error = Assert.Throws<ArgumentException>(
+            () => merchant.UpdateProfile(ownerName, businessName, address, defaultConcept));
 
         Assert.Equal(parameter, error.ParamName);
         Assert.Equal("María López", merchant.OwnerName);
         Assert.Equal("Negocio", merchant.BusinessName);
+        Assert.Null(merchant.DefaultConcept);
     }
+
+    [Fact]
+    public void UpdateProfile_rechaza_un_concepto_por_defecto_de_mas_de_100() =>
+        Assert.Throws<ArgumentException>(() => NewMerchant().UpdateProfile(
+            "María", "Tacos", null, new string('a', DefaultConcept.MaxLength + 1)));
 
     [Fact]
     public void ReplaceLogo_y_ReplaceShopPhoto_devuelven_la_llave_anterior()

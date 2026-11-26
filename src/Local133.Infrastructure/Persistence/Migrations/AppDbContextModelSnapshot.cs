@@ -168,6 +168,10 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("DefaultConcept")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("LogoKey")
                         .HasMaxLength(100)
                         .IsUnicode(false)

@@ -10,6 +10,8 @@
         ("Transactions", null, "~/admin/transacciones", "Transacciones", "bi-arrow-left-right"),
         ("Webhooks", null, "~/admin/webhooks", "Webhooks", "bi-broadcast"),
         ("Settings", null, "~/admin/parametros", "Parámetros", "bi-sliders"),
+        // Contraseña y cuentas ligadas (Identity, con el layout público): nunca queda activa aquí.
+        ("", null, "~/Identity/Account/Manage/ChangePassword", "Mi cuenta", "bi-person-gear"),
     };
 }
 <!DOCTYPE html>
@@ -23,10 +25,7 @@
             <button class="navbar-toggler d-lg-none me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#admin-menu" aria-controls="admin-menu" aria-label="Abrir menú">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a class="navbar-brand d-flex align-items-center gap-2" href="~/admin/clientes">
-                <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
-                Admin
-            </a>
+            <partial name="_NavbarBrand" model="NavbarBrandViewModel.Admin" />
             <div class="ms-auto">
                 <partial name="_LoginPartial" />
             </div>

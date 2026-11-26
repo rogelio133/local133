@@ -10,7 +10,7 @@
 <div class="row justify-content-center" data-profile data-can-edit="@(Model.CanEdit ? "true" : "false")">
     <div class="col-md-10 col-xl-9">
         <h1 class="h4 mb-1">Mi información</h1>
-        <p class="text-body-secondary">Los datos de tu negocio. El nombre del negocio aparece en tus cobros y en tus recibos.</p>
+        <p class="text-body-secondary">Los datos de tu negocio. El nombre del negocio aparece en tus recibos y en tu catálogo.</p>
 
         @if (notice is not null)
         {
@@ -38,7 +38,8 @@
                                 <div class="mb-3">
                                     <label asp-for="Input.OwnerName" class="form-label text-body-secondary"></label>
                                     <input asp-for="Input.OwnerName" type="text" autocomplete="name" autocapitalize="words"
-                                           maxlength="@PersonName.MaxLength" class="form-control form-control-lg" aria-required="true" data-val-trim />
+                                           maxlength="@PersonName.MaxLength" class="form-control form-control-lg" aria-required="true"
+                                           data-val-trim data-letters-only />
                                     <span asp-validation-for="Input.OwnerName" class="d-block text-danger small mt-1"></span>
                                 </div>
 
@@ -47,7 +48,7 @@
                                     <input asp-for="Input.BusinessName" type="text" autocomplete="organization" autocapitalize="words"
                                            maxlength="@BusinessName.MaxLength" class="form-control form-control-lg" aria-required="true"
                                            aria-describedby="business-name-help" placeholder="Ej. Tacos Don Ramón" data-val-trim />
-                                    <div class="form-text" id="business-name-help">Lo ve tu cliente en su app del banco al pagarte.</div>
+                                    <div class="form-text" id="business-name-help">Aparece en tus recibos y en tu catálogo en línea.</div>
                                     <span asp-validation-for="Input.BusinessName" class="d-block text-danger small mt-1"></span>
                                 </div>
 
@@ -67,6 +68,15 @@
                                               placeholder="Ej. Tianguis de los martes, pasillo 4"></textarea>
                                     <div class="form-text" id="address-help">Opcional. Hasta 3 renglones.</div>
                                     <span asp-validation-for="Input.Address" class="d-block text-danger small mt-1"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Input.DefaultConcept" class="form-label text-body-secondary"></label>
+                                    <input asp-for="Input.DefaultConcept" type="text" autocomplete="off" autocapitalize="sentences"
+                                           maxlength="@DefaultConcept.MaxLength" class="form-control form-control-lg"
+                                           aria-describedby="default-concept-help" placeholder="Ej. Consumo" data-val-trim />
+                                    <div class="form-text" id="default-concept-help">Es el concepto que verá tu cliente si no escribes otro. Puedes cambiarlo en cada cobro.</div>
+                                    <span asp-validation-for="Input.DefaultConcept" class="d-block text-danger small mt-1"></span>
                                 </div>
                             </fieldset>
 
@@ -103,4 +113,5 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/js/image-upload.js" asp-append-version="true"></script>
+    <script src="~/js/letters-input.js" asp-append-version="true"></script>
 }

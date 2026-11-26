@@ -11,7 +11,7 @@ namespace Local133.Web.Identity;
 /// Doble envío de un formulario que inicia sesión (Enter + clic, doble clic o el administrador de contraseñas):
 /// el primer POST deja la cookie de sesión y el segundo llega con un token antiforgery generado para el usuario
 /// anónimo, así que falla con 400 y la persona ve «Algo salió mal» aunque ya entró (producción, 2026-11-26).
-/// Si el token falla y la petición ya trae sesión, se redirige a su inicio (o al <c>returnUrl</c> local) en lugar
+/// Si el token falla y la petición ya trae sesión, se redirige a su inicio (o al <c>returnUrl</c> de su área) en lugar
 /// del 400. Sin sesión, el 400 se queda igual: el token sigue protegiendo el formulario.
 /// </summary>
 /// <remarks>
@@ -30,9 +30,8 @@ public sealed class SignedInAntiforgeryRedirectAttribute : Attribute, IAsyncAlwa
             var url = http.RequestServices.GetRequiredService<IUrlHelperFactory>().GetUrlHelper(context);
             var returnUrl = http.Request.Query["returnUrl"].ToString();
 
-            var target = !string.IsNullOrEmpty(returnUrl) && url.IsLocalUrl(returnUrl)
-                ? returnUrl
-                : await PostLoginRedirect.HomeUrlAsync(userManager, await userManager.GetUserAsync(http.User));
+            var target = await PostLoginRedirect.ResolveAsync(
+                userManager, await userManager.GetUserAsync(http.User), returnUrl, url.IsLocalUrl);
 
             http.RequestServices.GetRequiredService<ILogger<SignedInAntiforgeryRedirectAttribute>>()
                 .LogInformation("Formulario de {Path} enviado otra vez con la sesión ya iniciada; se redirige a su inicio.", http.Request.Path);

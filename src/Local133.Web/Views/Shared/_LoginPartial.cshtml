@@ -1,22 +1,33 @@
+@using Local133.Application.Auth
 @using Microsoft.AspNetCore.Identity
 @using Local133.Infrastructure.Identity
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
-@* Sesión en la barra superior de los tres layouts. "Salir" es un POST con antiforgery. *@
+@* Sesión en la barra superior de los tres layouts. "Salir" es un POST con antiforgery.
+   Vendedor: ícono + correo a «Mi información». Admin (u otro rol): solo el correo, sin liga; «Mi cuenta» (contraseña)
+   está en «Más» del vendedor y en el menú del admin. *@
 <div class="navbar-nav flex-row align-items-center gap-2">
     @if (SignInManager.IsSignedIn(User))
     {
-        <a id="manage" class="nav-link d-flex align-items-center gap-2 login-partial-user" asp-area="Identity" asp-page="/Account/Manage/Index" title="Mi cuenta">
-            <i class="bi bi-person-circle fs-4 lh-1" aria-hidden="true"></i>
-            <span class="d-none d-sm-inline-block text-truncate login-partial-name">@UserManager.GetUserName(User)</span>
-        </a>
+        if (User.IsInRole(Roles.Merchant))
+        {
+            <a id="manage" class="nav-link d-flex align-items-center gap-2 login-partial-user" href="~/app/mi-informacion" title="Mi información" data-navbar-profile>
+                <i class="bi bi-person-circle fs-4 lh-1" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline-block text-truncate login-partial-name">@UserManager.GetUserName(User)</span>
+                <span class="visually-hidden d-sm-none">Mi información</span>
+            </a>
+        }
+        else
+        {
+            <span class="navbar-text d-none d-sm-inline-block text-truncate login-partial-name" data-navbar-email>@UserManager.GetUserName(User)</span>
+        }
         <form id="logoutForm" class="d-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Content("~/")" method="post" data-disable-on-submit>
             <button id="logout" type="submit" class="btn btn-sm btn-outline-light">Salir</button>
         </form>
     }
     else
     {
-        <a class="nav-link" id="login" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
-        <a class="btn btn-sm btn-light" id="register" asp-area="Identity" asp-page="/Account/Register">Crear cuenta</a>
+        <a class="nav-link text-nowrap" id="login" asp-area="Identity" asp-page="/Account/Login">Entrar</a>
+        <a class="btn btn-sm btn-light text-nowrap" id="register" asp-area="Identity" asp-page="/Account/Register">Crear cuenta</a>
     }
 </div>

@@ -51,8 +51,8 @@ public class BusinessNameTests
     [Fact]
     public void Un_nombre_valido_nunca_lleva_el_separador_del_concepto()
     {
-        // ConceptTextOf corta en el último separador: un nombre válido no puede traerlo.
+        // ConceptTextOf corta en el último separador de las ventas viejas: un nombre válido no puede traerlo.
         Assert.DoesNotMatch(new Regex(BusinessName.Pattern), Sale.ConceptSeparator.Trim());
-        Assert.Equal("2 tacos", Sale.ConceptTextOf(Sale.BuildConcept("Tacos Don Ramón", "2 tacos")));
+        Assert.Equal("2 tacos", Sale.ConceptTextOf("Tacos Don Ramón · 2 tacos"));
     }
 }

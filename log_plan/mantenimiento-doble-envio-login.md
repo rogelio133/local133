@@ -42,4 +42,4 @@ Copia del sitio en `http://localhost:5239`, sin Pey ni Resend. Se dio de alta un
 - Error de contraseña en 375, 768 y 1280 px: sin scroll horizontal, mensaje visible y botón habilitado después. Consola sin errores ni 404.
 
 ## Pendientes
-- Correr la suite completa sin `--artifacts-path` (ver «Pruebas»).
+- ~~Correr la suite completa sin `--artifacts-path` (ver «Pruebas»).~~ Hecho el 2026-11-26 con los [ajustes del bloque 1](ajustes-2026-11-26-marca-y-navegacion.md#pruebas): integración 856/856 con `dotnet test` normal. Ahí el filtro pasó a usar `PostLoginRedirect.ResolveAsync`, que solo respeta el `returnUrl` del área del rol.

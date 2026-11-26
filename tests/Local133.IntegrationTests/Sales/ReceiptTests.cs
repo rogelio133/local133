@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using Local133.Application.Auth;
 using Local133.Domain.Sales;
 using Local133.IntegrationTests.Infrastructure;
 using Local133.Web.Hosting;
@@ -29,7 +30,10 @@ public class ReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         Assert.Contains("data-receipt-business>Tacos Don Ramón<", html);
         Assert.Contains("data-receipt-amount>$150.00<", html);
         Assert.Contains("data-receipt-concept>2 tacos al pastor<", html);
-        Assert.Contains($"data-receipt-folio>{sale.Folio}<", html);
+        // Ticket (ajustes 2026-11-26): sin sesión no se ve el folio.
+        Assert.Contains("class=\"receipt-ticket\"", html);
+        Assert.Contains("receipt-check", html);
+        Assert.DoesNotContain("data-receipt-folio", html);
         Assert.Contains("data-receipt-paid-at>12 de noviembre", html);
         Assert.Contains("data-receipt-tracking>0192191042<", html);
         Assert.Contains("<meta name=\"robots\" content=\"noindex, nofollow\" />", html);
@@ -70,6 +74,7 @@ public class ReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         Assert.Contains("2 × $25.00", html);
         Assert.Contains("1 × $20.00", html);
         Assert.Contains("data-receipt-amount>$70.00<", html);
+        Assert.Contains("data-receipt-total>$70.00<", html);
     }
 
     [Fact]
@@ -96,6 +101,22 @@ public class ReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         var html = await GetHtmlAsync(other, ReceiptUrl(sale));
 
         Assert.Contains("data-receipt-business>Tacos Don Ramón<", html);
+        Assert.Contains($"data-receipt-folio>{sale.Folio}<", html);
+    }
+
+    [Fact]
+    public async Task El_admin_con_sesion_ve_el_folio()
+    {
+        var merchant = await ActiveMerchantAsync(Email);
+        var sale = await ChargeAsync(merchant);
+        await PostWebhookAsync(QrPaymentBodyFor(sale));
+        await CreateConfirmedUserAsync("admin@prueba.mx", Roles.Admin);
+        var admin = CreateClient();
+        Assert.Equal(HttpStatusCode.Redirect, (await LoginAsync(admin, "admin@prueba.mx")).StatusCode);
+
+        var html = await GetHtmlAsync(admin, ReceiptUrl(sale));
+
+        Assert.Contains($"data-receipt-folio>{sale.Folio}<", html);
     }
 
     [Theory]

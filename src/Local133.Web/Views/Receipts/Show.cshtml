@@ -3,33 +3,35 @@
 @{
     ViewData["Title"] = Model.BusinessName is null ? "Recibo de pago" : $"Recibo de {Model.BusinessName}";
     ViewData["NoIndex"] = true;
+    ViewData["BodyClass"] = "receipt-page";
 }
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <article class="card receipt" data-receipt>
-            <div class="card-body text-center">
-                @if (Model.LogoUrl is not null)
-                {
-                    <img class="receipt-logo d-block mx-auto mb-3" src="@Model.LogoUrl" alt="@(Model.BusinessName is null ? "Logo del negocio" : $"Logo de {Model.BusinessName}")" data-receipt-logo />
-                }
-                <p class="text-body-secondary small mb-1">Recibo de pago</p>
-                <h1 class="h4 mb-3 text-break" data-receipt-business>@(Model.BusinessName ?? "Comprobante de pago")</h1>
-
-                <i class="bi bi-check-circle-fill text-success fs-1" aria-hidden="true"></i>
-                <p class="fw-semibold text-success mb-1">Pago recibido</p>
-                <p class="display-5 fw-semibold mb-1" data-receipt-amount>@Model.AmountText</p>
-                @if (Model.ConceptText is not null)
-                {
-                    <p class="text-body-secondary text-break mb-0" data-receipt-concept>@Model.ConceptText</p>
-                }
-            </div>
-
-            @if (Model.IsCart)
+@* Ticket de papel (ajustes 2026-11-26): el contenedor lleva la sombra y el artículo la máscara de los dientes. *@
+<div class="receipt-ticket-wrap">
+    <article class="receipt-ticket" data-receipt>
+        <div class="receipt-ticket-section text-center">
+            @if (Model.LogoUrl is not null)
             {
-                <ul class="list-group list-group-flush border-top" data-receipt-items>
+                <img class="receipt-logo d-block mx-auto mb-3" src="@Model.LogoUrl" alt="@(Model.BusinessName is null ? "Logo del negocio" : $"Logo de {Model.BusinessName}")" data-receipt-logo />
+            }
+            <p class="text-body-secondary small mb-1">Recibo de pago</p>
+            <h1 class="h4 mb-3 text-break" data-receipt-business>@(Model.BusinessName ?? "Comprobante de pago")</h1>
+
+            <i class="bi bi-check-circle-fill text-success receipt-check d-block mb-2" aria-hidden="true"></i>
+            <p class="fw-semibold text-success mb-1">Pago recibido</p>
+            <p class="display-5 fw-semibold mb-1" data-receipt-amount>@Model.AmountText</p>
+            @if (Model.ConceptText is not null)
+            {
+                <p class="text-body-secondary text-break mb-0" data-receipt-concept>@Model.ConceptText</p>
+            }
+        </div>
+
+        @if (Model.IsCart)
+        {
+            <div class="receipt-ticket-section">
+                <ul class="list-unstyled mb-0" data-receipt-items>
                     @foreach (var item in Model.Items)
                     {
-                        <li class="list-group-item d-flex justify-content-between gap-3" data-receipt-item>
+                        <li class="d-flex justify-content-between gap-3 mb-2" data-receipt-item>
                             <span class="product-info">
                                 <span class="d-block text-break">@item.Name</span>
                                 <span class="d-block small text-body-secondary">@item.Quantity × @item.UnitPriceText</span>
@@ -38,55 +40,62 @@
                         </li>
                     }
                 </ul>
-            }
+                <p class="receipt-ticket-total d-flex justify-content-between gap-3 fw-bold mb-0">
+                    <span>Total</span>
+                    <span class="text-nowrap" data-receipt-total>@Model.AmountText</span>
+                </p>
+            </div>
+        }
 
-            <div class="card-body border-top">
-                <dl class="row small mb-0">
+        <div class="receipt-ticket-section">
+            <dl class="row small mb-0">
+                @if (Model.ShowFolio)
+                {
                     <dt class="col-5 fw-normal text-body-secondary">Venta</dt>
                     <dd class="col-7 mb-1" data-receipt-folio>@Model.Folio</dd>
-                    @if (Model.PaidAtText is not null)
+                }
+                @if (Model.PaidAtText is not null)
+                {
+                    <dt class="col-5 fw-normal text-body-secondary">Fecha</dt>
+                    <dd class="col-7 mb-1" data-receipt-paid-at>@Model.PaidAtText</dd>
+                }
+                <dt class="col-5 fw-normal text-body-secondary">Forma de pago</dt>
+                <dd class="col-7 mb-1">CoDi (transferencia)</dd>
+                @foreach (var payment in Model.Payments)
+                {
+                    @if (Model.Payments.Count > 1)
                     {
-                        <dt class="col-5 fw-normal text-body-secondary">Fecha</dt>
-                        <dd class="col-7 mb-1" data-receipt-paid-at>@Model.PaidAtText</dd>
+                        <dt class="col-5 fw-normal text-body-secondary">Pago</dt>
+                        <dd class="col-7 mb-1">@payment.AmountText · @payment.PaidAtText</dd>
                     }
-                    <dt class="col-5 fw-normal text-body-secondary">Forma de pago</dt>
-                    <dd class="col-7 mb-1">CoDi (transferencia)</dd>
-                    @foreach (var payment in Model.Payments)
+                    @if (payment.TrackingKey is not null)
                     {
-                        @if (Model.Payments.Count > 1)
-                        {
-                            <dt class="col-5 fw-normal text-body-secondary">Pago</dt>
-                            <dd class="col-7 mb-1">@payment.AmountText · @payment.PaidAtText</dd>
-                        }
-                        @if (payment.TrackingKey is not null)
-                        {
-                            <dt class="col-5 fw-normal text-body-secondary">Clave de rastreo</dt>
-                            <dd class="col-7 mb-1 text-break font-monospace" data-receipt-tracking>@payment.TrackingKey</dd>
-                        }
+                        <dt class="col-5 fw-normal text-body-secondary">Clave de rastreo</dt>
+                        <dd class="col-7 mb-1 text-break font-monospace" data-receipt-tracking>@payment.TrackingKey</dd>
                     }
-                </dl>
-            </div>
-            @if (Model.PoweredByUrl is not null)
-            {
-                @* Gratuito (5.10): la liga lleva a la portada con el código de invitación del vendedor. *@
-                <div class="card-footer bg-transparent text-center small" data-receipt-powered-by>
-                    <a class="link-body-emphasis text-decoration-none" href="@Model.PoweredByUrl" target="_blank" rel="noopener">
-                        Cobrado con <strong>Local133</strong>
-                    </a>
-                    <span class="d-block text-body-secondary">Cobra con CoDi desde tu celular, sin terminal.</span>
-                </div>
-            }
-        </article>
-
-        <p class="small text-body-secondary text-center mt-3 mb-2">
-            Con la clave de rastreo puedes consultar la transferencia en el portal de Banxico.
-        </p>
-        <div class="text-center d-print-none">
-            <button type="button" class="btn btn-outline-primary" data-receipt-print>
-                <i class="bi bi-printer me-1" aria-hidden="true"></i> Imprimir o guardar PDF
-            </button>
+                }
+            </dl>
         </div>
-    </div>
+        @if (Model.PoweredByUrl is not null)
+        {
+            @* Gratuito (5.10): la liga lleva a la portada con el código de invitación del vendedor. *@
+            <div class="receipt-ticket-section text-center small" data-receipt-powered-by>
+                <a class="link-body-emphasis text-decoration-none" href="@Model.PoweredByUrl" target="_blank" rel="noopener">
+                    Cobrado con <strong>Local133</strong>
+                </a>
+                <span class="d-block text-body-secondary">Cobra con CoDi desde tu celular, sin terminal.</span>
+            </div>
+        }
+    </article>
+</div>
+
+<p class="small text-body-secondary text-center mt-3 mb-2">
+    Con la clave de rastreo puedes consultar la transferencia en el portal de Banxico.
+</p>
+<div class="text-center d-print-none">
+    <button type="button" class="btn btn-outline-primary" data-receipt-print>
+        <i class="bi bi-printer me-1" aria-hidden="true"></i> Imprimir o guardar PDF
+    </button>
 </div>
 
 @section Scripts {

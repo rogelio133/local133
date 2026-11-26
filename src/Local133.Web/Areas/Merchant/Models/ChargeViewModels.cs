@@ -67,7 +67,7 @@ public sealed class CartLineInput
 /// <summary>Concepto, método (QR o celular) y celular: comunes al cobro por monto y al de carrito.</summary>
 public abstract class ChargeOptionsInput
 {
-    /// <summary>Concepto del cobro; el pagador lo ve en su app junto con el nombre del negocio.</summary>
+    /// <summary>Concepto del cobro; es lo que ve el pagador en su app bancaria (sin el nombre del negocio).</summary>
     [Required(ErrorMessage = SaleConceptMessages.Required)]
     [StringLength(Sale.ConceptTextMaxLength, ErrorMessage = SaleConceptMessages.TooLong)]
     [RegularExpression(Sale.ConceptTextPattern, ErrorMessage = SaleConceptMessages.Invalid)]

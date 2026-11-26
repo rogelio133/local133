@@ -25,9 +25,7 @@
 <body>
     <nav class="navbar bg-primary sticky-top d-print-none" data-bs-theme="dark">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="~/app">
-                <img class="navbar-logo" src="~/img/local133-invertido.svg" alt="Local133" width="42" height="32" asp-append-version="true" />
-            </a>
+            <partial name="_NavbarBrand" model="NavbarBrandViewModel.Merchant" />
             <div class="navbar-nav flex-row gap-3 d-none d-md-flex">
                 @foreach (var tab in tabs)
                 {

@@ -36,7 +36,8 @@ internal sealed class MerchantProfileService(
 
         var merchant = row.Merchant;
         return new MerchantProfileData(merchant.Id, merchant.OwnerName, merchant.BusinessName, merchant.Address,
-            row.PhoneNumber, row.Email, merchant.LogoKey, merchant.ShopPhotoKey, merchant.CanEditProfile);
+            row.PhoneNumber, row.Email, merchant.LogoKey, merchant.ShopPhotoKey, merchant.CanEditProfile,
+            merchant.DefaultConcept);
     }
 
     public async Task<SaveProfileResult> SaveAsync(SaveProfileCommand command, CancellationToken cancellationToken = default)
@@ -63,7 +64,7 @@ internal sealed class MerchantProfileService(
         var phone = string.IsNullOrWhiteSpace(command.PhoneNumber) ? null : PhoneNumber.Normalize(command.PhoneNumber);
         var phoneChanged = !string.Equals(phone, user.PhoneNumber, StringComparison.Ordinal);
 
-        merchant.UpdateProfile(command.OwnerName!, command.BusinessName!, command.Address);
+        merchant.UpdateProfile(command.OwnerName!, command.BusinessName!, command.Address, command.DefaultConcept);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
@@ -216,6 +217,18 @@ internal sealed class MerchantProfileService(
         if (!string.IsNullOrWhiteSpace(command.PhoneNumber) && !PhoneNumber.IsValid(PhoneNumber.Normalize(command.PhoneNumber)))
         {
             errors[nameof(command.PhoneNumber)] = [ProfileMessages.PhoneInvalid];
+        }
+
+        if (DefaultConcept.Normalize(command.DefaultConcept) is { } defaultConcept)
+        {
+            if (defaultConcept.Length > DefaultConcept.MaxLength)
+            {
+                errors[nameof(command.DefaultConcept)] = [ProfileMessages.DefaultConceptTooLong];
+            }
+            else if (!DefaultConcept.IsValid(defaultConcept))
+            {
+                errors[nameof(command.DefaultConcept)] = [ProfileMessages.DefaultConceptInvalid];
+            }
         }
 
         return errors;

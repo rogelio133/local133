@@ -86,10 +86,10 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
     [Fact]
     public async Task Registro_guarda_el_nombre_normalizado_y_saluda_en_el_correo_de_confirmacion()
     {
-        var response = await RegisterAsync(CreateClient(), Email, ownerName: "  María   O’Brien  ");
+        var response = await RegisterAsync(CreateClient(), Email, ownerName: "  María   Núñez  ");
 
         Assert.StartsWith("/Identity/Account/RegisterConfirmation", Location(response));
-        Assert.Equal("María O'Brien", await OwnerNameAsync(Email));
+        Assert.Equal("María Núñez", await OwnerNameAsync(Email));
         var confirm = WebUtility.HtmlDecode(Factory.Emails.Last(Email).Html);
         Assert.Contains("¡Hola, María!", confirm);
         Assert.Contains("Te damos la bienvenida a Local133", confirm);
@@ -121,6 +121,9 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
     [InlineData("María 123", OwnerNameMessages.Invalid)]
     [InlineData("...", OwnerNameMessages.Invalid)]
     [InlineData("<script>", OwnerNameMessages.Invalid)]
+    [InlineData("O'Brien", OwnerNameMessages.Invalid)] // ajustes 2026-11-26: solo letras y espacios
+    [InlineData("Ma.", OwnerNameMessages.Invalid)]
+    [InlineData("Ana-Luisa", OwnerNameMessages.Invalid)]
     public async Task Registro_con_nombre_vacio_o_invalido_muestra_error_y_no_crea_cuenta(string ownerName, string message)
     {
         var response = await RegisterAsync(CreateClient(), Email, ownerName: ownerName);
@@ -168,6 +171,8 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
             Assert.Contains($"data-val-regex-pattern=\"{PersonName.Pattern}\"", html);
             Assert.Contains("data-val-length-max=\"100\"", html);
             Assert.Contains("data-val-trim", html);
+            Assert.Contains("data-letters-only", html);
+            Assert.Contains("/js/letters-input.", html);
             // Es el primer campo del formulario.
             Assert.True(html.IndexOf("name=\"Input.OwnerName\"", StringComparison.Ordinal)
                 < html.IndexOf("name=\"Input.Email\"", StringComparison.Ordinal));
