@@ -1,10 +1,14 @@
 @model Local133.Web.Identity.LegalAcceptanceInput
-@* Casilla única de Términos y Aviso de privacidad. Uso: <partial name="_AcceptLegalCheckbox" for="Input" /> *@
+@using Local133.Web.Hosting
+@using Microsoft.Extensions.Options
+@inject IOptions<PublicSiteOptions> Site
+@* Casilla única de Términos y Aviso de privacidad (en la portada, App:LandingUrl).
+   Uso: <partial name="_AcceptLegalCheckbox" for="Input" /> *@
 <div class="form-check mb-3">
     <input asp-for="AcceptLegal" class="form-check-input" aria-required="true" />
     <label asp-for="AcceptLegal" class="form-check-label">
-        Acepto los <a href="~/terminos" target="_blank" rel="noopener">Términos y condiciones</a>
-        y el <a href="~/aviso-de-privacidad" target="_blank" rel="noopener">Aviso de privacidad</a>.
+        Acepto los <a href="@Site.Value.TermsUrl" target="_blank" rel="noopener">Términos y condiciones</a>
+        y el <a href="@Site.Value.PrivacyNoticeUrl" target="_blank" rel="noopener">Aviso de privacidad</a>.
     </label>
     <span asp-validation-for="AcceptLegal" class="d-block text-danger small"></span>
 </div>

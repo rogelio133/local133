@@ -1,0 +1,34 @@
+// Portada: tokens del diseño (Claude Design, 2026-11-25). Se importa DESPUÉS de _custom.scss y ANTES de Bootstrap:
+// reasigna la tipografía solo aquí (el portal sigue con Bungee + Atkinson Hyperlegible).
+
+// --- Colores ----------------------------------------------------
+// El diseño usa #E6007E; se usa $primary (#E4007C) de _custom.scss: una sola fuente.
+$landing-ink:          #1F1720;  // tinta: texto y fondos oscuros
+$landing-text:         #4A3C48;  // texto secundario
+$landing-muted:        #6B5C68;  // gris de apoyo
+$landing-nav-text:     #3A2E38;  // enlaces del menú y «Hecho para»
+$landing-tint:         #FFF5FA;  // fondo rosa claro
+$landing-border:       #F3E3EC;  // borde rosa
+$landing-card-dark:    #2C2230;  // tarjeta sobre tinta
+$landing-text-on-dark: #E4D7E0;  // texto claro sobre tinta
+$landing-footer-small: #BFAFBB;  // texto chico del pie
+$landing-dot:          #F4B3D3;  // puntos inactivos y trazo de las ilustraciones
+$landing-pink-text:    #C2006A;  // texto rosa sobre blanco
+$landing-pink-strong:  #A8005C;  // texto de los botones blancos
+$landing-pink-hover:   #8F004E;
+$landing-pink-light:   #FF7DBF;  // rosa claro sobre tinta
+$landing-pink-wash:    #FFF0F7;  // hover del botón blanco
+$landing-tag-bg:       #FCE6F1;
+$landing-logo-pink:    #F40284;  // fondo de local133-invertido.svg (el cuadro del logo es del mismo rosa)
+
+// --- Forma -------------------------------------------------------
+$landing-container:    1200px;
+$landing-gutter:       24px;
+$landing-pill:         999px;
+
+// --- Tipografía (solo la portada) ---------------------------------
+$font-family-sans-serif: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+$headings-font-family:   "Baloo 2", "Nunito Sans", system-ui, sans-serif;
+$headings-font-weight:   800;
+$headings-line-height:   1.05;
+$body-color:             $landing-ink;

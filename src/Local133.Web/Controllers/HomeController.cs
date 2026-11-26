@@ -6,19 +6,22 @@ namespace Local133.Web.Controllers;
 
 /// <summary>Sitio público: portada y páginas de error.</summary>
 [ApiExplorerSettings(IgnoreApi = true)]
-public class HomeController(IOptions<HomeHeroOptions> heroOptions) : Controller
+public class HomeController(IOptions<HomeHeroOptions> heroOptions, IOptions<PublicSiteOptions> site) : Controller
 {
     /// <summary>Portada; el modelo son las palabras que rotan en el título (la primera la pinta el servidor).</summary>
     [HttpGet("")]
     public IActionResult Index() => View(heroOptions.Value.GetWords());
 
-    /// <summary>Términos y condiciones (públicos; se aceptan al registrarse).</summary>
+    /// <summary>
+    /// Términos y condiciones: viven en la portada desde el 2026-11-25 (<c>App:LandingUrl</c>). La ruta vieja redirige
+    /// para no romper ligas guardadas.
+    /// </summary>
     [HttpGet("terminos")]
-    public IActionResult Terms() => View();
+    public IActionResult Terms() => RedirectPermanent(site.Value.TermsUrl);
 
-    /// <summary>Aviso de privacidad (público; se acepta al registrarse).</summary>
+    /// <summary>Aviso de privacidad: en la portada, igual que <see cref="Terms"/>.</summary>
     [HttpGet("aviso-de-privacidad")]
-    public IActionResult PrivacyNotice() => View();
+    public IActionResult PrivacyNotice() => RedirectPermanent(site.Value.PrivacyNoticeUrl);
 
     /// <summary>Destino de <c>UseExceptionHandler("/error")</c> para peticiones fuera de /api.</summary>
     [Route("error")]

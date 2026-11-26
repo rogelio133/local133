@@ -4,16 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#E4007C" />
-    <meta name="description" content="Genera un QR, tu cliente paga desde su app bancaria y el dinero llega directo a tu cuenta." />
+    <meta name="description" content="@(ViewData["Description"] as string ?? "Cobra con CoDi® desde tu celular, sin terminal ni efectivo. El dinero llega completo a tu cuenta, sin comisión por venta.")" />
     <title>@(ViewData["Title"] is string title ? $"{title} · Local133" : "Local133")</title>
     <link rel="icon" href="~/favicon.ico" sizes="any" />
     <link rel="icon" href="~/local133.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="~/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+    @* Solo la portada usa Baloo 2 + Nunito Sans; el portal sigue con Bungee y Atkinson Hyperlegible. *@
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     @* Compilado desde Styles/landing.scss (marca de Local133.Web/Styles/_custom.scss). *@
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
 </head>
 <body>
     @RenderBody()

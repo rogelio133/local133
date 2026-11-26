@@ -1,33 +1,29 @@
 @model LandingViewModel
 @{
-    ViewData["Title"] = "Cobra con CoDi";
-    // El servidor pinta la primera palabra: el título queda completo sin JS y para los buscadores;
-    // rotating-word.js (copia del de Local133.Web) rota las demás.
-    var words = Model.Words;
-    var rotatingWords = words.Count > 1 ? System.Text.Json.JsonSerializer.Serialize(words) : null;
+    ViewData["Title"] = "Cobra con CoDi®";
+    ViewData["Description"] = "Escribe el monto y muestra el QR, o manda el cobro al celular de tu cliente. El dinero llega completo a tu cuenta, sin comisión por venta, y tu pantalla avisa «Pago recibido» al instante.";
 }
-<main class="landing d-flex align-items-center">
-    <div class="container text-center">
-        <img class="landing-logo mb-4" src="~/local133.svg" alt="Local133" width="973" height="740" asp-append-version="true" />
-        @* Razor no omite un data-* nulo (lo deja vacío): sin lista, la palabra va sin el atributo. *@
-        @if (rotatingWords is not null)
-        {
-            <h1 class="display-6 fw-semibold">Cobra con CoDi desde&nbsp;tu <span class="rotating-word" data-rotating-words="@rotatingWords">@words[0]</span></h1>
-        }
-        else
-        {
-            <h1 class="display-6 fw-semibold">Cobra con CoDi desde&nbsp;tu <span class="rotating-word">@words[0]</span></h1>
-        }
-        <p class="lead text-body-secondary landing-lead mx-auto">Genera un QR, tu cliente paga desde su app bancaria y el dinero llega directo a tu cuenta.</p>
-        <div class="d-grid d-sm-flex justify-content-sm-center mt-4">
-            <a class="btn btn-primary btn-lg" href="@Model.AppUrl" target="_blank" rel="noopener">Empieza a cobrar</a>
-        </div>
-    </div>
+<partial name="_Header" model="Model.Chrome" />
+
+<main>
+    <partial name="_Hero" />
+    <partial name="_MadeFor" />
+    <partial name="_HowItWorks" />
+    <partial name="_Tools" />
+    <partial name="_YourMoney" />
+    <partial name="_Pricing" />
+    <partial name="_Referral" />
+    <partial name="_Faq" />
+    <partial name="_Closing" />
 </main>
 
+<partial name="_Footer" model="Model.Chrome" />
+
 @section Scripts {
-    @if (rotatingWords is not null)
+    <script src="~/js/landing.js" asp-append-version="true" defer></script>
+    @* rotating-word.js es copia del de Local133.Web (SharedAssetsTests): anima todos los [data-rotating-words]. *@
+    @if (Model.RotatingWordsJson is not null)
     {
-        <script src="~/js/rotating-word.js" asp-append-version="true"></script>
+        <script src="~/js/rotating-word.js" asp-append-version="true" defer></script>
     }
 }

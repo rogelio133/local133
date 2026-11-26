@@ -1,0 +1,19 @@
+@model LandingViewModel
+@* Las mismas palabras que rotan (Home:RotatingWords), en plural: LandingViewModel.MadeFor. *@
+<section class="made-for" aria-labelledby="hecho-para">
+    <div class="landing-container made-for-inner">
+        <h2 id="hecho-para" class="made-for-title">Hecho para:</h2>
+        <ul class="made-for-list">
+            @for (var i = 0; i < Model.MadeFor.Count; i++)
+            {
+                <li class="made-for-item">
+                    @if (i > 0)
+                    {
+                        <span class="made-for-dot" aria-hidden="true">•</span>
+                    }
+                    <span class="made-for-label">@Model.MadeFor[i]</span>
+                </li>
+            }
+        </ul>
+    </div>
+</section>

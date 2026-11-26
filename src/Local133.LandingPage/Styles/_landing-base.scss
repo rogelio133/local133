@@ -1,0 +1,310 @@
+// Base de la portada: contenedor, secciones, títulos, logo, botones y carruseles. Celular primero.
+
+body {
+  background-color: $white;
+}
+
+// Contenedor del diseño: 1200 px con 24 px de margen lateral (el .container de Bootstrap tiene otros anchos).
+.landing-container {
+  width: 100%;
+  max-width: $landing-container;
+  margin-inline: auto;
+  padding-inline: $landing-gutter;
+}
+
+.landing-section {
+  padding-block: 64px;
+
+  @include media-breakpoint-up(sm) {
+    padding-block: 96px;
+  }
+}
+
+.section-tint {
+  background-color: $landing-tint;
+}
+
+.section-dark {
+  color: $white;
+  background-color: $landing-ink;
+
+  .eyebrow {
+    color: $landing-pink-light;
+  }
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 680px;
+  margin-bottom: 40px;
+
+  @include media-breakpoint-up(sm) {
+    margin-bottom: 48px;
+  }
+}
+
+.section-head-wide {
+  max-width: 720px;
+}
+
+.section-head-center {
+  align-items: center;
+  max-width: 720px;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: $landing-pink-text;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 34px;
+
+  @include media-breakpoint-up(sm) {
+    font-size: 46px;
+  }
+}
+
+.section-lead {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: $landing-text;
+}
+
+// «®» de CoDi en títulos: pequeño y arriba, sin mover el renglón (el <sup> de Bootstrap es de .75em).
+.trademark {
+  position: static;
+  font-size: .4em;
+  line-height: 0;
+  vertical-align: super;
+}
+
+// «Local133» con el 133 en rosa.
+.brand-number {
+  color: $landing-pink-text;
+}
+
+// Logo: cuadro rosa con local133-invertido.svg (toldo blanco), como el ícono de la app.
+.logo-tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: $landing-logo-pink;
+
+  img {
+    display: block;
+    width: 86%;
+    height: auto;
+  }
+}
+
+.logo-tile-xs {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.logo-tile-sm {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.logo-tile-lg {
+  width: 160px;
+  height: 160px;
+  border-radius: 32px;
+  box-shadow: 0 0 0 4px rgba($white, .5);
+}
+
+// --- Botones píldora ---------------------------------------------
+// Sobre .btn de Bootstrap: colores con button-variant, tamaño y forma con sus variables CSS.
+.btn-landing {
+  --#{$prefix}btn-padding-y: 14px;
+  --#{$prefix}btn-padding-x: 24px;
+  --#{$prefix}btn-font-size: 17px;
+  --#{$prefix}btn-font-weight: 800;
+  --#{$prefix}btn-border-radius: #{$landing-pill};
+  --#{$prefix}btn-focus-box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid $landing-ink;
+    outline-offset: 3px;
+  }
+}
+
+.btn-landing-sm {
+  --#{$prefix}btn-padding-y: 10px;
+  --#{$prefix}btn-padding-x: 20px;
+  --#{$prefix}btn-font-size: 16px;
+  min-height: 44px;
+}
+
+.btn-landing-lg {
+  --#{$prefix}btn-padding-y: 16px;
+  --#{$prefix}btn-padding-x: 28px;
+  --#{$prefix}btn-font-size: 18px;
+}
+
+.btn-landing-xl {
+  --#{$prefix}btn-padding-y: 18px;
+  --#{$prefix}btn-padding-x: 32px;
+  --#{$prefix}btn-font-size: 19px;
+  min-height: 56px;
+}
+
+.btn-landing-primary {
+  @include button-variant(
+    $primary, $primary, $white,
+    $hover-background: $landing-pink-text, $hover-border: $landing-pink-text, $hover-color: $white,
+    $active-background: $landing-pink-strong, $active-border: $landing-pink-strong, $active-color: $white
+  );
+}
+
+.btn-landing-white {
+  @include button-variant(
+    $white, $white, $landing-pink-strong,
+    $hover-background: $landing-pink-wash, $hover-border: $landing-pink-wash, $hover-color: $landing-pink-hover,
+    $active-background: $landing-pink-wash, $active-border: $landing-pink-wash, $active-color: $landing-pink-hover
+  );
+
+  &:hover {
+    box-shadow: 0 8px 20px rgba(60, 0, 30, .25);
+  }
+}
+
+.btn-landing-outline-white {
+  @include button-variant(
+    transparent, $white, $white,
+    $hover-background: rgba($white, .14), $hover-border: $white, $hover-color: $white,
+    $active-background: rgba($white, .2), $active-border: $white, $active-color: $white
+  );
+}
+
+.btn-landing-outline {
+  @include button-variant(
+    transparent, $landing-pink-text, $landing-pink-strong,
+    $hover-background: $landing-pink-text, $hover-border: $landing-pink-text, $hover-color: $white,
+    $active-background: $landing-pink-strong, $active-border: $landing-pink-strong, $active-color: $white
+  );
+
+  &:hover {
+    box-shadow: 0 8px 20px rgba($landing-pink-text, .25);
+  }
+}
+
+// --- Carruseles (pasos y precios) ---------------------------------
+// La pista se desplaza con scroll-snap (funciona sin JS); landing.js mueve los puntos y el avance automático.
+.carousel-track {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+// Objetivo táctil de 44 px de alto; el punto visible es la barra.
+.carousel-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 44px;
+  padding: 0 12px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: $landing-pill;
+
+  &:focus-visible {
+    outline: 3px solid $landing-ink;
+    outline-offset: -2px;
+  }
+}
+
+.carousel-dot-bar {
+  position: relative;
+  display: block;
+  width: 10px;
+  height: 10px;
+  overflow: hidden;
+  background-color: $landing-dot;
+  border-radius: $landing-pill;
+  transition: width .25s ease;
+}
+
+.carousel-dot-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  background-color: $primary;
+  border-radius: $landing-pill;
+}
+
+.carousel-dot.is-active {
+  .carousel-dot-bar {
+    width: 28px;
+  }
+
+  .carousel-dot-fill {
+    width: 100%;
+  }
+}
+
+// Avance automático: la barra del punto activo se llena de izquierda a derecha en el intervalo del carrusel.
+.carousel-dot.is-running .carousel-dot-fill {
+  animation: carousel-dot-fill var(--carousel-interval, 5s) linear both;
+}
+
+@keyframes carousel-dot-fill {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+// Sin JS los puntos no harían nada: la pista se desliza con el dedo.
+@media (scripting: none) {
+  .carousel-dots {
+    display: none;
+  }
+}
+
+// --- Página de error ----------------------------------------------
+.error-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-block: 3rem;
+}

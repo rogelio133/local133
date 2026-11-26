@@ -1,0 +1,18 @@
+@model LandingViewModel
+<section id="registro" class="closing">
+    <div class="landing-container closing-inner" data-reveal>
+        <span class="logo-tile logo-tile-lg"><img src="~/img/local133-invertido.svg" alt="" width="973" height="740" asp-append-version="true" /></span>
+        <div class="closing-copy">
+            @* La palabra va en una caja de ancho fijo: un inline-grid cuyo ::before (la palabra más larga, invisible, más
+               el cursor) reserva el ancho, con la palabra visible encima. Así el título no se mueve al rotar. *@
+            <h2 class="closing-title">
+                <span class="closing-line">Tu <span class="closing-word" data-longest="@Model.LongestWord"><partial name="_RotatingWord" model='RotatingWordViewModel.For(Model, "closing-rotating-word")' /></span></span>
+                <span class="d-block">listo para cobrar con CoDi<sup class="trademark">®</sup></span>
+            </h2>
+            <p class="closing-text">Regístrate, agrega tu CLABE y prueba todo Pro 30 días gratis.</p>
+            <a class="btn btn-landing btn-landing-white btn-landing-xl" href="@Model.AppUrl">Crear mi cuenta gratis</a>
+        </div>
+    </div>
+</section>
+@* Remate: festones del toldo colgando sobre el footer. *@
+<div class="awning-edge" aria-hidden="true"></div>

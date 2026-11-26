@@ -1,0 +1,178 @@
+// Encabezado. Celular y tablet: logo + botón ☰ con panel debajo (landing.js). Desde lg: enlaces en la barra
+// (a 768 px los seis no caben en una línea).
+
+.site-header {
+  position: relative;
+  z-index: 10;
+  background-color: $white;
+  border-bottom: 1px solid $landing-border;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: $landing-ink;
+  text-decoration: none;
+
+  &:hover {
+    color: $landing-ink;
+  }
+}
+
+.brand-word {
+  font-family: $headings-font-family;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.site-nav-links {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  font-size: 16px;
+  font-weight: 700;
+
+  @include media-breakpoint-up(lg) {
+    display: flex;
+  }
+
+  @include media-breakpoint-up(xl) {
+    gap: 24px;
+  }
+}
+
+.site-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: $landing-nav-text;
+  text-decoration: none;
+
+  &:hover {
+    color: $landing-pink-text;
+    text-decoration: underline;
+  }
+}
+
+.site-nav-login {
+  color: $landing-pink-text;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: $landing-ink;
+  cursor: pointer;
+  background-color: $landing-tint;
+  border: 0;
+  border-radius: 12px;
+
+  &:focus-visible {
+    outline: 3px solid $landing-ink;
+    outline-offset: 2px;
+  }
+
+  @include media-breakpoint-up(lg) {
+    display: none;
+  }
+}
+
+.menu-icon-close,
+.menu-toggle[aria-expanded="true"] .menu-icon-open {
+  display: none;
+}
+
+.menu-toggle[aria-expanded="true"] .menu-icon-close {
+  display: block;
+}
+
+// Panel: la altura va de 0fr a 1fr (grid) con la opacidad; visibility se apaga al terminar de cerrar, así sus
+// enlaces no se pueden enfocar cerrado.
+.mobile-menu {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  opacity: 0;
+  transition: grid-template-rows .3s ease, opacity .25s ease, visibility 0s linear .3s;
+
+  &.is-open {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+
+  // Al elegir un ancla se cierra sin animar (landing.js), para que el salto llegue a su lugar.
+  &.is-instant {
+    transition: none;
+  }
+
+  @include media-breakpoint-up(lg) {
+    display: none;
+  }
+}
+
+.mobile-menu-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobile-menu-links {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+  padding-bottom: 12px;
+  font-size: 17px;
+  font-weight: 800;
+  border-top: 1px solid $landing-border;
+}
+
+.mobile-menu-link {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding-block: 12px;
+  color: $landing-ink;
+  text-decoration: none;
+  border-bottom: 1px solid $landing-border;
+
+  &:hover {
+    color: $landing-pink-text;
+  }
+}
+
+.mobile-menu-login {
+  color: $landing-pink-text;
+  border-bottom: 0;
+}
+
+.mobile-menu-cta {
+  margin-top: 6px;
+}
+
+// Sin JS: el botón no haría nada, así que el panel queda abierto.
+@media (scripting: none) {
+  .menu-toggle {
+    display: none;
+  }
+
+  .mobile-menu {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    opacity: 1;
+  }
+}

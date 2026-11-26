@@ -217,7 +217,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - «lo que te pierdes» y resumen mensual.
 
     ✅ *(hecho 2026-11-24; la marca del recibo sigue el plan al abrir la liga, «Cobrado con Local133» lleva a la portada con el código y el resumen va solo a quien cobró en el mes)* — [bitácora](log_plan/fase-5.10-valor-visible.md)
-11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. ✅ *(textos legales hechos el 2026-11-24, versión `2026-11-24`, con marcadores para el responsable y el contacto y pendientes de revisión legal; la sección «Planes» de la portada queda **pendiente**, decisión del usuario)* — [bitácora](log_plan/fase-5.11-textos-legales.md)
+11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. ✅ *(textos legales hechos el 2026-11-24, versión `2026-11-24`, con marcadores para el responsable y el contacto y pendientes de revisión legal; la sección «Planes» de la portada quedó pendiente y se hizo el 2026-11-25 con la portada nueva, con los precios escritos en la vista)* — [bitácora](log_plan/fase-5.11-textos-legales.md) · [portada nueva](log_plan/portada-nueva.md) · el 2026-11-25 los textos legales se movieron a la portada (el portal redirige con 301), ver [portada nueva](log_plan/portada-nueva.md#textos-legales-en-la-portada-2026-11-25)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
 1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan. ✅ *(hecho 2026-11-23; solo lectura, la pestaña Plan con el resumen)* — [bitácora](log_plan/fase-6.1-clientes.md)
@@ -276,12 +276,19 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [5.9](log_plan/fase-5.9-pro-de-lanzamiento.md): abrir el `.xlsx` exportado en Excel de escritorio, en el celular (Excel o Google Sheets) y en Numbers; imprimir el corte de caja en papel o PDF (Android, iPhone, Windows) y mandarlo por WhatsApp real.
 - [5.10](log_plan/fase-5.10-valor-visible.md): resumen mensual enviado a Outlook el 2026-11-24 (falta revisar cómo se ve, Gmail, modo oscuro y el envío del job el día 1); catálogo y recibo con marca en un celular real y la vista previa de WhatsApp de la liga del catálogo; el aviso del resumen en la campana (5.4).
 - [5.11](log_plan/fase-5.11-textos-legales.md):
-  - sección «Planes» de la portada, pospuesta (falta decidir de dónde saca precios y lugares de fundador, porque la portada no tiene base);
+  - ~~sección «Planes» de la portada~~: hecha con la [portada nueva](log_plan/portada-nueva.md); sus pendientes van abajo;
   - revisión legal de Términos y Aviso de privacidad, y razón social, domicilio y correo de contacto en lugar de los marcadores (con un buzón que reciba correo);
   - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
   - cambiar desde el admin un parámetro que aparece en los Términos exige publicar una versión nueva: la pantalla de la 6.2 lo advierte, pero no lo impide;
   - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
 - [6.2](log_plan/fase-6.2-plan-y-parametros.md): anular un premio y «Dar premios pendientes» en el navegador (la base de desarrollo no tiene premios; los cubren las pruebas de integración).
+- [Portada nueva](log_plan/portada-nueva.md):
+  - «Quedan N lugares» de fundador está oculto: falta de dónde saca el dato la portada, que no tiene base;
+  - los precios están escritos a mano en `_Pricing.cshtml`: si se cambian desde el admin (6.2), hay que cambiar la vista;
+  - columna «Contacto» del pie: falta un correo que reciba y un WhatsApp;
+  - confirmar con Pey o con el abogado «con CoDi® o tarjeta» (posible comisión con tarjeta) y «Precio congelado si renuevas a tiempo»;
+  - el video del hero: reemplazar `_HeroPhone.cshtml`;
+  - revisar en un celular real los carruseles, el menú y las fuentes.
 - [6.4](log_plan/fase-6.4-tablero-y-webhooks.md): la búsqueda dentro del payload de la bitácora no tiene índice (columnas propias para los ids de Pey si se vuelve lenta).
 - [Migración a .NET 10](log_plan/mantenimiento-net10.md): cambiar la pila del App Service a .NET 10 antes del próximo despliegue (ver `azure.md`) y confirmar que CI (GitHub Actions, Ubuntu) pasa con el SDK 10.0.401.
 

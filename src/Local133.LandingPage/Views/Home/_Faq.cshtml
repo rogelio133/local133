@@ -1,0 +1,30 @@
+@{
+    (string Question, string Answer)[] questions =
+    [
+        ("¿Qué es CoDi®?", "CoDi® (Cobro Digital) es la plataforma del Banco de México para cobrar y pagar con transferencias desde el celular, con un código QR o una notificación a la app del banco."),
+        ("¿Cobran comisión por cada venta?", "No. Local133 no cobra comisión por venta y nunca toca tu dinero: los pagos van directo a tu CLABE. Solo pagas tu plan Pro si lo eliges."),
+        ("¿Cómo paga mi cliente?", "Tu cliente escanea tu QR con la app de su banco, o recibe la solicitud de pago en su celular cuando tú escribes su número. Solo confirma, y tu pantalla cambia a «Pago recibido»."),
+        ("¿Cuánto tarda en activarse mi cuenta?", "Banxico revisa tu CLABE para CoDi® y puede tardar hasta 5 días hábiles. Mientras, puedes cargar tus productos. Te avisamos por correo en cuanto tu cuenta queda activa, y tu prueba de 30 días empieza ese día, así que la espera no te quita días."),
+        ("¿Qué pasa al terminar mis 30 días gratis?", "Te avisamos 3 días antes. Si no pagas, pasas solo al plan gratuito y sigues cobrando con QR y al celular. No guardamos tu tarjeta ni te cobramos en automático."),
+        ("¿Cómo pago mi plan?", "Desde «Mi plan» eliges 1, 3 o 6 meses o el anual, y pagas con un link de pago con CoDi® o tarjeta. Tu plan se activa en cuanto se confirma el pago."),
+        ("¿Y si dejo de pagar Pro?", "Tienes 5 días de gracia. Después pasas al plan gratuito sin perder nada: tu catálogo, tu historial y tus datos se quedan guardados para cuando vuelvas a Pro."),
+    ];
+}
+@* <details> nativos: se abren sin JS. La transición de apertura es CSS (::details-content); sin soporte, abren al instante. *@
+<section id="preguntas" class="faq-section">
+    <div class="landing-container faq">
+        <div class="section-head section-head-center" data-reveal>
+            <p class="eyebrow">Preguntas frecuentes</p>
+            <h2 class="section-title">¿Tienes dudas?</h2>
+        </div>
+        <div class="faq-list" data-reveal>
+            @foreach (var (question, answer) in questions)
+            {
+                <details class="faq-item">
+                    <summary class="faq-question">@question<span class="faq-plus" aria-hidden="true">+</span></summary>
+                    <p class="faq-answer">@answer</p>
+                </details>
+            }
+        </div>
+    </div>
+</section>

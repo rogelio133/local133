@@ -1,0 +1,10 @@
+@model RotatingWordViewModel
+@* Razor no omite un data-* nulo (lo deja vacío): sin lista, la palabra va sin el atributo y no rota. *@
+@if (Model.WordsJson is not null)
+{
+    <span class="rotating-word @Model.CssClass" data-rotating-words="@Model.WordsJson">@Model.Word</span>
+}
+else
+{
+    <span class="rotating-word @Model.CssClass">@Model.Word</span>
+}

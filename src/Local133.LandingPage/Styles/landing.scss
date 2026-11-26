@@ -1,33 +1,16 @@
 // Portada pública. Marca, Bootstrap y la palabra que rota salen de Local133.Web/Styles (una sola fuente):
-// no se copian aquí. Personalizar con las variables de _custom.scss, no pisando clases de Bootstrap.
+// no se copian aquí. Personalizar con variables (las de _custom.scss y las de _landing-variables.scss), no pisando
+// clases de Bootstrap: los componentes de la portada usan clases propias.
 @import "../../Local133.Web/Styles/custom";
+@import "landing-variables";
 @import "../../Local133.Web/Styles/vendor/bootstrap/scss/bootstrap";
 @import "../../Local133.Web/Styles/rotating-word";
 
-body {
-  background-color: var(--bs-tertiary-bg);
-}
-
-/* Hero a pantalla completa, centrado (dvh: sin la barra del navegador en el celular). */
-.landing {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-top: calc(3rem + env(safe-area-inset-top));
-  padding-bottom: calc(3rem + env(safe-area-inset-bottom));
-}
-
-/* local133.svg mide 973×740. */
-.landing-logo {
-  height: 7rem;
-  width: auto;
-}
-
-.landing-lead {
-  max-width: 36rem;
-}
-
-@include media-breakpoint-up(md) {
-  .landing-logo {
-    height: 9rem;
-  }
-}
+@import "landing-base";
+@import "landing-header";
+@import "landing-hero";
+@import "landing-sections";
+@import "landing-pricing";
+@import "landing-closing";
+@import "landing-legal";
+@import "landing-motion";

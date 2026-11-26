@@ -1,12 +1,18 @@
 @using Local133.Domain.Legal
+@model SiteChromeViewModel
 @{
+    ViewData["Description"] = "Términos y condiciones de Local133: planes, prueba gratis, límites del plan gratuito, precios, pago, Invita y gana y cancelación.";
     ViewData["Title"] = "Términos y condiciones";
     // Los números van escritos (es un documento versionado): LegalPagesTests los compara con SystemSettings.Default*.
     // Si cambia un número, un precio o una regla, subir LegalDocuments.CurrentTermsVersion.
 }
-<article class="legal-document mx-auto">
-    <h1 class="h3">@ViewData["Title"]</h1>
-    <p class="text-body-secondary small">Versión @LegalDocuments.CurrentTermsVersion</p>
+<partial name="_Header" />
+
+<main class="landing-section legal-page">
+<article class="landing-container legal-document">
+    <p class="eyebrow">Legal</p>
+    <h1 class="legal-title">@ViewData["Title"]</h1>
+    <p class="legal-version">Versión @LegalDocuments.CurrentTermsVersion</p>
 
     <div class="alert alert-warning" role="alert">
         <strong>Borrador pendiente de revisión legal.</strong> Este texto es provisional y puede cambiar antes del lanzamiento.
@@ -159,7 +165,11 @@
 
     <p class="mt-4">Consulta también nuestro <a href="~/aviso-de-privacidad">Aviso de privacidad</a>.</p>
 </article>
+</main>
+
+<partial name="_Footer" />
 
 @section Scripts {
+    <script src="~/js/landing.js" asp-append-version="true" defer></script>
     <script src="~/js/section-index.js" asp-append-version="true"></script>
 }

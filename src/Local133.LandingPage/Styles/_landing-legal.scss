@@ -1,0 +1,59 @@
+// Términos y Aviso de privacidad (5.11; en la portada desde 2026-11-25). Celular primero.
+// El texto es el del documento versionado: aquí solo el envoltorio y la tipografía de la portada.
+
+.legal-page {
+  padding-block: 40px 64px;
+
+  @include media-breakpoint-up(sm) {
+    padding-block: 64px 96px;
+  }
+}
+
+// Columna de lectura: 46rem de texto más el margen lateral de .landing-container.
+.legal-document {
+  max-width: calc(46rem + 2 * #{$landing-gutter});
+  font-size: 17px;
+  line-height: 1.6;
+  color: $landing-text;
+
+  h2 {
+    font-size: 24px;
+    line-height: 1.15;
+    color: $landing-ink;
+    // El encabezado de la portada no es fijo: solo un respiro arriba del título al saltar desde el índice.
+    scroll-margin-top: 24px;
+  }
+
+  strong {
+    color: $landing-ink;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  // Índice (section-index.js).
+  nav[data-section-index] {
+    padding: 20px 24px;
+    margin-block: 24px 8px;
+    background-color: $landing-tint;
+    border: 1px solid $landing-border;
+    border-radius: 16px;
+  }
+}
+
+.legal-title {
+  margin-block: 12px 8px;
+  font-size: 34px;
+  color: $landing-ink;
+
+  @include media-breakpoint-up(sm) {
+    font-size: 46px;
+  }
+}
+
+.legal-version {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: $landing-muted;
+}

@@ -1,11 +1,17 @@
 @using Local133.Domain.Legal
+@model SiteChromeViewModel
 @{
+    ViewData["Description"] = "Aviso de privacidad de Local133: qué datos recabamos, para qué los usamos, con quién los compartimos y cómo ejercer tus derechos ARCO.";
     ViewData["Title"] = "Aviso de privacidad";
     // Al cambiar el texto, subir LegalDocuments.CurrentPrivacyNoticeVersion. La cookie y sus días: ReferralCookie (Web/Identity).
 }
-<article class="legal-document mx-auto">
-    <h1 class="h3">@ViewData["Title"]</h1>
-    <p class="text-body-secondary small">Versión @LegalDocuments.CurrentPrivacyNoticeVersion</p>
+<partial name="_Header" />
+
+<main class="landing-section legal-page">
+<article class="landing-container legal-document">
+    <p class="eyebrow">Legal</p>
+    <h1 class="legal-title">@ViewData["Title"]</h1>
+    <p class="legal-version">Versión @LegalDocuments.CurrentPrivacyNoticeVersion</p>
 
     <div class="alert alert-warning" role="alert">
         <strong>Borrador pendiente de revisión legal.</strong> Este texto es provisional y puede cambiar antes del lanzamiento.
@@ -106,7 +112,11 @@
 
     <p class="mt-4">Consulta también nuestros <a href="~/terminos">Términos y condiciones</a>.</p>
 </article>
+</main>
+
+<partial name="_Footer" />
 
 @section Scripts {
+    <script src="~/js/landing.js" asp-append-version="true" defer></script>
     <script src="~/js/section-index.js" asp-append-version="true"></script>
 }

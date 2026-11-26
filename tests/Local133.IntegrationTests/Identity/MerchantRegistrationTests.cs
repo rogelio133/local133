@@ -3,9 +3,11 @@ using Local133.Domain.Legal;
 using Local133.Domain.Merchants;
 using Local133.IntegrationTests.Infrastructure;
 using Local133.Infrastructure.Persistence;
+using Local133.Web.Hosting;
 using Local133.Web.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using static Local133.IntegrationTests.Identity.ExternalLoginTests;
 
 namespace Local133.IntegrationTests.Identity;
@@ -67,13 +69,15 @@ public class MerchantRegistrationTests(Local133WebFactory factory) : WebTestBase
         var client = CreateClient();
         var register = await HtmlAsync(client, "/Identity/Account/Register");
         var external = await HtmlAsync(client, await StartExternalLoginAsync(client));
+        // Los textos legales viven en la portada (App:LandingUrl).
+        var site = Factory.Services.GetRequiredService<IOptions<PublicSiteOptions>>().Value;
 
         foreach (var html in new[] { register, external })
         {
             Assert.Contains("name=\"Input.AcceptLegal\"", html);
             Assert.Contains("data-val-mustbetrue=", html);
-            Assert.Contains("href=\"/terminos\"", html);
-            Assert.Contains("href=\"/aviso-de-privacidad\"", html);
+            Assert.Contains($"href=\"{site.TermsUrl}\" target=\"_blank\"", html);
+            Assert.Contains($"href=\"{site.PrivacyNoticeUrl}\" target=\"_blank\"", html);
         }
     }
 

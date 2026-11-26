@@ -1,0 +1,80 @@
+@model LandingViewModel
+@* Precios escritos a mano: la portada no tiene base y no puede leer SystemSettings. LandingPageTests los compara con
+   SystemSettings.Default*; si el admin cambia un precio (6.2), hay que cambiarlo también aquí.
+   Pendiente: «Quedan [N] lugares» de fundador se oculta hasta que la portada tenga ese dato. *@
+<section id="precios" class="landing-section section-tint">
+    <div class="landing-container pricing">
+        <div class="section-head section-head-center" data-reveal>
+            <p class="eyebrow">Precios</p>
+            <h2 class="section-title">Prueba todo gratis 30 días</h2>
+            <p class="section-lead">Tus 30 días de Pro empiezan cuando tu cuenta queda activa. Al terminar, eliges: sigues en Pro o te quedas en el plan gratuito. No te cobramos nada en automático.</p>
+        </div>
+
+        @* Celular y tablet: carrusel con puntos (sin avance automático). Desde lg: tres tarjetas en fila, con las
+           filas alineadas (subgrid) para que los precios queden a la misma altura. *@
+        <div class="carousel" data-carousel>
+            <ul class="pricing-track carousel-track" data-carousel-track data-reveal-stagger>
+                <li class="plan-card">
+                    <div class="plan-head">
+                        <h3 class="plan-name">Gratuito</h3>
+                        <span class="plan-tagline">Para empezar a cobrar</span>
+                    </div>
+                    <div class="plan-price"><span class="plan-amount">$0</span><span class="plan-period">para siempre</span></div>
+                    <ul class="plan-features">
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobro con QR y al celular</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>100 cobros al mes</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Historial de los últimos 30 días</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo con liga para copiar</li>
+                        <li class="plan-feature-off"><span class="plan-check" aria-hidden="true">–</span>Catálogo solo de lectura, sin carrito</li>
+                    </ul>
+                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Crear cuenta gratis</a>
+                </li>
+                <li class="plan-card">
+                    <div class="plan-head">
+                        <h3 class="plan-name">Pro mensual</h3>
+                        <span class="plan-tagline">Todo Local133, mes con mes</span>
+                    </div>
+                    <div class="plan-price"><span class="plan-amount">$199</span><span class="plan-period">al mes</span></div>
+                    <ul class="plan-features">
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobros ilimitados (uso justo)</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Catálogo, carrito y catálogo público</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo con tu logo y botón de WhatsApp</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Historial completo y exportar a Excel</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Corte de caja diario</li>
+                    </ul>
+                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Empezar con 30 días gratis</a>
+                </li>
+                <li class="plan-card plan-card-featured">
+                    <span class="plan-ribbon">2 meses de regalo</span>
+                    <div class="plan-head">
+                        <h3 class="plan-name">Pro anual</h3>
+                        <span class="plan-tagline">12 meses por el precio de 10</span>
+                    </div>
+                    <div class="plan-price-block">
+                        <div class="plan-price"><span class="plan-amount">$1,990</span><span class="plan-period">al año</span></div>
+                        <span class="plan-equivalent">Equivale a $165.83 al mes</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Todo lo de Pro mensual</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Ahorras $398 al año</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Precio congelado si renuevas a tiempo</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Un solo pago, sin pendientes cada mes</li>
+                    </ul>
+                    <a class="btn btn-landing btn-landing-white plan-btn" href="@Model.AppUrl">Empezar con 30 días gratis</a>
+                </li>
+            </ul>
+            <div class="carousel-dots pricing-dots">
+                <button type="button" class="carousel-dot is-active" aria-label="Plan Gratuito" aria-current="true" data-carousel-dot="0"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Plan Pro mensual" aria-current="false" data-carousel-dot="1"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Plan Pro anual" aria-current="false" data-carousel-dot="2"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+            </div>
+        </div>
+
+        <div class="founder" data-reveal>
+            <span class="founder-badge">Fundador</span>
+            <p class="founder-text"><strong>Precio de fundador de por vida:</strong> los primeros 100 vendedores que paguen Pro pagan $149 al mes o $1,490 al año.</p>
+        </div>
+
+        <p class="pricing-note">Precios en pesos mexicanos con IVA incluido. También hay paquetes de 3 meses ($597) y 6 meses ($1,194). Pagas tu plan con un link de pago, con CoDi® o tarjeta.</p>
+    </div>
+</section>

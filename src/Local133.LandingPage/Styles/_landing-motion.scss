@@ -1,0 +1,60 @@
+// Movimiento de la portada.
+
+// --- Aparecer al hacer scroll ---------------------------------------
+// landing.js pone .reveal-ready en <html> (nunca sin JS, sin IntersectionObserver ni con «reducir movimiento») y marca
+// .is-revealed / .is-revealing al entrar en pantalla. El estado oculto vive solo en pantalla y sin «reducir movimiento»:
+// al imprimir, o si el usuario lo activa con la página abierta, todo se ve. Es una animación (no transition) para no
+// pisar las transiciones de hover; con fill-mode backwards no deja transform al terminar.
+@media screen and (prefers-reduced-motion: no-preference) {
+  .reveal-ready [data-reveal]:not(.is-revealed),
+  .reveal-ready [data-reveal-stagger]:not(.is-revealed) > * {
+    opacity: 0;
+  }
+
+  [data-reveal].is-revealing,
+  [data-reveal-stagger].is-revealing > * {
+    animation: landing-reveal .6s cubic-bezier(.2, .7, .2, 1) backwards;
+  }
+
+  // Escalonado: 90 ms más por hijo, hasta el 6.º (los siguientes, como el 6.º).
+  @for $i from 2 through 5 {
+    [data-reveal-stagger].is-revealing > :nth-child(#{$i}) {
+      animation-delay: ($i - 1) * 90ms;
+    }
+  }
+
+  [data-reveal-stagger].is-revealing > :nth-child(n + 6) {
+    animation-delay: 450ms;
+  }
+}
+
+@keyframes landing-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+// --- «Reducir movimiento» -------------------------------------------
+// Sin transiciones ni animaciones en la portada. La palabra no rota (rotating-word.js), el carrusel no avanza solo y
+// nada aparece al hacer scroll (landing.js).
+@media (prefers-reduced-motion: reduce) {
+  .btn-landing,
+  .mobile-menu,
+  .tool-card,
+  .tool-icon,
+  .carousel-dot-bar,
+  .faq-plus,
+  .faq-item::details-content {
+    transition: none;
+  }
+
+  .btn-landing:hover,
+  .tool-card:hover .tool-icon {
+    transform: none;
+  }
+
+  .carousel-dot.is-running .carousel-dot-fill {
+    animation: none;
+  }
+}

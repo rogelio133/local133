@@ -452,13 +452,3 @@ body {
 .storefront-link {
   word-break: break-all;
 }
-
-// --- Textos legales (5.11) -------------------------------------
-/* Términos y Aviso de privacidad: el índice lleva a cada sección sin que la barra fija la tape. */
-.legal-document {
-  max-width: 46rem;
-
-  h2 {
-    scroll-margin-top: 5rem;
-  }
-}

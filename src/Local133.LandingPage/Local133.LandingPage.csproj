@@ -13,6 +13,9 @@
     <Compile Include="..\Local133.Web\Hosting\HomeHeroOptions.cs" Link="Hosting\HomeHeroOptions.cs" />
     <!-- Código de invitación (5.10): «Cobrado con Local133» del recibo llega con ?codigo=. Sin dependencias. -->
     <Compile Include="..\Local133.Domain\Merchants\ReferralCode.cs" Link="Hosting\ReferralCode.cs" />
+    <!-- Versión de Términos y Aviso de privacidad (5.11; las páginas viven aquí desde 2026-11-25). Sin dependencias:
+         la misma que guarda el portal al registrar. -->
+    <Compile Include="..\Local133.Domain\Legal\LegalDocuments.cs" Link="Hosting\LegalDocuments.cs" />
   </ItemGroup>
 
 </Project>

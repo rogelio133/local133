@@ -32,8 +32,6 @@
             <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Crear cuenta</button>
         </form>
 
-        <p class="mt-3 text-center">¿Ya tienes cuenta? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Entrar</a></p>
-
         @if ((Model.ExternalLogins?.Count ?? 0) > 0)
         {
             <div class="text-center text-body-secondary small my-3">o regístrate con</div>
@@ -44,6 +42,9 @@
                 }
             </form>
         }
+
+        <p class="mt-3 text-center">¿Ya tienes cuenta? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Entrar</a></p>
+        
     </div>
 </div>
 
