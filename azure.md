@@ -263,3 +263,4 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 
 ### Ajustes 2026-11-26 — Bloque 3: pantallas del vendedor
 - Punto 9 (recibo tipo ticket): sin cambios para Azure. Solo vista y CSS; el folio del recibo se oculta sin sesión.
+- Punto 10 (Ventas: resumen del día y paginación): sin cambios para Azure. Solo vistas y CSS (resumen del día en una fila y el parcial `_Pager` con botones).

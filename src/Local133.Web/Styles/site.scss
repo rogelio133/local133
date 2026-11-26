@@ -332,6 +332,56 @@ body {
   min-width: 0;
 }
 
+// --- Ventas y paginación (ajustes 2026-11-26) ---------------------
+// Resumen del día: las tres tarjetas van en una fila a 375 px (~93 px útiles cada una). Así cabe «$99,999.99». Para
+// un monto más largo, la vista agrega .day-summary-amount-long.
+.day-summary-amount {
+  font-size: clamp(1rem, 4.5vw, 1.5rem);
+  line-height: 1.2;
+}
+
+.day-summary-amount-long {
+  font-size: clamp(.8125rem, 3.4vw, 1.25rem);
+}
+
+// Paginador compartido (_Pager): Anterior y Siguiente de al menos 44 px de alto, para tocarlos con el pulgar. El
+// relleno de marca del .btn (1.5rem a los lados) dejaba a 375 px el estado con una palabra por renglón, así que aquí
+// es menor, con las variables del propio botón.
+.pager-btn {
+  --bs-btn-padding-x: 1rem;
+  --bs-btn-padding-y: .5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  min-height: 2.75rem;
+  white-space: nowrap;
+}
+
+// El estado ocupa lo que sobra y se parte si no cabe, sin aplastar los botones. Con balance, los dos renglones
+// quedan parejos («Página» / «1 de 5»).
+.pager-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+// Con menos de 20rem (el catálogo dentro del panel del carrito a 375 px), el estado ya no cabe ni en dos renglones
+// entre los botones: sube a su propio renglón y los botones quedan debajo, a los lados.
+.pager {
+  container-type: inline-size;
+}
+
+@container (max-width: 20rem) {
+  .pager-list {
+    flex-wrap: wrap;
+  }
+
+  .pager-status {
+    flex-basis: 100%;
+    order: -1;
+  }
+}
+
 /* Corte de caja (5.9): el campo de fecha se encoge entre las flechas (si no, desborda a 375 px). */
 .cash-cut-day {
   min-width: 0;
