@@ -16,7 +16,7 @@
                 <span id="@($"login-provider-{login.LoginProvider}")">@login.ProviderDisplayName</span>
                 @if (Model.ShowRemoveButton)
                 {
-                    <form id="@($"remove-login-{login.LoginProvider}")" asp-page-handler="RemoveLogin" method="post">
+                    <form id="@($"remove-login-{login.LoginProvider}")" asp-page-handler="RemoveLogin" method="post" data-disable-on-submit>
                         <input asp-for="@login.LoginProvider" name="LoginProvider" type="hidden" />
                         <input asp-for="@login.ProviderKey" name="ProviderKey" type="hidden" />
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Quitar @login.ProviderDisplayName de tu cuenta">Quitar</button>
@@ -29,7 +29,7 @@
 @if (Model.OtherLogins?.Count > 0)
 {
     <h3 class="h6 mt-3">Ligar otra cuenta</h3>
-    <form id="link-login-form" asp-page-handler="LinkLogin" method="post" class="d-grid gap-2">
+    <form id="link-login-form" asp-page-handler="LinkLogin" method="post" data-disable-on-submit class="d-grid gap-2">
         @foreach (var provider in Model.OtherLogins)
         {
             <partial name="_ExternalProviderButton" model='new ExternalProviderButton(provider, "Ligar", $"link-login-button-{provider.Name}")' />

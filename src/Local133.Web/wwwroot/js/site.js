@@ -8,6 +8,20 @@ document.addEventListener('submit', function (event) {
     if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-disable-on-submit') || event.defaultPrevented) {
         return;
     }
+    // Un botón deshabilitado no se envía: si el que se pulsó trae name/value (p. ej. provider=Google),
+    // se copia a un campo oculto para que el servidor lo siga recibiendo.
+    var submitter = event.submitter;
+    if (submitter && submitter.name && !submitter.disabled) {
+        var hidden = form.querySelector('input[type="hidden"][data-submitter-value]');
+        if (!hidden) {
+            hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.setAttribute('data-submitter-value', '');
+            form.appendChild(hidden);
+        }
+        hidden.name = submitter.name;
+        hidden.value = submitter.value;
+    }
     form.querySelectorAll('button[type="submit"]').forEach(function (button) {
         button.disabled = true;
         button.setAttribute('aria-busy', 'true');

@@ -8,7 +8,7 @@
         <h1 class="h3 mb-1">@ViewData["Title"]</h1>
         <p class="text-body-secondary">Regístrate para poder cobrar con CoDi®</p>
 
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" data-disable-on-submit>
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
             <partial name="_OwnerNameField" for="Input" />
             <div class="form-floating mb-3">
@@ -35,7 +35,7 @@
         @if ((Model.ExternalLogins?.Count ?? 0) > 0)
         {
             <div class="text-center text-body-secondary small my-3">o regístrate con</div>
-            <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="d-grid gap-2">
+            <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" data-disable-on-submit class="d-grid gap-2">
                 @foreach (var provider in Model.ExternalLogins!)
                 {
                     <partial name="_ExternalProviderButton" model='new ExternalProviderButton(provider, "Regístrate")' />

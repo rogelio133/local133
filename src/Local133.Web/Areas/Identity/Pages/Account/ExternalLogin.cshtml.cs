@@ -24,6 +24,7 @@ namespace Local133.Web.Areas.Identity.Pages.Account;
 /// desde Manage/ExternalLogins).
 /// </summary>
 [AllowAnonymous]
+[SignedInAntiforgeryRedirect]
 public class ExternalLoginModel(
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager,

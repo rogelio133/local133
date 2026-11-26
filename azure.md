@@ -246,3 +246,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Tablero en caché** 5 minutos en memoria del proceso: con varias instancias del App Service, cada una lo calcula aparte. No hace falta Redis. La entrada del admin (`/admin`) lleva a Clientes; el tablero está en `/admin/tablero`.
 - La bitácora muestra el payload con la CLABE, el RFC y el celular enmascarados. En la base siguen crudos (como desde la 2.3): el acceso a Azure SQL y sus respaldos debe seguir restringido.
 - Sin recursos, App Settings ni secretos nuevos.
+
+### Mantenimiento 2026-11-26 — Doble envío del login
+- Sin cambios para Azure: atributo en los formularios de Identity, un filtro de Razor Pages y JS. Sin recursos, App Settings ni secretos nuevos.
+- Diagnóstico: la referencia de «Algo salió mal» es el `TraceIdentifier`. No sale en el log, pero la hora y la ruta (`POST … responded 400` seguido de `POST /error/400`) la ubican en el log del contenedor: `az webapp log download -g local133 -n local133` → `LogFiles/<fecha>_<instancia>_default_docker.log`.

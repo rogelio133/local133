@@ -64,6 +64,67 @@ public class AccountFlowTests(Local133WebFactory factory) : WebTestBase(factory)
         Assert.Contains("Correo o contraseña incorrectos", WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()));
     }
 
+    [Theory]
+    [InlineData("/Identity/Account/Login", "/app")]
+    [InlineData("/Identity/Account/Login?returnUrl=%2Fapp%2Fventas", "/app/ventas")]
+    public async Task Doble_envio_del_login_redirige_al_inicio_en_vez_de_error(string loginUrl, string expected)
+    {
+        // Producción, 2026-11-26: el segundo POST llegaba con la cookie de sesión del primero y un token
+        // antiforgery del usuario anónimo ⇒ 400 «Algo salió mal» aunque la persona ya había entrado.
+        await CreateMerchantAsync(Email);
+        var client = CreateClient();
+        var form = new Dictionary<string, string>
+        {
+            ["Input.Email"] = Email,
+            ["Input.Password"] = Password,
+            ["__RequestVerificationToken"] = await GetAntiforgeryTokenAsync(client, loginUrl),
+        };
+
+        var first = await client.PostAsync(loginUrl, new FormUrlEncodedContent(form));
+        Assert.Equal(expected, Location(first));
+
+        var second = await client.PostAsync(loginUrl, new FormUrlEncodedContent(form));
+        Assert.Equal(HttpStatusCode.Redirect, second.StatusCode);
+        Assert.Equal(expected, Location(second));
+    }
+
+    [Fact]
+    public async Task Doble_envio_del_login_no_sigue_un_returnUrl_externo()
+    {
+        await CreateMerchantAsync(Email);
+        var client = CreateClient();
+        const string loginUrl = "/Identity/Account/Login?returnUrl=https%3A%2F%2Fejemplo.com%2F";
+        var form = new Dictionary<string, string>
+        {
+            ["Input.Email"] = Email,
+            ["Input.Password"] = Password,
+            ["__RequestVerificationToken"] = await GetAntiforgeryTokenAsync(client, loginUrl),
+        };
+        await client.PostAsync(loginUrl, new FormUrlEncodedContent(form));
+
+        var second = await client.PostAsync(loginUrl, new FormUrlEncodedContent(form));
+
+        Assert.Equal("/app", Location(second));
+    }
+
+    [Fact]
+    public async Task Login_sin_sesion_con_token_invalido_sigue_respondiendo_400()
+    {
+        await CreateMerchantAsync(Email);
+        var client = CreateClient();
+        await GetAntiforgeryTokenAsync(client, "/Identity/Account/Login");
+
+        var response = await client.PostAsync("/Identity/Account/Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["Input.Email"] = Email,
+            ["Input.Password"] = Password,
+            ["__RequestVerificationToken"] = "token-invalido",
+        }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/app")).StatusCode);
+    }
+
     [Fact]
     public async Task Logout_cierra_la_sesion()
     {
