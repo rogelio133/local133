@@ -62,6 +62,21 @@ public class MoreTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
     }
 
     [Fact]
+    public async Task Instalar_app_es_un_boton_oculto_hasta_que_se_pueda_instalar()
+    {
+        var client = await MerchantClientAsync(Email);
+
+        var html = await GetHtmlAsync(client, Url);
+
+        // pwa.js la muestra con beforeinstallprompt (o en iOS); sin JS ni soporte se queda oculta (punto 12).
+        Assert.Matches(
+            "<li class=\"col\" data-pwa-install hidden>\\s*<button type=\"button\" class=\"more-card more-card-install\" data-more-install>",
+            html);
+        Assert.Contains("data-pwa-ios-modal", html);
+        Assert.Contains("Agregar a inicio", html);
+    }
+
+    [Fact]
     public async Task Contrasena_y_acceso_abre_cambiar_contrasena()
     {
         var client = await MerchantClientAsync(Email);

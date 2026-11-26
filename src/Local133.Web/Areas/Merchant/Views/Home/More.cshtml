@@ -2,7 +2,8 @@
     ViewData["Title"] = "Más";
 }
 @* «Más» con tarjetas (ajustes 2026-11-26, punto 11): 2 por fila en el celular y 3 desde md. Cada tarjeta es la liga
-   completa; el color del ícono de la esquina sale de $more-card-colors (Styles/site.scss). «Instalar app» entra con la PWA (punto 12). *@
+   completa; el color del ícono de la esquina sale de $more-card-colors (Styles/site.scss). «Instalar app» (PWA, punto 12) va
+   oculta: pwa.js la muestra solo si el navegador puede instalar la app (o en iOS, con el modal de instrucciones). *@
 <h1 class="h4 mb-3">Más</h1>
 <ul class="row row-cols-2 row-cols-md-3 g-3 list-unstyled mb-3" data-more-cards>
     <li class="col">
@@ -56,6 +57,13 @@
             <span class="more-card-text">Cambia tu contraseña y tus cuentas ligadas.</span>
         </a>
     </li>
+    <li class="col" data-pwa-install hidden>
+        <button type="button" class="more-card more-card-install" data-more-install>
+            <i class="bi bi-phone more-card-art" aria-hidden="true"></i>
+            <span class="more-card-title">Instalar app</span>
+            <span class="more-card-text">Ten Local133 en tu pantalla de inicio.</span>
+        </button>
+    </li>
     <li class="col">
         @* QR impreso del puesto (2.7): función de Pro anunciada, todavía no existe. *@
         <div class="more-card is-disabled" data-more-static-qr>
@@ -66,3 +74,25 @@
         </div>
     </li>
 </ul>
+
+@* iOS no tiene beforeinstallprompt: la tarjeta «Instalar app» abre estas instrucciones (pwa.js). *@
+<div class="modal fade" id="pwa-ios-modal" tabindex="-1" aria-labelledby="pwa-ios-modal-title" aria-hidden="true" data-pwa-ios-modal>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="pwa-ios-modal-title">Instala Local133</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <ol class="mb-3">
+                    <li class="mb-2">Toca <strong>Compartir</strong> <i class="bi bi-box-arrow-up" aria-hidden="true"></i>.</li>
+                    <li>Elige <strong>Agregar a inicio</strong> <i class="bi bi-plus-square" aria-hidden="true"></i>.</li>
+                </ol>
+                <p class="mb-0 small text-body-secondary">Abre Local133 desde el ícono. La primera vez tendrás que iniciar sesión otra vez.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>

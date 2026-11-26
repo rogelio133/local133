@@ -12,6 +12,16 @@
 <link rel="icon" href="~/favicon.ico" sizes="any" />
 <link rel="icon" href="~/icon-192.png" type="image/png" sizes="192x192" />
 <link rel="apple-touch-icon" href="~/apple-touch-icon.png" />
+@* PWA (ajustes 2026-11-26, punto 12): solo en las pantallas de la app (ViewData["Pwa"] = true en _MerchantLayout,
+   _AdminLayout, la home e Identity). /recibo y /tienda no la llevan: el cliente que abre un recibo no ve «Instalar». *@
+@if (ViewData["Pwa"] is true)
+{
+    <link rel="manifest" href="~/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Local133" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">

@@ -634,6 +634,7 @@ $more-card-colors: (
   "bank-account": #6F42C1,   // morado
   "invite":       #C2410C,   // naranja
   "account":      #0E7C86,   // turquesa
+  "install":      #0369A1,   // azul cielo
 );
 
 .more-card {
@@ -664,12 +665,23 @@ $more-card-colors: (
   }
 }
 
-a.more-card:hover {
+// «Instalar app» es un botón (lanza el diálogo del navegador): se le quitan los estilos del navegador.
+button.more-card {
+  width: 100%;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  appearance: none;
+}
+
+a.more-card:hover,
+button.more-card:hover {
   color: $tinta;
   background-color: mix($rosa-mexicano, $rosa-papel, 10%);
 }
 
-a.more-card:focus-visible {
+a.more-card:focus-visible,
+button.more-card:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 var(--bs-focus-ring-width) var(--bs-focus-ring-color);
 }
@@ -705,12 +717,15 @@ a.more-card:focus-visible {
 }
 
 a.more-card:hover .more-card-art,
-a.more-card:focus-visible .more-card-art {
+a.more-card:focus-visible .more-card-art,
+button.more-card:hover .more-card-art,
+button.more-card:focus-visible .more-card-art {
   transform: scale(1.25);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  a.more-card {
+  a.more-card,
+  button.more-card {
     transition: background-color .15s ease-in-out;
   }
 

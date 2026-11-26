@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#E4007C" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <title>Sin conexión · Local133</title>
+    <!-- Página sin conexión de la PWA (ajustes 2026-11-26, punto 12). La precarga sw.js y la muestra cuando una navegación
+         falla por falta de red. Estática y con estilos en línea: sin red no hay site.css ni fuentes. -->
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 1.5rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+            font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+            color: #fff;
+            text-align: center;
+            background-color: #E4007C;
+        }
+        img {
+            width: 160px;
+            height: 160px;
+            margin-bottom: 1.5rem;
+            border-radius: 32px;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, .5);
+        }
+        h1 { margin: 0 0 .5rem; font-size: 1.75rem; line-height: 1.2; }
+        p { max-width: 22rem; margin: 0 0 1.5rem; font-size: 1.125rem; }
+        button {
+            min-height: 44px;
+            padding: .75rem 1.5rem;
+            font: inherit;
+            font-weight: 700;
+            color: #B8005F;
+            cursor: pointer;
+            background-color: #fff;
+            border: 0;
+            border-radius: .375rem;
+        }
+        button:focus-visible { outline: 3px solid rgba(255, 255, 255, .7); outline-offset: 3px; }
+    </style>
+</head>
+<body>
+    <img src="/img/local133-logo-160.png" srcset="/img/local133-logo-320.png 2x" alt="Local133" width="160" height="160" />
+    <h1>Sin conexión</h1>
+    <p>Revisa tu internet y vuelve a intentar.</p>
+    <button type="button" onclick="location.reload()">Reintentar</button>
+</body>
+</html>
