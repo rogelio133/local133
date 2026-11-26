@@ -348,10 +348,6 @@ body {
     background-color: #fff;
   }
 
-  .receipt {
-    box-shadow: none;
-  }
-
   /* Corte de caja (5.9): sin el espacio de la barra inferior ni sombras (las barras y botones llevan d-print-none). */
   .app-main {
     padding-bottom: 0;
@@ -481,6 +477,66 @@ body {
   max-height: 6rem;
   max-width: 12rem;
   object-fit: contain;
+}
+
+// --- Recibo tipo ticket (ajustes 2026-11-26) ---------------------
+// Fondo rosa papel para que el ticket blanco y sus dientes se distingan.
+.receipt-page {
+  background-color: $rosa-papel;
+}
+
+// La sombra va en el contenedor: en el mismo elemento, `filter` se aplica antes que `mask` y se perdería. Así sigue el
+// contorno de los dientes.
+.receipt-ticket-wrap {
+  max-width: 26rem;
+  margin-inline: auto;
+  filter: drop-shadow(0 2px 6px rgba($tinta, .18));
+}
+
+// Dientes arriba y abajo: dos zigzag de 90° (conic-gradient en repeat-x), sin imágenes. La profundidad es la mitad del
+// ancho de cada diente, y el relleno vertical la deja fuera del contenido.
+.receipt-ticket {
+  --receipt-tooth: .875rem;
+  $teeth:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--receipt-tooth) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--receipt-tooth) 51% repeat-x;
+  padding: calc(var(--receipt-tooth) / 2) 1.5rem;
+  font-variant-numeric: tabular-nums;
+  background-color: $white;
+  -webkit-mask: $teeth;
+  mask: $teeth;
+}
+
+.receipt-ticket-section {
+  padding-block: 1.25rem;
+
+  + .receipt-ticket-section {
+    border-top: 2px dashed rgba($tinta, .25);
+  }
+}
+
+.receipt-ticket-total {
+  padding-top: .5rem;
+  margin-top: .25rem;
+  border-top: 1px solid rgba($tinta, .15);
+}
+
+.receipt-check {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+// Al imprimir: sobre papel blanco, y la sombra se vuelve un contorno delgado para que los dientes se sigan viendo.
+// Va después de las reglas de pantalla porque pesan lo mismo.
+@media print {
+  .receipt-page {
+    background-color: $white;
+  }
+
+  .receipt-ticket-wrap {
+    filter: drop-shadow(0 0 1px rgba($tinta, .6));
+    break-inside: avoid;
+  }
 }
 
 /* Catálogo público: portada con la foto del local y el logo encima. */

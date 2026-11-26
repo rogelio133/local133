@@ -75,6 +75,7 @@ public class ReceiptsController(
         {
             LogoUrl = branded && merchant.LogoKey is { } logoKey ? LogoPathFor(token, logoKey) : null,
             PoweredByUrl = branded ? null : site.Value.LandingUrlFor(merchant.ReferralCode),
+            ShowFolio = User.Identity?.IsAuthenticated == true,
         });
     }
 
@@ -162,6 +163,12 @@ public sealed record ReceiptViewModel(
     /// Portada con el código de invitación del vendedor para «Cobrado con Local133» (gratuito), o <c>null</c> en Pro.
     /// </summary>
     public string? PoweredByUrl { get; init; }
+
+    /// <summary>
+    /// El folio («Venta») solo se muestra con sesión iniciada, de cualquier rol (ajustes 2026-11-26): al cliente anónimo
+    /// no le sirve. El recibo responde <c>no-store</c>, así que ninguna caché mezcla las dos versiones.
+    /// </summary>
+    public bool ShowFolio { get; init; }
 }
 
 /// <summary>Pago en el recibo público.</summary>

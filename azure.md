@@ -260,3 +260,6 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Ajustes 2026-11-26 — Bloque 2: concepto del cobro y «Mi información»
 - **Migración `MerchantDefaultConcept`** (columna `Merchants.DefaultConcept`, `nvarchar(100)` nula): se aplica sola al arrancar (`DatabaseMigrationSetup`). Es aditiva; no toca datos.
 - Sin recursos, App Settings ni secretos nuevos. El concepto que va a Pey ya no lleva el nombre del negocio; la llamada y el webhook no cambian.
+
+### Ajustes 2026-11-26 — Bloque 3: pantallas del vendedor
+- Punto 9 (recibo tipo ticket): sin cambios para Azure. Solo vista y CSS; el folio del recibo se oculta sin sesión.
