@@ -4,6 +4,8 @@
     // Solo se ve sin sesión (HomeController.Index redirige a vendedores y admins). Sin barra y sobre rosa (.home-page).
     ViewData["HideNavbar"] = true;
     ViewData["BodyClass"] = "home-page";
+    // PWA (punto 12): la app instalada abre en "/" (start_url) y de aquí se redirige según la sesión.
+    ViewData["Pwa"] = true;
     // Palabras de Home:RotatingWords (HomeHeroOptions.GetWords, nunca vacía). El servidor pinta la primera: el título
     // queda completo sin JS y para los buscadores; rotating-word.js rota las demás.
     var words = Model;

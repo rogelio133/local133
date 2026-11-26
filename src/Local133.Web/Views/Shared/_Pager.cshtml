@@ -1,38 +1,41 @@
 @model Local133.Web.Models.PagerViewModel
 @* Paginación móvil primero: «Anterior · Página X de Y · Siguiente» (sin una fila de números que no cabe en 375 px).
-   Las ligas no se parten (text-nowrap); si falta ancho (catálogo dentro del panel de cobro), el estado usa dos líneas. *@
+   Anterior y Siguiente son botones de al menos 44 px (.pager-btn) que no se parten. Si falta ancho, el estado usa dos
+   renglones, y en un contenedor angosto (catálogo del carrito a 375 px) sube a su propio renglón (container query en
+   site.scss). Los data-pager-* los usan product-search.js y admin-customer-search.js:
+   solo los llevan las ligas, nunca los botones deshabilitados. *@
 @{
     var info = Model.Page;
 }
 @if (info.TotalPages > 1)
 {
-    <nav aria-label="@Model.Label" data-pager data-page="@info.Page" data-total-pages="@info.TotalPages">
-        <ul class="pagination justify-content-between align-items-center mb-0">
-            <li class="page-item @(info.HasPrevious ? null : "disabled")">
+    <nav class="pager" aria-label="@Model.Label" data-pager data-page="@info.Page" data-total-pages="@info.TotalPages">
+        <ul class="pager-list list-unstyled d-flex align-items-center justify-content-between gap-2 mb-0">
+            <li>
                 @if (info.HasPrevious)
                 {
-                    <a class="page-link text-nowrap" href="@Model.UrlForPage(info.Page - 1)" rel="prev" data-pager-previous>
+                    <a class="btn btn-outline-primary rounded-pill pager-btn" href="@Model.UrlForPage(info.Page - 1)" rel="prev" data-pager-previous>
                         <i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior
                     </a>
                 }
                 else
                 {
-                    <span class="page-link text-nowrap" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</span>
+                    <span class="btn btn-outline-primary rounded-pill pager-btn disabled" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</span>
                 }
             </li>
-            <li class="text-body-secondary small px-2 text-center" aria-current="page" data-pager-status>
+            <li class="pager-status fw-semibold text-center" aria-current="page" data-pager-status>
                 Página @info.Page de @info.TotalPages
             </li>
-            <li class="page-item @(info.HasNext ? null : "disabled")">
+            <li>
                 @if (info.HasNext)
                 {
-                    <a class="page-link text-nowrap" href="@Model.UrlForPage(info.Page + 1)" rel="next" data-pager-next>
+                    <a class="btn btn-outline-primary rounded-pill pager-btn" href="@Model.UrlForPage(info.Page + 1)" rel="next" data-pager-next>
                         Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i>
                     </a>
                 }
                 else
                 {
-                    <span class="page-link text-nowrap" aria-disabled="true">Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+                    <span class="btn btn-outline-primary rounded-pill pager-btn disabled" aria-disabled="true">Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
                 }
             </li>
         </ul>

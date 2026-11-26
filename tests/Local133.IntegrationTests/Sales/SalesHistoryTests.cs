@@ -138,6 +138,14 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         Assert.Equal(5, Regex.Matches(second, "data-sale-row=").Count);
         Assert.Contains("href=\"/app/ventas?estado=pendientes\" rel=\"prev\"", second);
         Assert.Equal(5, Regex.Matches(beyond, "data-sale-row=").Count); // ajustada a la última
+
+        // Paginador como botones (ajustes 2026-11-26): el deshabilitado no es liga ni lleva data-pager-*.
+        Assert.Contains("pager-btn", first);
+        Assert.Matches("<span class=\"[^\"]*pager-btn disabled\" aria-disabled=\"true\">.*Anterior", first);
+        Assert.DoesNotContain("data-pager-previous", first);
+        Assert.Contains("data-pager-next", first);
+        Assert.Contains("data-pager-previous", second);
+        Assert.Matches("<span class=\"[^\"]*pager-btn disabled\" aria-disabled=\"true\">Siguiente", second);
     }
 
     // --- Resumen del día ----------------------------------------------------------------------------------------------
@@ -164,12 +172,32 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         Assert.Contains("data-day-collected>$200.00<", html);
         Assert.Contains("data-day-paid>2<", html);
         Assert.Contains("data-day-pending>1<", html);
+        // Las tres en una fila, con la etiqueta en dos renglones (ajustes 2026-11-26).
+        Assert.Contains("Cobrado<br>hoy", html);
+        Assert.Contains("Pagadas<br>hoy", html);
+        Assert.Contains("Esperando<br>pago", html);
+        Assert.DoesNotContain("day-summary-amount-long", html);
 
         var home = await GetHtmlAsync(client, "/app");
         Assert.Contains("data-day-summary", home);
         Assert.Contains("data-day-collected>$200.00<", home);
         Assert.Contains("2 ventas pagadas", home);
         Assert.Contains("1 esperando pago", home);
+    }
+
+    [Fact]
+    public async Task Un_monto_del_dia_largo_usa_la_letra_mas_chica()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        var first = await InsertSaleAsync(Email, 600000m, now.AddMinutes(-10));
+        await AddPaymentAsync(first, 600000m, now.AddMinutes(-9));
+        var second = await InsertSaleAsync(Email, 600000m, now.AddMinutes(-8));
+        await AddPaymentAsync(second, 600000m, now.AddMinutes(-7));
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.Matches("day-summary-amount-long[^>]*data-day-collected>\\$1,200,000\\.00<", html);
     }
 
     [Fact]
