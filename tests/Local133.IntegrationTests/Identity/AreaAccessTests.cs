@@ -11,8 +11,13 @@ public class AreaAccessTests(Local133WebFactory factory) : WebTestBase(factory)
     [InlineData("/app")]
     [InlineData("/app/cobrar")]
     [InlineData("/admin")]
+    [InlineData("/admin/tablero")]
     [InlineData("/admin/clientes")]
     [InlineData("/admin/clientes/1")]
+    [InlineData("/admin/transacciones")]
+    [InlineData("/admin/transacciones/suscripciones")]
+    [InlineData("/admin/webhooks")]
+    [InlineData("/admin/webhooks/1")]
     [InlineData("/Identity/Account/Manage")]
     public async Task Sin_sesion_redirige_al_login(string path)
     {
@@ -60,9 +65,12 @@ public class AreaAccessTests(Local133WebFactory factory) : WebTestBase(factory)
         var client = CreateClient();
 
         var login = await LoginAsync(client, "admin@prueba.mx");
-        Assert.Equal("/admin", Location(login));
+        Assert.Equal("/admin/clientes", Location(login));
 
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/admin")).StatusCode);
+        // La entrada del admin lleva a Clientes.
+        Assert.Equal("/admin/clientes", Location(await client.GetAsync("/admin")));
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/admin/clientes")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/admin/tablero")).StatusCode);
 
         var app = await client.GetAsync("/app");
         Assert.StartsWith("/Identity/Account/AccessDenied", Location(app));

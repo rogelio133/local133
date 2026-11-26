@@ -239,3 +239,10 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Parámetros desde el admin** (`/admin/parametros`): los precios, la prueba, la gracia, los límites del gratuito, los referidos, el IVA y la expiración del QR se editan en la base (`SystemSettings`), no en App Settings. En la base de Azure, un cambio ahí afecta a ese ambiente de inmediato (los cargos ya creados conservan su monto). Para la prueba real con $0.01 ya no hace falta tocar SQL: se cambia el precio desde esa pantalla y se regresa después.
 - **Correo**: un aviso más cuando el admin regala días con la casilla «Avisar al vendedor». Mismo Resend.
 - Sin recursos, App Settings ni secretos nuevos.
+
+### Fase 6.4 — Tablero, transacciones globales y bitácora de webhooks (admin)
+- **Migración `AdminDashboard`** (no destructiva): agrega la columna nula `AuditLogs.WebhookEventId` (índice filtrado) y cinco índices para las consultas globales del admin: `Payments(PaidAt)` con `INCLUDE (Amount, SaleId)`, `Sales(CreatedAt)`, `SubscriptionCharges(Status, PaidAt)`, `SubscriptionPayments(PaidAt)` y `WebhookEvents(ReceivedAt)`. Se aplica sola al arrancar. Crear índices bloquea esas tablas mientras se construyen (Azure SQL Basic/Standard no hace `ONLINE`): con pocas filas tarda segundos, pero con muchas conviene publicar en un horario tranquilo.
+- **Reproceso de webhooks** (`/admin/webhooks/{id}`): vuelve a procesar el body guardado en `WebhookEvents`, sin llamar a Pey. Sirve, por ejemplo, para un pago que llegó antes de que existiera su venta o cuando Pey dejó de reintentar. No cambia la URL ni el secreto registrados en portal.mipey.mx.
+- **Tablero en caché** 5 minutos en memoria del proceso: con varias instancias del App Service, cada una lo calcula aparte. No hace falta Redis. La entrada del admin (`/admin`) lleva a Clientes; el tablero está en `/admin/tablero`.
+- La bitácora muestra el payload con la CLABE, el RFC y el celular enmascarados. En la base siguen crudos (como desde la 2.3): el acceso a Azure SQL y sus respaldos debe seguir restringido.
+- Sin recursos, App Settings ni secretos nuevos.

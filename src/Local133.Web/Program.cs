@@ -62,6 +62,7 @@ try
 
     // Admin: detalle de un cliente (6.1).
     builder.Services.AddScoped<Local133.Web.Areas.Admin.Services.CustomerDetailQuery>();
+    builder.Services.AddSingleton<Local133.Web.Areas.Admin.Services.DashboardCache>();
 
     // Portada: palabras que rotan en el título (Home:RotatingWords; por defecto en appsettings.json).
     builder.Services.Configure<HomeHeroOptions>(builder.Configuration.GetSection(HomeHeroOptions.SectionName));

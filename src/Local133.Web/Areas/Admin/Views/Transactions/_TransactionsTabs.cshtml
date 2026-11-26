@@ -1,0 +1,17 @@
+@model TransactionTab
+<h1 class="h4 mb-3">Transacciones</h1>
+<ul class="nav nav-tabs mb-3" data-transaction-tabs>
+    @foreach (var (tab, href, label, icon) in new[]
+    {
+        (TransactionTab.Sales, TransactionUrls.Sales, "Ventas", "bi-receipt"),
+        (TransactionTab.Subscriptions, TransactionUrls.Subscriptions, "Suscripciones", "bi-star"),
+    })
+    {
+        var active = tab == Model;
+        <li class="nav-item">
+            <a class="nav-link @(active ? "active" : null)" href="@Url.Content("~" + href)" aria-current="@(active ? "page" : null)" data-transaction-tab="@tab">
+                <i class="bi @icon me-1" aria-hidden="true"></i>@label
+            </a>
+        </li>
+    }
+</ul>

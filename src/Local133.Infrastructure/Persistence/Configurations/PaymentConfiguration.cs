@@ -24,5 +24,8 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(p => p.PeyTransactionId).IsUnique();
         // Historial y resumen del día: pagos del vendedor por fecha.
         builder.HasIndex(p => new { p.MerchantId, p.PaidAt });
+
+        // GMV global del tablero del admin (6.4).
+        builder.HasIndex(p => p.PaidAt).IncludeProperties(p => new { p.Amount, p.SaleId });
     }
 }

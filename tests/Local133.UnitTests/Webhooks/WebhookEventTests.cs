@@ -77,3 +77,49 @@ public class WebhookEventTests
     public void Rechaza_un_webhook_id_demasiado_largo() =>
         Assert.Throws<ArgumentException>(() => WebhookEvent.Receive(new string('a', 101), "x", "{}", Now, Now));
 }
+
+/// <summary>6.4: reproceso desde la bitácora del admin.</summary>
+public class WebhookEventReprocessTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 11, 25, 18, 0, 0, TimeSpan.Zero);
+
+    private static WebhookEvent Received() => WebhookEvent.Receive("msg_1", "codi.qr.payment_received", "{}", Now, Now);
+
+    [Fact]
+    public void Se_reprocesa_todo_salvo_lo_procesado()
+    {
+        var received = Received();
+        var failed = Received();
+        failed.MarkFailed("Venta no encontrada", Now);
+        var ignored = Received();
+        ignored.MarkIgnored("QR fijo", Now);
+        var processed = Received();
+        processed.MarkProcessed(Now);
+
+        Assert.True(received.CanReprocess);
+        Assert.True(failed.CanReprocess);
+        Assert.True(ignored.CanReprocess);
+        Assert.False(processed.CanReprocess);
+    }
+
+    [Fact]
+    public void Reprocesar_suma_un_intento()
+    {
+        var failed = Received();
+        failed.StartAttempt();
+        failed.MarkFailed("Venta no encontrada", Now);
+
+        failed.StartReprocess();
+
+        Assert.Equal(2, failed.Attempts);
+    }
+
+    [Fact]
+    public void Un_procesado_no_se_reprocesa()
+    {
+        var processed = Received();
+        processed.MarkProcessed(Now);
+
+        Assert.Throws<InvalidOperationException>(processed.StartReprocess);
+    }
+}

@@ -1,0 +1,117 @@
+@model WebhookListViewModel
+@{
+    ViewData["Title"] = "Webhooks";
+    var filters = Model.Filters;
+    var today = SaleFormats.IsoDate(Model.Today);
+    var advanced = filters.Status != WebhookStatusFilter.All || filters.Type != WebhookTypeFilter.All || filters.From is not null || filters.To is not null;
+    var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlFor(p)), "Páginas de webhooks");
+    var total = Model.Page.TotalCount;
+}
+<h1 class="h4 mb-3">Webhooks de Pey</h1>
+
+<div class="d-flex flex-wrap gap-2 mb-3" data-webhook-counters>
+    <a class="btn btn-sm @(Model.FailedCount > 0 ? "btn-danger" : "btn-outline-secondary")" href="@Url.Content("~" + WebhookUrls.WithStatus(WebhookStatusFilter.Failed))"
+       data-webhook-failed-count="@Model.FailedCount">
+        @(Model.FailedCount == 1 ? "1 fallido" : $"{Model.FailedCount:N0} fallidos")
+    </a>
+    <a class="btn btn-sm @(Model.StuckCount > 0 ? "btn-warning" : "btn-outline-secondary")" href="@Url.Content("~" + WebhookUrls.WithStatus(WebhookStatusFilter.Stuck))"
+       data-webhook-stuck-count="@Model.StuckCount">
+        @(Model.StuckCount == 1 ? "1 atorado" : $"{Model.StuckCount:N0} atorados")
+    </a>
+</div>
+
+<form method="get" action="@Url.Content("~" + WebhookUrls.List)" class="card mb-3" role="search" data-webhook-search>
+    <div class="card-body">
+        <label class="form-label small mb-1" for="webhook-q">Buscar</label>
+        <div class="input-group mb-2">
+            <input class="form-control" type="search" id="webhook-q" name="q" value="@filters.Query" maxlength="@WebhookFilters.QueryMaxLength"
+                   placeholder="webhook-id o id de Pey" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
+        <div class="form-text mt-0 mb-1">Con @WebhookLog.PayloadSearchMinLength caracteres o más también busca dentro del payload (transacción, QR, link, cuenta).</div>
+
+        <button class="btn btn-link btn-sm px-0 d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#webhook-filters"
+                aria-expanded="@(advanced ? "true" : "false")" aria-controls="webhook-filters">
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>Filtros
+        </button>
+        <div class="collapse d-lg-block @(advanced ? "show" : null)" id="webhook-filters">
+            <div class="row g-2 pt-2 align-items-end">
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="webhook-status">Estatus</label>
+                    <select class="form-select" id="webhook-status" name="@WebhookStatusFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var status in WebhookStatusFilters.All)
+                        {
+                            <option value="@WebhookStatusFilters.Slug(status)" selected="@(filters.Status == status)">@WebhookStatusFilters.Label(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-6 col-xl">
+                    <label class="form-label small mb-1" for="webhook-type">Tipo</label>
+                    <select class="form-select" id="webhook-type" name="@WebhookTypeFilters.QueryKey">
+                        <option value="">Todos</option>
+                        @foreach (var type in WebhookTypeFilters.All)
+                        {
+                            <option value="@WebhookTypeFilters.Slug(type)" selected="@(filters.Type == type)">@WebhookTypeFilters.Label(type)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="webhook-from">Recibido desde</label>
+                    <input class="form-control" type="date" id="webhook-from" name="desde" max="@today" value="@AdminQueryString.Date(filters.From)" />
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                    <label class="form-label small mb-1" for="webhook-to">Recibido hasta</label>
+                    <input class="form-control" type="date" id="webhook-to" name="hasta" max="@today" value="@AdminQueryString.Date(filters.To)" />
+                </div>
+                <div class="col-12 col-md-6 col-xl-auto">
+                    <button type="submit" class="btn btn-primary w-100">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+    <p class="small text-body-secondary mb-0" data-webhooks-count="@total">@(total == 1 ? "1 evento" : $"{total:N0} eventos")</p>
+    @if (filters.IsFiltered)
+    {
+        <a class="small ms-auto" href="@Url.Content("~" + WebhookUrls.List)" data-clear-search>Ver todos</a>
+    }
+</div>
+@if (Model.QueryTooShortForPayload)
+{
+    <p class="small text-body-secondary" data-webhook-query-short>Solo se buscó el webhook-id exacto: para buscar en el payload escribe al menos @WebhookLog.PayloadSearchMinLength caracteres.</p>
+}
+
+@if (Model.Rows.Count == 0)
+{
+    <div class="card" data-webhooks-empty>
+        <div class="card-body text-center text-body-secondary">
+            @(filters.IsFiltered ? "No hay eventos con estos filtros." : "Todavía no llega ningún webhook.")
+        </div>
+    </div>
+}
+else
+{
+    <div class="list-group mb-3">
+        @foreach (var row in Model.Rows)
+        {
+            <a class="list-group-item list-group-item-action d-flex align-items-start gap-3" href="@Url.Content("~" + WebhookUrls.Detail(row.Id))"
+               data-webhook-row="@row.Id" data-status="@row.Status" data-stuck="@(row.IsStuck ? "true" : "false")">
+                <div class="flex-grow-1 text-break">
+                    <div class="small text-body-secondary">#@row.Id · @row.ReceivedAtText@(row.Attempts > 1 ? $" · {row.Attempts} intentos" : null)</div>
+                    <div class="fw-semibold">@row.TypeLabel</div>
+                    <div class="small text-body-secondary font-monospace">@row.WebhookId</div>
+                    @if (row.Error is { } error)
+                    {
+                        <div class="small text-danger-emphasis">@error</div>
+                    }
+                </div>
+                <span class="badge @WebhookLog.StatusBadge(row.Status, row.IsStuck)">@WebhookLog.StatusText(row.Status, row.IsStuck)</span>
+            </a>
+        }
+    </div>
+
+    <partial name="_Pager" model="pager" />
+}

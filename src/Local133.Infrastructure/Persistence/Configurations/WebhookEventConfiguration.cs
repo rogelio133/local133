@@ -20,5 +20,8 @@ public class WebhookEventConfiguration : IEntityTypeConfiguration<WebhookEvent>
         builder.HasIndex(e => e.WebhookId).IsUnique();
         // Bitácora del admin (Fase 6): por fecha y estatus.
         builder.HasIndex(e => new { e.Status, e.ReceivedAt });
+
+        // Bitácora sin filtro de estatus (6.4).
+        builder.HasIndex(e => e.ReceivedAt);
     }
 }
