@@ -1,5 +1,6 @@
-// Portada: menú del celular y carruseles (pasos y precios). Sin librerías. Sin JS la página se ve completa: el panel
-// del menú queda abierto y las pistas se deslizan con el dedo (@media (scripting: none) en el SCSS).
+// Portada: menú del celular, secciones que aparecen al hacer scroll y carruseles (pasos y precios). Sin librerías. Sin
+// JS la página se ve completa: el panel del menú queda abierto, nada se oculta y las pistas se deslizan con el dedo
+// (@media (scripting: none) en el SCSS).
 (function () {
     'use strict';
 
@@ -65,6 +66,41 @@
         desktopNav.addEventListener('change', function (event) {
             if (event.matches) {
                 setOpen(false);
+            }
+        });
+    })();
+
+    // --- Aparecer al hacer scroll -------------------------------------------
+    // [data-reveal] aparece solo; [data-reveal-stagger] hace aparecer a sus hijos escalonados (_landing-motion.scss).
+    // El estado oculto solo existe con .reveal-ready en <html>, que se pone aquí: sin JS, sin IntersectionObserver o con
+    // «reducir movimiento» todo se ve desde el inicio. Lo que ya está en pantalla al cargar se marca antes, así que no
+    // parpadea ni se anima. Cada elemento aparece una sola vez.
+    (function initReveal() {
+        var targets = Array.prototype.slice.call(document.querySelectorAll('[data-reveal], [data-reveal-stagger]'));
+        if (!targets.length || !('IntersectionObserver' in window) || reducedMotion.matches) {
+            return;
+        }
+
+        targets.forEach(function (el) {
+            if (el.getBoundingClientRect().top < window.innerHeight) {
+                el.classList.add('is-revealed');
+            }
+        });
+        document.documentElement.classList.add('reveal-ready');
+
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (!entry.isIntersecting) {
+                    return;
+                }
+                entry.target.classList.add('is-revealed', 'is-revealing');
+                observer.unobserve(entry.target);
+            });
+        }, { rootMargin: '0px 0px -10% 0px' });
+
+        targets.forEach(function (el) {
+            if (!el.classList.contains('is-revealed')) {
+                observer.observe(el);
             }
         });
     })();

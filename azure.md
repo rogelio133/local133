@@ -231,6 +231,9 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Publicar en orden: primero la portada (para que existan las páginas) y después el portal (que empieza a redirigir).
 - Cambiar el texto legal implica publicar la portada. Si además cambia la versión (`LegalDocuments`), hay que publicar también el portal, que la guarda al registrar.
 
+### Portada 2026-11-25 — Aparecer al hacer scroll
+- Sin cambios para Azure: solo CSS y JS de la portada, sin recursos, App Settings ni secretos nuevos.
+
 ### Fase 6.2 — Plan por cliente y parámetros globales (admin)
 - **Migración `AdminPlanActions`** (no destructiva): crea la tabla `AuditLogs` (bitácora de cambios del admin, FK opcional a `Merchants`, índices `(MerchantId, OccurredAt)` y `(Action, OccurredAt)`) y agrega las columnas nulas `Referrals.RevokedAt` y `SubscriptionCharges.CreditedManuallyAt`. Se aplica sola al arrancar.
 - **Parámetros desde el admin** (`/admin/parametros`): los precios, la prueba, la gracia, los límites del gratuito, los referidos, el IVA y la expiración del QR se editan en la base (`SystemSettings`), no en App Settings. En la base de Azure, un cambio ahí afecta a ese ambiente de inmediato (los cargos ya creados conservan su monto). Para la prueba real con $0.01 ya no hace falta tocar SQL: se cambia el precio desde esa pantalla y se regresa después.

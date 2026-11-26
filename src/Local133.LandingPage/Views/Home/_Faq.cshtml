@@ -13,11 +13,11 @@
 @* <details> nativos: se abren sin JS. La transición de apertura es CSS (::details-content); sin soporte, abren al instante. *@
 <section id="preguntas" class="faq-section">
     <div class="landing-container faq">
-        <div class="section-head section-head-center">
+        <div class="section-head section-head-center" data-reveal>
             <p class="eyebrow">Preguntas frecuentes</p>
             <h2 class="section-title">¿Tienes dudas?</h2>
         </div>
-        <div class="faq-list">
+        <div class="faq-list" data-reveal>
             @foreach (var (question, answer) in questions)
             {
                 <details class="faq-item">

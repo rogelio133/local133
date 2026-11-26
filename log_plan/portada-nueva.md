@@ -117,6 +117,20 @@ Sitio en `http://localhost:5241` (Development, `Sass__Watch=false`). Capturas en
   - el pie se ve al final;
   - `:5231/terminos` llega a `:5242/terminos`, y la casilla del registro y el pie del portal enlazan a la portada.
 
+## Aparecer al hacer scroll (2026-11-25)
+- **Qué se hizo**: las secciones aparecen con un desvanecido y un deslizamiento de 24 px al entrar en pantalla, una sola vez.
+  - `data-reveal` va en los títulos de sección, «Próximamente», «Tu dinero», fundador, «Invita y gana», preguntas y cierre.
+  - `data-reveal-stagger` va en los pasos, las herramientas, la lista de «Tu dinero», los precios y las tarjetas de «Invita y gana»: sus hijos aparecen escalonados.
+  - El código está en `landing.js` (`initReveal`) y `_landing-motion.scss`.
+- **«Reducir movimiento» y sin JS**: el estado oculto solo existe con `reveal-ready`, que pone el JS. El CSS además está dentro de `prefers-reduced-motion: no-preference` y de `screen`. Lo que ya se ve al cargar no se anima.
+- **Pruebas**: `LandingPageTests.Las_secciones_aparecen_al_hacer_scroll_sin_ocultarse_sin_JS`. Revisa el número de elementos marcados, que el hero no se anime y que el servidor nunca mande el estado oculto.
+- **Revisión en navegador** (Edge, portada de Release en 5242):
+  - **375**: al cargar solo se ve el hero. Al bajar, «Cómo funciona» aparece con desvanecido y el carrusel sigue avanzando.
+  - **1280**: las herramientas aparecen escalonadas y el hover sigue funcionando (el ícono sube 4 px y crece al 110 %). Al bajar hasta el final y subir, no queda nada oculto.
+  - **768 con `/#precios`**: el destino se ve completo.
+  - **«Reducir movimiento»**: no hay `reveal-ready`, nada oculto y ninguna animación. Al activarlo con la página abierta, los 28 elementos ocultos aparecen al instante.
+  - En los tres tamaños, sin scroll horizontal y con la consola limpia.
+
 ## Pendientes
 - **Lugares de fundador**: «Quedan [N] lugares» está oculto, porque la portada no tiene ese dato. Necesita una fuente: una API pública del portal o un valor en la configuración.
 - **Precios a mano**: si cambian en `SystemSettings` (admin, 6.2), hay que cambiar `_Pricing.cshtml`, las preguntas y la prueba.

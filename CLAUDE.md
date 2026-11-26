@@ -41,6 +41,10 @@ Dependencias: Domain ← Application ← Infrastructure/Web. Pey solo se usa des
   - los componentes son clases propias en `Styles/_landing-*.scss`, celular primero; menú en la barra desde `lg`;
   - sin JS, `@media (scripting: none)` deja abierto el menú y oculta los puntos.
 - **JS**: `wwwroot/js/landing.js`, con el menú y los carruseles `[data-carousel]`. Los pasos avanzan cada 5 s, nunca con «reducir movimiento». Las páginas legales cargan `landing.js` (menú) y `section-index.js`.
+- **Aparecer al hacer scroll**: `data-reveal` (el elemento) y `data-reveal-stagger` (sus hijos, escalonados de 90 en 90 ms hasta el 6.º), en las secciones de la portada desde «Cómo funciona». El hero, «Hecho para», el encabezado, el pie y las páginas legales no se animan.
+  - `landing.js` (`initReveal`, `IntersectionObserver`) pone `reveal-ready` en `<html>` y marca `is-revealed` / `is-revealing`. Lo que ya está en pantalla al cargar se marca antes, sin animar.
+  - El estado oculto solo existe con `reveal-ready` y dentro de `@media screen and (prefers-reduced-motion: no-preference)` (`_landing-motion.scss`). Sin JS, con «reducir movimiento» o al imprimir, todo se ve.
+  - Es una `animation` con `backwards`, no `transition`, para no pisar los hovers.
 - **Compartido con `Local133.Web` sin copiar**:
   - el SCSS: `Styles/landing.scss` importa `../../Local133.Web/Styles/_custom`, el Bootstrap de `Styles/vendor` y `_rotating-word.scss`;
   - `HomeHeroOptions.cs` (`Compile Link`).

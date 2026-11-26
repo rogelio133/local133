@@ -204,6 +204,27 @@ public class LandingPageTests
     }
 
     [Fact]
+    public async Task Las_secciones_aparecen_al_hacer_scroll_sin_ocultarse_sin_JS()
+    {
+        var html = await GetHomeAsync();
+
+        // Títulos de sección, «Próximamente», tu dinero, fundador, Invita y gana, preguntas y cierre.
+        Assert.Equal(10, Regex.Matches(html, @"\sdata-reveal[\s>]").Count);
+        // Pasos, herramientas, tu dinero, precios e Invita y gana: sus tarjetas aparecen escalonadas.
+        Assert.Equal(5, Regex.Matches(html, @"\sdata-reveal-stagger[\s>]").Count);
+        Assert.Contains("data-carousel-track data-reveal-stagger>", html);
+
+        // El hero se ve al cargar: nunca se anima.
+        var heroStart = html.IndexOf("id=\"inicio\"", StringComparison.Ordinal);
+        var hero = html[heroStart..html.IndexOf("</section>", heroStart, StringComparison.Ordinal)];
+        Assert.DoesNotContain("data-reveal", hero);
+
+        // El estado oculto lo pone landing.js (.reveal-ready): sin JS todo se ve.
+        Assert.DoesNotContain("reveal-ready", html);
+        Assert.DoesNotContain("is-revealed", html);
+    }
+
+    [Fact]
     public async Task Menu_del_celular_es_accesible()
     {
         var html = await GetHomeAsync();
