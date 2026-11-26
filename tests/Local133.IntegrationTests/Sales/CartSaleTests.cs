@@ -46,6 +46,21 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
     }
 
     [Fact]
+    public async Task El_carrito_no_precarga_el_concepto_por_defecto()
+    {
+        // Ajustes 2026-11-26: el concepto por defecto solo va en Cobrar › Monto; aquí lo propone cart.js con los productos.
+        var client = await ActiveMerchantAsync(Email);
+        await CreateProductAsync(Email, "Taco al pastor", 25m);
+        await UpdateMerchantAsync(Email, m => m.DefaultConcept = "Consumo");
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.Contains("name=\"Input.Concept\"", html);
+        Assert.DoesNotContain("value=\"Consumo\"", html);
+        Assert.Contains("Tu cliente lo verá en su app bancaria.", html);
+    }
+
+    [Fact]
     public async Task El_cobro_por_monto_lleva_al_carrito_con_el_selector()
     {
         var client = await ActiveMerchantAsync(Email);
@@ -141,7 +156,7 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
         Assert.Equal(SaleSource.Cart, sale.Source);
         Assert.Equal(ChargeMethod.DynamicQr, sale.Method);
         Assert.Equal(70.50m, sale.Amount);
-        Assert.Equal("Tacos Don Ramón · 2 Taco al pastor, Refresco", sale.Concept);
+        Assert.Equal("2 Taco al pastor, Refresco", sale.Concept); // sin el nombre del negocio (ajustes 2026-11-26)
         Assert.NotNull(sale.PeyQrId);
 
         var items = await LoadItemsAsync(sale.Id);
@@ -163,7 +178,7 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
 
         var sent = Assert.Single(Factory.Gateway.CodiQrRequests);
         Assert.Equal(70.50m, sent.Amount);
-        Assert.Equal("Tacos Don Ramón · 2 Taco al pastor, Refresco", sent.Concept);
+        Assert.Equal("2 Taco al pastor, Refresco", sent.Concept);
         Assert.Equal(sale.Id.ToString(CultureInfo.InvariantCulture), sent.Metadata![SaleMetadata.SaleIdKey]);
     }
 
@@ -176,7 +191,7 @@ public class CartSaleTests(Local133WebFactory factory) : SaleFlowTestBase(factor
         await PostFormAsync(client, Url, CartFields((tacoId, 1), concept: "Orden mesa 4"));
 
         var sale = Assert.Single(await LoadSalesAsync());
-        Assert.Equal("Tacos Don Ramón · Orden mesa 4", sale.Concept);
+        Assert.Equal("Orden mesa 4", sale.Concept);
     }
 
     [Fact]

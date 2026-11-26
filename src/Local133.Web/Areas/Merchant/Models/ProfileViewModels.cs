@@ -32,6 +32,12 @@ public sealed class ProfileInput
     [MaxLines(MerchantAddress.MaxLines, ErrorMessage = ProfileMessages.AddressTooManyLines)]
     [Display(Name = "Dirección o ubicación del puesto")]
     public string? Address { get; set; }
+
+    /// <summary>Concepto que Cobrar › Monto propone (ajustes 2026-11-26); mismas reglas que el concepto del cobro.</summary>
+    [StringLength(Domain.Merchants.DefaultConcept.MaxLength, ErrorMessage = ProfileMessages.DefaultConceptTooLong)]
+    [RegularExpression(Domain.Merchants.DefaultConcept.Pattern, ErrorMessage = ProfileMessages.DefaultConceptInvalid)]
+    [Display(Name = "Concepto (opcional)")]
+    public string? DefaultConcept { get; set; }
 }
 
 public sealed record ProfileViewModel
@@ -51,14 +57,19 @@ public sealed record ProfileViewModel
 
     public string? ShopPhotoError { get; init; }
 
+    /// <summary>
+    /// Sin <paramref name="input"/> (datos de la base), el nombre se propone con <see cref="PersonName.Clean"/>: uno
+    /// guardado antes de la regla de solo letras («Ma. José») no impide guardar.
+    /// </summary>
     public static ProfileViewModel From(MerchantProfileData data, ProfileInput? input = null) => new()
     {
         Input = input ?? new ProfileInput
         {
-            OwnerName = data.OwnerName,
+            OwnerName = data.OwnerName is null ? null : PersonName.Clean(data.OwnerName),
             BusinessName = data.BusinessName,
             PhoneNumber = data.PhoneNumber,
             Address = data.Address,
+            DefaultConcept = data.DefaultConcept,
         },
         Email = data.Email,
         CanEdit = data.CanEdit,

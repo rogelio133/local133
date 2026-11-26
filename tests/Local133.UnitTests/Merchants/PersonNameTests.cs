@@ -3,20 +3,18 @@ using Local133.Domain.Merchants;
 
 namespace Local133.UnitTests.Merchants;
 
-/// <summary>4.0: nombre de la persona en el alta (reglas, normalización y saludo).</summary>
+/// <summary>4.0 y ajustes 2026-11-26: nombre de la persona, solo letras y espacios (reglas, normalización y saludo).</summary>
 public class PersonNameTests
 {
     [Theory]
     [InlineData("María")]
     [InlineData("José Ángel")]
-    [InlineData("O'Brien")]
-    [InlineData("O’Brien")]
-    [InlineData("Ana-Lucía")]
-    [InlineData("Ma. Luisa")]
+    [InlineData("María José Núñez")]
     [InlineData("Françoise Müller")]
     [InlineData("Peña Nieto")]
+    [InlineData("Güero")]
     [InlineData("  María   López  ")]
-    public void Acepta_letras_con_acentos_espacios_punto_guion_y_apostrofo(string name) =>
+    public void Acepta_letras_con_acentos_y_espacios(string name) =>
         Assert.True(PersonName.IsValid(name));
 
     [Theory]
@@ -26,6 +24,13 @@ public class PersonNameTests
     [InlineData("...")]
     [InlineData("-'")]
     [InlineData("María 2")]
+    [InlineData("Juan2")]
+    [InlineData("Ma.")]
+    [InlineData("Ma. Luisa")]
+    [InlineData("O'Brien")]
+    [InlineData("O’Brien")]
+    [InlineData("Ana-Luisa")]
+    [InlineData("Ana × Luis")]
     [InlineData("María 🙂")]
     [InlineData("<b>Ana</b>")]
     [InlineData("Ana_López")]
@@ -44,11 +49,28 @@ public class PersonNameTests
 
     [Theory]
     [InlineData("  María   José  López ", "María José López")]
-    [InlineData("O’Brien", "O'Brien")]
     [InlineData("Ana\tLucía", "Ana Lucía")]
     [InlineData(null, "")]
-    public void Normaliza_espacios_y_apostrofo(string? raw, string expected) =>
+    public void Normaliza_espacios(string? raw, string expected) =>
         Assert.Equal(expected, PersonName.Normalize(raw));
+
+    [Theory]
+    [InlineData("Ma. José", "Ma José")]
+    [InlineData("O'Brien", "O Brien")]
+    [InlineData("  María  O’Brien ", "María O Brien")]
+    [InlineData("Ana-Luisa", "Ana Luisa")]
+    [InlineData("Juan 2", "Juan")]
+    [InlineData("María José Núñez", "María José Núñez")]
+    [InlineData("...", "")]
+    [InlineData(null, "")]
+    public void Clean_cambia_lo_que_no_es_letra_por_espacio(string? raw, string expected)
+    {
+        Assert.Equal(expected, PersonName.Clean(raw));
+        if (expected.Length > 0)
+        {
+            Assert.True(PersonName.IsValid(PersonName.Clean(raw)));
+        }
+    }
 
     [Theory]
     [InlineData("María José López", "María")]
@@ -63,22 +85,24 @@ public class PersonNameTests
     {
         // jQuery Validation lo usa tal cual (sin bandera u) y exige que la coincidencia cubra todo el valor.
         var regex = new Regex(PersonName.Pattern);
-        Assert.Matches(regex, "María O'Brien");
+        Assert.Matches(regex, "María Núñez");
         Assert.DoesNotMatch(regex, "María1");
+        Assert.DoesNotMatch(regex, "O'Brien");
     }
 
     [Fact]
     public void Register_guarda_el_nombre_normalizado()
     {
-        var merchant = Merchant.Register("user-1", DateTimeOffset.UtcNow, "  Ana   O’Brien ");
+        var merchant = Merchant.Register("user-1", DateTimeOffset.UtcNow, "  Ana   Núñez ");
 
-        Assert.Equal("Ana O'Brien", merchant.OwnerName);
+        Assert.Equal("Ana Núñez", merchant.OwnerName);
         Assert.Equal(MerchantStatus.PendingBankAccount, merchant.Status);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("123")]
+    [InlineData("O'Brien")]
     public void Register_rechaza_un_nombre_invalido(string name) =>
         Assert.Throws<ArgumentException>(() => Merchant.Register("user-1", DateTimeOffset.UtcNow, name));
 

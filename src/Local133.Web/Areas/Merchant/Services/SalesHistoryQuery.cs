@@ -137,8 +137,8 @@ public static class SalesHistoryQuery
 
 /// <summary>
 /// Búsqueda del historial (5.9, Pro): por folio o por el concepto que escribió el vendedor, sin distinguir mayúsculas
-/// ni acentos. No busca en el nombre del negocio que antecede al concepto («Tacos Juan · 2 tacos»): si no, «tacos»
-/// encontraría todas las ventas.
+/// ni acentos. En las ventas anteriores al 2026-11-26, que guardan «Tacos Juan · 2 tacos», no busca en el nombre del
+/// negocio: si no, «tacos» encontraría todas. Las ventas nuevas guardan solo el concepto y se busca en todo él.
 /// </summary>
 public static class SaleSearch
 {
@@ -188,7 +188,7 @@ public static class SaleSearch
         var escaped = EscapeLike(query);
 
         // Ni el nombre del negocio ni el concepto admiten «·», así que el separador aparece a lo más una vez: lo que
-        // va después de él es el concepto. Las ventas sin negocio guardan solo el concepto.
+        // va después de él es el concepto. Las ventas sin negocio, y todas desde el 2026-11-26, guardan solo el concepto.
         var afterSeparator = "%" + Sale.ConceptSeparator + "%" + escaped + "%";
         var withSeparator = "%" + Sale.ConceptSeparator + "%";
         var anywhere = "%" + escaped + "%";

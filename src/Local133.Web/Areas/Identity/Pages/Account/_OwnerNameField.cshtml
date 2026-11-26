@@ -3,7 +3,7 @@
 @* Nombre de la persona en el alta (4.0). Uso: <partial name="_OwnerNameField" for="Input" /> *@
 <div class="form-floating mb-3">
     <input asp-for="OwnerName" type="text" class="form-control" autocomplete="name" autocapitalize="words"
-           maxlength="@PersonName.MaxLength" aria-required="true" placeholder="Tu nombre" data-val-trim />
+           maxlength="@PersonName.MaxLength" aria-required="true" placeholder="Tu nombre" data-val-trim data-letters-only />
     <label asp-for="OwnerName"></label>
     <span asp-validation-for="OwnerName" class="text-danger small"></span>
     <div class="form-text">Así te saludaremos en Local133.</div>

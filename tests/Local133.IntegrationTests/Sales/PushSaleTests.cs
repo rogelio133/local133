@@ -63,7 +63,7 @@ public partial class PushSaleTests(Local133WebFactory factory) : SaleFlowTestBas
         Assert.Equal("5512345678", sent.PhoneNumber);
         Assert.Equal(SystemSettings.DefaultSaleQrExpirationSeconds, sent.ExpirationSeconds);
         Assert.Equal(1, sent.NumRef);
-        Assert.Equal("Tacos Don Ramón · 2 tacos al pastor", sent.Concept);
+        Assert.Equal("2 tacos al pastor", sent.Concept);
         Assert.Equal(await PeyBankAccountIdAsync(), sent.BankAccountId);
         Assert.NotNull(sent.Metadata);
         Assert.Equal(SaleMetadata.SaleKind, sent.Metadata[SaleMetadata.KindKey]);

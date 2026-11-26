@@ -46,7 +46,8 @@ public class ProfileController(
         var data = await LoadAsync(cancellationToken);
         if (ModelState.IsValid)
         {
-            var command = new SaveProfileCommand(data.MerchantId, input.OwnerName, input.BusinessName, input.Address, input.PhoneNumber);
+            var command = new SaveProfileCommand(
+                data.MerchantId, input.OwnerName, input.BusinessName, input.Address, input.PhoneNumber, input.DefaultConcept);
             switch (await profile.SaveAsync(command, cancellationToken))
             {
                 case SaveProfileResult.Saved saved:

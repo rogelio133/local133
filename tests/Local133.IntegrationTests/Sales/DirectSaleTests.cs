@@ -99,7 +99,7 @@ public partial class DirectSaleTests(Local133WebFactory factory) : WebTestBase(f
         Assert.Equal(150.50m, sent.Amount);
         Assert.Equal(600, sent.ExpirationSeconds);
         Assert.Equal(1, sent.NumRef);
-        Assert.Equal("Tacos Don Ramón · 2 tacos al pastor", sent.Concept);
+        Assert.Equal("2 tacos al pastor", sent.Concept); // sin el nombre del negocio (ajustes 2026-11-26)
         Assert.Equal(await PeyBankAccountIdAsync(Email), sent.BankAccountId);
         Assert.NotNull(sent.Metadata);
         Assert.Equal(SaleMetadata.SaleKind, sent.Metadata[SaleMetadata.KindKey]);
@@ -108,7 +108,7 @@ public partial class DirectSaleTests(Local133WebFactory factory) : WebTestBase(f
 
         Assert.Equal(1, sale.Folio);
         Assert.Equal(150.50m, sale.Amount);
-        Assert.Equal("Tacos Don Ramón · 2 tacos al pastor", sale.Concept);
+        Assert.Equal("2 tacos al pastor", sale.Concept);
         Assert.Equal(SaleStatus.Pending, sale.Status);
         Assert.Equal(ChargeMethod.DynamicQr, sale.Method);
         Assert.Equal(SaleSource.DirectAmount, sale.Source);
@@ -122,7 +122,7 @@ public partial class DirectSaleTests(Local133WebFactory factory) : WebTestBase(f
         Assert.Contains("data-expired=\"false\"", html);
         Assert.Contains("Venta 1", html);
         Assert.Contains("$150.50", html);
-        Assert.Contains("data-sale-concept>Tacos Don Ramón · 2 tacos al pastor<", html);
+        Assert.Contains("data-sale-concept>2 tacos al pastor<", html);
         Assert.Contains($"data-qr-string=\"{sale.QrString}\"", html);
         Assert.Matches(ExpiresInRegex(), html);
         Assert.Contains("/lib/qrcodejs/qrcode.min", html);
@@ -166,15 +166,53 @@ public partial class DirectSaleTests(Local133WebFactory factory) : WebTestBase(f
         Assert.Empty(await LoadSalesAsync(Email));
     }
 
-    [Fact]
-    public async Task Sin_nombre_de_negocio_el_concepto_es_solo_el_texto_capturado()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Tacos Don Ramón")]
+    public async Task El_concepto_es_solo_el_texto_capturado_con_o_sin_nombre_de_negocio(string? businessName)
     {
-        var client = await ActiveMerchantAsync(Email);
+        var client = await ActiveMerchantAsync(Email, businessName: businessName);
 
         await ChargeAsync(client, "10", "  Café con pan  ");
 
         Assert.Equal("Café con pan", Assert.Single(Factory.Gateway.CodiQrRequests).Concept);
         Assert.Equal("Café con pan", Assert.Single(await LoadSalesAsync(Email)).Concept);
+    }
+
+    [Fact]
+    public async Task El_formulario_precarga_el_concepto_por_defecto_de_mi_informacion()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.DefaultConcept = "Consumo");
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.Matches(new Regex("<input(?=[^>]*name=\"Input.Concept\")(?=[^>]*value=\"Consumo\")[^>]*>"), html);
+        Assert.Contains("Tu cliente lo verá en su app bancaria.", html);
+        Assert.DoesNotContain("junto con el nombre de tu negocio", html);
+    }
+
+    [Fact]
+    public async Task Sin_concepto_por_defecto_el_campo_va_vacio()
+    {
+        var client = await ActiveMerchantAsync(Email);
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.DoesNotMatch(new Regex("<input(?=[^>]*name=\"Input.Concept\")(?=[^>]*value=\"[^\"]+\")[^>]*>"), html);
+    }
+
+    [Fact]
+    public async Task Tras_un_error_se_conserva_lo_capturado_y_no_el_concepto_por_defecto()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.DefaultConcept = "Consumo");
+
+        var response = await ChargeAsync(client, "abc", "Refresco");
+
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Contains("value=\"Refresco\"", html);
+        Assert.DoesNotContain("value=\"Consumo\"", html);
     }
 
     [Theory]

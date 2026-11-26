@@ -256,3 +256,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Publicar las dos apps juntas** (portal y portada): las dos cambian el logo, el `favicon.ico`, el `apple-touch-icon.png` y el `icon-192.png`, y se borraron `local133.svg` e `img/local133-invertido.svg`. Si se publica una sola, las dos marcas no coinciden mientras tanto.
 - **Correo**: el logo nuevo se sirve desde el portal (`/img/email/local133-email-logo.png?v=2`). Los correos viejos piden `?v=1` y reciben el PNG nuevo (mismo archivo); Gmail tiene en caché el viejo por la URL vieja.
 - Los navegadores guardan el favicon en caché por su cuenta: tras publicar, el ícono de la pestaña puede tardar en cambiar.
+
+### Ajustes 2026-11-26 — Bloque 2: concepto del cobro y «Mi información»
+- **Migración `MerchantDefaultConcept`** (columna `Merchants.DefaultConcept`, `nvarchar(100)` nula): se aplica sola al arrancar (`DatabaseMigrationSetup`). Es aditiva; no toca datos.
+- Sin recursos, App Settings ni secretos nuevos. El concepto que va a Pey ya no lleva el nombre del negocio; la llamada y el webhook no cambian.

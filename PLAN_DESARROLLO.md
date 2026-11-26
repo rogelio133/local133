@@ -14,7 +14,8 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 - **Formularios de Identity a prueba de doble envío** (botón deshabilitado al enviar y, si el login llega dos veces con la sesión ya iniciada, redirección en vez del 400). *(Corrección 2026-11-26 por un error en producción, [bitácora](log_plan/mantenimiento-doble-envio-login.md).)*
 - **Ajustes 2026-11-26** (marca, navegación con sesión, concepto del cobro, «Mi información», recibo, Ventas, «Más», PWA, menú del admin y categorías), por bloques según el [documento de los ajustes](actualizaciones/ajustes_2026_11_26.md#implementación):
   - ✅ Bloque 1, marca y navegación (logo `01.png` en Web y en la portada, «Local133» junto al logo, la barra según el rol, `returnUrl` solo del área del rol, `/` con sesión redirige y home sin barra), 2026-11-26, [bitácora](log_plan/ajustes-2026-11-26-marca-y-navegacion.md);
-  - pendientes: bloque 2 (concepto y «Mi información»), 3 (pantallas del vendedor), 4 (PWA), 5 (menú del admin) y 6 (categorías).
+  - ✅ Bloque 2, concepto y «Mi información» (el concepto a Pey ya no lleva el nombre del negocio, concepto por defecto que precarga Cobrar › Monto, nombre de la persona solo con letras), 2026-11-26, [bitácora](log_plan/ajustes-2026-11-26-concepto-y-mi-informacion.md);
+  - pendientes: bloques 3 (pantallas del vendedor), 4 (PWA), 5 (menú del admin) y 6 (categorías).
 - La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
 - **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
@@ -254,6 +255,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 
 **Confirmar con soporte de Pey** (ver también §6):
 - [2.4](log_plan/fase-2.4-venta-monto-directo.md): límite del `concept` y que `qrString` sea solo ASCII.
+- [Ajustes 2026-11-26, bloque 2](log_plan/ajustes-2026-11-26-concepto-y-mi-informacion.md): si el pagador ve el nombre del titular de la cuenta en su app, ahora que el concepto ya no lleva el nombre del negocio.
 - [2.5](log_plan/fase-2.5-tiempo-real.md): tolerancia del timestamp del webhook, política de reintentos y si un QR con monto acepta varios pagos.
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): qué responde si el celular no tiene CoDi (¿400 o 200 sin que llegue nada?) y si hay aviso de rechazo del pagador.
 - [2.9](log_plan/fase-2.9-conciliacion.md): límites de peticiones (la conciliación hace unas 4 consultas por venta no pagada).

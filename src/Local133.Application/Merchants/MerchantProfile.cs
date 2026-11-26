@@ -31,10 +31,12 @@ public sealed record MerchantProfileData(
     string? Email,
     string? LogoKey,
     string? ShopPhotoKey,
-    bool CanEdit);
+    bool CanEdit,
+    string? DefaultConcept);
 
 /// <summary>Lo que escribió el vendedor; el servicio lo valida y lo normaliza (el teléfono puede venir con espacios o +52).</summary>
-public sealed record SaveProfileCommand(int MerchantId, string? OwnerName, string? BusinessName, string? Address, string? PhoneNumber);
+public sealed record SaveProfileCommand(
+    int MerchantId, string? OwnerName, string? BusinessName, string? Address, string? PhoneNumber, string? DefaultConcept);
 
 /// <summary>Textos de los datos generales de «Mi información».</summary>
 public static class ProfileMessages
@@ -43,13 +45,13 @@ public static class ProfileMessages
 
     public const string OwnerNameTooLong = "Tu nombre puede tener hasta 100 caracteres.";
 
-    public const string OwnerNameInvalid = "Usa solo letras, espacios, punto, guion y apóstrofo.";
+    public const string OwnerNameInvalid = "Escribe solo letras y espacios.";
 
     public const string BusinessNameRequired = "Escribe el nombre de tu negocio.";
 
     public const string BusinessNameTooLong = "El nombre del negocio puede tener hasta 120 caracteres.";
 
-    /// <summary>Mismos caracteres que el concepto del cobro (el nombre va al inicio de cada concepto).</summary>
+    /// <summary>Mismos caracteres que el concepto del cobro.</summary>
     public const string BusinessNameInvalid = "Usa solo letras, números, espacios y . , - # / ( )";
 
     public const string AddressTooLong = "La dirección puede tener hasta 200 caracteres.";
@@ -59,6 +61,11 @@ public static class ProfileMessages
     public const string AddressInvalid = "La dirección tiene caracteres que no se permiten.";
 
     public const string PhoneInvalid = "Escribe un teléfono de 10 dígitos, por ejemplo 55 1234 5678.";
+
+    /// <summary>Concepto por defecto: los mismos textos del concepto del cobro.</summary>
+    public const string DefaultConceptTooLong = Sales.SaleConceptMessages.TooLong;
+
+    public const string DefaultConceptInvalid = Sales.SaleConceptMessages.Invalid;
 
     public const string ReadOnly = "Tu cuenta está dada de baja: no puedes modificar tu información.";
 
@@ -82,7 +89,7 @@ public abstract record SaveProfileResult
     /// <param name="PhoneChanged">Cambió el celular de la cuenta (y su security stamp): hay que refrescar la cookie.</param>
     public sealed record Saved(bool PhoneChanged) : SaveProfileResult;
 
-    /// <summary>Datos inválidos; llave = propiedad del comando (<c>OwnerName</c>, <c>BusinessName</c>, <c>Address</c>, <c>PhoneNumber</c>).</summary>
+    /// <summary>Datos inválidos; llave = propiedad del comando (<c>OwnerName</c>, <c>BusinessName</c>, <c>Address</c>, <c>PhoneNumber</c>, <c>DefaultConcept</c>).</summary>
     public sealed record Invalid(IReadOnlyDictionary<string, string[]> Errors) : SaveProfileResult;
 
     /// <summary>Vendedor dado de baja: solo lectura.</summary>

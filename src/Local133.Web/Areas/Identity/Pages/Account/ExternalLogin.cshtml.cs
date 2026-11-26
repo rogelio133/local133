@@ -177,8 +177,7 @@ public class ExternalLoginModel(
 
     /// <summary>
     /// Nombre que manda el proveedor, para proponerlo en el alta: el nombre completo o, sin él, nombre y apellido.
-    /// Normalizado y recortado; se propone aunque traiga caracteres no permitidos (el usuario lo corrige y la
-    /// validación lo marca).
+    /// Limpio con <see cref="PersonName.Clean"/> (solo letras y espacios: «O'Brien» ⇒ «O Brien») y recortado.
     /// </summary>
     private static string ProviderName(ExternalLoginInfo info)
     {
@@ -188,7 +187,7 @@ public class ExternalLoginModel(
             name = $"{info.Principal.FindFirstValue(ClaimTypes.GivenName)} {info.Principal.FindFirstValue(ClaimTypes.Surname)}";
         }
 
-        name = PersonName.Normalize(name);
+        name = PersonName.Clean(name);
         return name.Length == 0 ? null : name[..Math.Min(name.Length, PersonName.MaxLength)].TrimEnd();
     }
 

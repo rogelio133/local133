@@ -4,10 +4,11 @@ using Local133.Domain.Sales;
 namespace Local133.Domain.Merchants;
 
 /// <summary>
-/// Nombre del negocio (<see cref="Merchant.BusinessName"/>), editable en «Mi información» (4.1). Va al inicio del
-/// concepto de cada cobro (<see cref="Sale.BuildConcept"/>), así que usa los mismos caracteres que el concepto
-/// (<see cref="Sale.ConceptTextPattern"/>), con al menos una letra o número. Por eso nunca lleva el separador
-/// <c>·</c> y <see cref="Sale.ConceptTextOf"/> puede quitarlo aunque el negocio cambie de nombre.
+/// Nombre del negocio (<see cref="Merchant.BusinessName"/>), editable en «Mi información» (4.1). Aparece en el recibo,
+/// el catálogo y el alias de la cuenta bancaria. Usa los mismos caracteres que el concepto
+/// (<see cref="Sale.ConceptTextPattern"/>), con al menos una letra o número. Hasta el 2026-11-26 iba al inicio del
+/// concepto de cada cobro; como nunca lleva el separador <c>·</c>, <see cref="Sale.ConceptTextOf"/> lo quita de esas
+/// ventas viejas aunque el negocio cambie de nombre.
 /// </summary>
 public static partial class BusinessName
 {

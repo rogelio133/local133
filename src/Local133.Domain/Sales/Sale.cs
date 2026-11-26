@@ -25,12 +25,15 @@ public partial class Sale : Entity
     /// </summary>
     public const string ConceptTextPattern = @"^[A-Za-z0-9ÁÉÍÓÚÜÑáéíóúüñ .,\-#/()]+$";
 
-    /// <summary>Separador entre el nombre del negocio y el concepto.</summary>
+    /// <summary>
+    /// Separador entre el nombre del negocio y el concepto en las ventas anteriores al 2026-11-26 («Tacos Don Ramón ·
+    /// 2 tacos»). Las ventas nuevas guardan solo el concepto del vendedor.
+    /// </summary>
     public const string ConceptSeparator = " · ";
 
     /// <summary>
-    /// Concepto completo enviado a Pey y guardado: negocio + separador + concepto del vendedor. Pey no documenta un
-    /// límite para <c>concept</c>.
+    /// Concepto guardado (columna <c>nvarchar(250)</c>). Las ventas viejas traen «negocio · concepto»; las nuevas, solo
+    /// el concepto del vendedor (hasta <see cref="ConceptTextMaxLength"/>). Pey no documenta un límite para <c>concept</c>.
     /// </summary>
     public const int ConceptMaxLength = 250;
 
@@ -217,19 +220,11 @@ public partial class Sale : Entity
         return trimmed.Length <= ConceptTextMaxLength && ConceptTextRegex().IsMatch(trimmed);
     }
 
-    /// <summary>Lo que ve el pagador en su app: "Tacos Don Ramón · 2 tacos al pastor", o solo el concepto si el negocio no tiene nombre.</summary>
-    public static string BuildConcept(string? businessName, string conceptText)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(conceptText);
-        var text = conceptText.Trim();
-        return string.IsNullOrWhiteSpace(businessName) ? text : $"{businessName.Trim()}{ConceptSeparator}{text}";
-    }
-
     /// <summary>
-    /// Lo que escribió el vendedor, sin el nombre del negocio que <see cref="BuildConcept"/> antepone: lo que sigue al
-    /// <b>último</b> <see cref="ConceptSeparator"/>. El texto del vendedor nunca lleva <c>·</c>
+    /// Lo que escribió el vendedor. Las ventas anteriores al 2026-11-26 guardaban «negocio · concepto»: de ellas se
+    /// toma lo que sigue al <b>último</b> <see cref="ConceptSeparator"/>. El texto del vendedor nunca lleva <c>·</c>
     /// (<see cref="ConceptTextPattern"/>), así que funciona aunque el negocio haya cambiado de nombre en «Mi
-    /// información» (4.1) o su nombre viejo trajera el separador. Sin separador, el concepto completo.
+    /// información» (4.1) o su nombre viejo trajera el separador. Sin separador (toda venta nueva), el concepto completo.
     /// </summary>
     public static string? ConceptTextOf(string? concept)
     {

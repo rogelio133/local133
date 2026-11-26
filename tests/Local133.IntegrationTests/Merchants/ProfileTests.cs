@@ -43,15 +43,16 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
     {
         var client = await MerchantClientAsync(Email);
 
-        var response = await SaveAsync(client, "  María José  O’Brien ", "  Tacos   Don Ramón ", "+52 55 1234 5678",
-            "  Tianguis de los martes \r\n\r\n pasillo 4 ");
+        var response = await SaveAsync(client, "  María José  Núñez ", "  Tacos   Don Ramón ", "+52 55 1234 5678",
+            "  Tianguis de los martes \r\n\r\n pasillo 4 ", "  Consumo  ");
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal(Url, Location(response));
         var merchant = await WithDbAsync(db => MerchantOfAsync(db, Email));
-        Assert.Equal("María José O'Brien", merchant.OwnerName);
+        Assert.Equal("María José Núñez", merchant.OwnerName);
         Assert.Equal("Tacos Don Ramón", merchant.BusinessName);
         Assert.Equal("Tianguis de los martes\npasillo 4", merchant.Address);
+        Assert.Equal("Consumo", merchant.DefaultConcept);
         var user = await WithDbAsync(db => db.Users.AsNoTracking().SingleAsync(u => u.Email == Email));
         Assert.Equal("5512345678", user.PhoneNumber);
         Assert.False(user.PhoneNumberConfirmed);
@@ -60,7 +61,34 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, Url));
         Assert.Contains(ProfileMessages.Saved, html);
         Assert.Contains("value=\"5512345678\"", html);
+        Assert.Contains("value=\"Consumo\"", html);
         Assert.Contains("Hola, María", await GetHtmlAsync(client, "/app"));
+    }
+
+    [Fact]
+    public async Task El_concepto_por_defecto_vacio_se_borra()
+    {
+        var client = await MerchantClientAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.DefaultConcept = "Consumo");
+
+        var response = await SaveAsync(client, "María López", "Tacos", "", "", "   ");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Null((await WithDbAsync(db => MerchantOfAsync(db, Email))).DefaultConcept);
+    }
+
+    [Fact]
+    public async Task Un_nombre_guardado_con_signos_se_propone_solo_con_letras()
+    {
+        // Ajustes 2026-11-26: los nombres anteriores con «.», «-» o «'» no se migran; se proponen limpios para que
+        // guardar no falle.
+        var client = await MerchantClientAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.OwnerName = "Ma. José O'Brien");
+
+        var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, Url));
+
+        Assert.Contains("value=\"Ma José O Brien\"", html);
+        Assert.Contains("Hola, Ma.", WebUtility.HtmlDecode(await GetHtmlAsync(client, "/app"))); // el saludo sigue igual
     }
 
     [Fact]
@@ -79,6 +107,9 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
     [Theory]
     [InlineData("", "Tacos", "", "", ProfileMessages.OwnerNameRequired)]
     [InlineData("María 2", "Tacos", "", "", ProfileMessages.OwnerNameInvalid)]
+    [InlineData("O'Brien", "Tacos", "", "", ProfileMessages.OwnerNameInvalid)]
+    [InlineData("Ma. Luisa", "Tacos", "", "", ProfileMessages.OwnerNameInvalid)]
+    [InlineData("Ana-Luisa", "Tacos", "", "", ProfileMessages.OwnerNameInvalid)]
     [InlineData("María", "   ", "", "", ProfileMessages.BusinessNameRequired)]
     [InlineData("María", "Tacos · Don Ramón", "", "", ProfileMessages.BusinessNameInvalid)]
     [InlineData("María", "<b>Tacos</b>", "", "", ProfileMessages.BusinessNameInvalid)]
@@ -98,6 +129,23 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         Assert.Equal(OwnerName, merchant.OwnerName);
         Assert.Equal("Negocio", merchant.BusinessName);
         Assert.Null(merchant.Address);
+    }
+
+    [Theory]
+    [InlineData("Tacos · Consumo", ProfileMessages.DefaultConceptInvalid)]
+    [InlineData("Taco 🌮", ProfileMessages.DefaultConceptInvalid)]
+    [InlineData(null, ProfileMessages.DefaultConceptTooLong)] // 101 caracteres
+    public async Task Concepto_por_defecto_invalido_no_guarda_nada(string? concept, string message)
+    {
+        var client = await MerchantClientAsync(Email);
+
+        var response = await SaveAsync(client, "María López", "Tacos", "", "", concept ?? new string('a', DefaultConcept.MaxLength + 1));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Contains(message, html);
+        Assert.Contains("data-valmsg-for=\"Input.DefaultConcept\"", html);
+        Assert.Null((await WithDbAsync(db => MerchantOfAsync(db, Email))).DefaultConcept);
     }
 
     [Fact]
@@ -126,6 +174,13 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         Assert.Contains("data-val-maxlines-max=\"3\"", html);
         Assert.Contains("maxlength=\"200\"", html);
         Assert.Contains("/js/image-upload.", html);
+        Assert.Contains("name=\"Input.DefaultConcept\"", html);
+        Assert.Contains($"data-val-regex-pattern=\"{DefaultConcept.Pattern}\"", html);
+        Assert.Contains($"data-val-length=\"{ProfileMessages.DefaultConceptTooLong}\"", html);
+        Assert.Contains($"maxlength=\"{DefaultConcept.MaxLength}\"", html);
+        Assert.Contains("data-letters-only", html);
+        Assert.Contains("/js/letters-input.", html);
+        Assert.Contains("Aparece en tus recibos y en tu catálogo en línea.", html);
     }
 
     [Fact]
@@ -368,15 +423,15 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
     public async Task Una_venta_vieja_se_sigue_viendo_bien_al_renombrar_el_negocio()
     {
         var client = await ActiveMerchantAsync(Email);
-        var sale = await ChargeAsync(client, concept: "2 tacos al pastor");
-        Assert.Equal("Tacos Don Ramón · 2 tacos al pastor", sale.Concept);
+        // Venta anterior al 2026-11-26: el concepto guardado llevaba el nombre del negocio.
+        var old = await InsertSaleAsync(Email, 10m, DateTimeOffset.UtcNow.AddMinutes(-5), concept: "Tacos Don Ramón · 2 tacos al pastor");
 
         Assert.Equal(HttpStatusCode.Redirect, (await SaveAsync(client, "María López", "Taquería Nueva", "", "")).StatusCode);
 
-        var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, $"/app/ventas/{sale.Id}"));
+        var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, $"/app/ventas/{old.Id}"));
         Assert.Contains("data-sale-concept>2 tacos al pastor</p>", html);
         var next = await ChargeAsync(client, concept: "Refresco");
-        Assert.Equal("Taquería Nueva · Refresco", next.Concept);
+        Assert.Equal("Refresco", next.Concept);
     }
 
     // --- Ayudas ------------------------------------------------------------------------------------------------------
@@ -389,13 +444,15 @@ public class ProfileTests(Local133WebFactory factory) : SaleFlowTestBase(factory
         return client;
     }
 
-    private static Task<HttpResponseMessage> SaveAsync(HttpClient client, string owner, string business, string phone, string address) =>
+    private static Task<HttpResponseMessage> SaveAsync(
+        HttpClient client, string owner, string business, string phone, string address, string defaultConcept = "") =>
         PostFormAsync(client, Url, new Dictionary<string, string>
         {
             ["Input.OwnerName"] = owner,
             ["Input.BusinessName"] = business,
             ["Input.PhoneNumber"] = phone,
             ["Input.Address"] = address,
+            ["Input.DefaultConcept"] = defaultConcept,
         });
 
     private static Task<HttpResponseMessage> UploadAsync(HttpClient client, string url, byte[] content, string fileName) =>
