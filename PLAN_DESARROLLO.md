@@ -2,7 +2,7 @@
 
 ## 1. Contexto
 
-Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos) cobren con CoDi usando la API de Pey. El vendedor se registra, da de alta su cuenta bancaria, y cobra generando un QR (carrito o monto directo). El negocio cobra una **suscripción**: un plan gratuito con límites y un plan Pro de $199 al mes o $1,990 al año (IVA incluido), con 30 días de prueba, que se paga con el link de pago de Pey. *(Cambio 2026-11-18: reemplaza la comisión del 3 % por venta, agrupada en estados de cuenta semanales. Diseño en [actualizaciones/suscripciones_2026_11_18.md](actualizaciones/suscripciones_2026_11_18.md).)*
+Plataforma para que vendedores informales (tianguis, mercados, bazares, puestos) cobren con CoDi usando la API de Pey. El vendedor se registra, da de alta su cuenta bancaria, y cobra generando un QR (carrito o monto directo). El negocio cobra una **suscripción**: un plan gratuito con límites y un plan Pro de $199 al mes o $1,990 al año (IVA incluido), con 30 días de prueba, que se paga con el link de pago de Pey. *(Cambio 2026-11-18: reemplaza la comisión del 3 % por venta, agrupada en estados de cuenta semanales. Diseño en [actualizaciones/suscripciones_2026_11_18.md](actualizaciones/suscripciones_2026_11_18.md).)* *(Cambio 2026-11-26, pendiente de implementar en la 5.12–5.18: se quita el gratuito. Quedan Básico ($99, o $69 para fundadores) y Pro ($199, o $149 para fundadores), con una prueba de Pro de 15 días que empieza con el primer cobro pagado. Al vencer, el vendedor no genera cobros hasta que paga, y el pago es un checkout por pasos. Diseño en [actualizaciones/planes_basico_pro_2026_11_26.md](actualizaciones/planes_basico_pro_2026_11_26.md).)*
 
 Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
 
@@ -16,7 +16,7 @@ Repositorio vacío (`c:\personalprojects\local133`): proyecto desde cero.
   - ✅ Bloque 1, marca y navegación (logo `01.png` en Web y en la portada, «Local133» junto al logo, la barra según el rol, `returnUrl` solo del área del rol, `/` con sesión redirige y home sin barra), 2026-11-26, [bitácora](log_plan/ajustes-2026-11-26-marca-y-navegacion.md);
   - ✅ Bloque 2, concepto y «Mi información» (el concepto a Pey ya no lleva el nombre del negocio, concepto por defecto que precarga Cobrar › Monto, nombre de la persona solo con letras), 2026-11-26, [bitácora](log_plan/ajustes-2026-11-26-concepto-y-mi-informacion.md);
   - pendientes: bloques 3 (pantallas del vendedor), 4 (PWA), 5 (menú del admin) y 6 (categorías).
-- La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)*
+- La suscripción se paga con **link de pago de Pey** (cae en la cuenta de la plataforma) y se concilia por webhook. Tiene 5 días de gracia; si no paga, el vendedor **baja solo al plan gratuito**, sin suspensión. *(Cambio 2026-11-18: antes, estado de cuenta semanal pagado con QR CoDi y suspensión por falta de pago.)* *(Cambio 2026-11-26, desde la 5.12: sin gratuito. Al terminar la gracia, la prueba, un premio o un regalo, el vendedor queda **vencido**: no genera cobros, pero conserva el acceso de lectura y puede pagar. Sigue sin haber suspensión por falta de pago. El pago es un **checkout por pasos** (plan, duración, resumen del pedido, Pey y confirmación con comprobante). [Diseño](actualizaciones/planes_basico_pro_2026_11_26.md).)*
 - **CLABE única** entre vendedores y **programa de afiliados**: un código por vendedor; 10 días de Pro por cada referido que pague y 30 % de un mes para el referido. *(2026-11-18)*
 - Además del QR dinámico: **QR fijo del puesto**, **cobro por número celular** y **recibo compartible**.
 
@@ -71,8 +71,10 @@ enum SaleSource      { Cart, DirectAmount, OpenAmount }      // OpenAmount = QR 
 enum SaleStatus      { Pending, Paid, Expired, Cancelled }
 enum SuspensionReason{ Admin, BankAccountError }             // la falta de pago ya no suspende (2026-11-18)
 enum PlanTier        { Onboarding, Trial, Pro, Grace, Free } // calculado, no se guarda
+                                                             // 5.12: { Onboarding, Trial, Basic, Pro, Grace, Expired }
+enum SubscriptionPlan         { Basic, Pro }                 // 5.12, en periodos y cargos
 enum SubscriptionPackage      { OneMonth, ThreeMonths, SixMonths, Annual }
-enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant }
+enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant } // 5.12: + Conversion, Transition
 enum SubscriptionChargeStatus { Pending, Processing, Paid, Partial, Failed }
 ```
 
@@ -224,6 +226,37 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     ✅ *(hecho 2026-11-24; la marca del recibo sigue el plan al abrir la liga, «Cobrado con Local133» lleva a la portada con el código y el resumen va solo a quien cobró en el mes)* — [bitácora](log_plan/fase-5.10-valor-visible.md)
 11. **Precios y textos legales**: planes en la portada, con «Próximamente» y lugares de fundador; términos con uso justo, referidos, fundador y cancelación; aviso de privacidad; revisión legal. ✅ *(textos legales hechos el 2026-11-24, versión `2026-11-24`, con marcadores para el responsable y el contacto y pendientes de revisión legal; la sección «Planes» de la portada quedó pendiente y se hizo el 2026-11-25 con la portada nueva, con los precios escritos en la vista)* — [bitácora](log_plan/fase-5.11-textos-legales.md) · [portada nueva](log_plan/portada-nueva.md) · el 2026-11-25 los textos legales se movieron a la portada (el portal redirige con 301), ver [portada nueva](log_plan/portada-nueva.md#textos-legales-en-la-portada-2026-11-25)
 
+*(Cambio 2026-11-26: planes Básico y Pro, y checkout. Reglas, datos y detalle en [actualizaciones/planes_basico_pro_2026_11_26.md](actualizaciones/planes_basico_pro_2026_11_26.md). Las subfases 5.12 a 5.18 se trabajan en una rama y **se publican juntas**.)*
+
+12. **Planes y vigencia v2**:
+    - `SubscriptionPlan` en periodos y cargos, y estados `Basic` y `Expired` en lugar de `Free`;
+    - funciones por estado, precios por plan, fundador y anual congelado por plan;
+    - conversión de Básico a Pro al subir de plan;
+    - migración con la transición de los vendedores existentes.
+
+    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
+13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
+14. **Acceso por plan y vencido**:
+    - el vencido no genera cobros (se valida en el servidor) y ve el banner y la tarjeta para elegir plan;
+    - Básico no tiene carrito, catálogo editable, Excel ni catálogo en línea;
+    - se retira todo lo del gratuito (límite mensual, historial de 30 días y recibo limitado).
+
+    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#514-acceso-por-plan-y-vencido)
+15. **Checkout por pasos**:
+    - plan, duración y resumen del pedido (total, IVA y casilla de términos), sin llamar a Pey hasta «Pagar»;
+    - confirmación con número de pedido, comprobante imprimible y «Tus pedidos» en «Mi plan»;
+    - abono por plan, con conversión y encadenado.
+
+    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#515-checkout-por-pasos)
+16. **Recordatorios, referidos y avisos**:
+    - etapas de vencido y seguimiento del día 7;
+    - premio con el plan de quien invita y descuento por plan;
+    - resumen mensual por plan y anuncio del cambio.
+
+    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
+17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
+18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
+
 ### Fase 6 — Portal administrador (≈1.5 semanas)
 1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan. ✅ *(hecho 2026-11-23; solo lectura, la pestaña Plan con el resumen)* — [bitácora](log_plan/fase-6.1-clientes.md)
 2. **Plan por cliente**: periodos, cargos y pagos de la suscripción, y referidos. Acciones: regalar días, registrar un pago manual y anular un premio. **Parámetros globales**: precios y fundador, días de prueba y de gracia, límites del gratuito, uso justo, premios de referidos, IVA y expiración del QR. Todo con auditoría. ✅ *(hecho 2026-11-24; el pago manual solo abona cargos que ya existen y cuenta igual que uno de Pey; anular un premio quita los días que no se han usado y recorre lo que sigue; revisado en navegador)* — [bitácora](log_plan/fase-6.2-plan-y-parametros.md)
@@ -303,7 +336,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 
 - **Con soporte de Pey**: ¿un QR con monto puede pagarse más de una vez?, ¿hay webhook de rechazo/expiración de push?, política de reintentos de webhooks, límites de cuentas por API key y de peticiones, fecha del sandbox. Del link de pago de la suscripción: quién paga el `fee` con tarjeta y qué es `applicationFee`; si un link puede ofrecer solo CoDi; qué es `partial` y si un link pagado acepta otro pago; si los links expiran o se pueden desactivar; reintentos de `payment_link.status_updated`; si Pey acepta la misma CLABE dos veces ([detalle](actualizaciones/suscripciones_2026_11_18.md#11-por-confirmar)).
 - **Espera de 5 días hábiles** para activar: principal fricción de adopción; mitigar con comunicación clara y notificación inmediata. La prueba de 30 días empieza al activarse la cuenta, así que la espera no le quita días.
-- **Cobranza**: la palanca es la baja al gratuito, que no le quita el cobro básico. Riesgo: que el gratuito alcance y nadie pague; en el piloto, medir la conversión de prueba a pago y cuánto se usa el límite. Los links de Pey no expiran ni se cancelan: un pago tardío siempre se abona. *(Cambio 2026-11-18: antes, la palanca era la suspensión.)*
+- **Cobranza**: la palanca es la baja al gratuito, que no le quita el cobro básico. Riesgo: que el gratuito alcance y nadie pague; en el piloto, medir la conversión de prueba a pago y cuánto se usa el límite. Los links de Pey no expiran ni se cancelan: un pago tardío siempre se abona. *(Cambio 2026-11-18: antes, la palanca era la suspensión.)* *(Cambio 2026-11-26: el riesgo se confirmó en el análisis y se quita el gratuito. La palanca pasa a ser el vencimiento: sin pago no se generan cobros. Riesgo nuevo: menos vendedores entran sin pagar y se pierde publicidad de boca en boca. Se mitiga con la prueba de 15 días al primer cobro, Básico a $99 y el pie «Cobrado con Local133» en el recibo de Básico. En el piloto, medir la conversión de prueba a pago y de Básico a Pro.)*
 - **Fiscal/legal** (validar con contador/abogado): CFDI de la suscripción (fuera de esta implementación; mientras tanto, factura global), precio con IVA incluido, términos (uso justo, referidos, fundador, cancelación y reembolsos), aviso de privacidad (referidos y retención de cuentas inactivas); resguardo de CLABE y datos personales.
 - **Abuso del gratuito** con varias cuentas: CLABE única, y premios de referidos solo cuando el referido paga.
 - **Tarjeta en el link de pago**: si Pey le cobra la comisión al pagador, con tarjeta se paga más que el precio «IVA incluido». Avisarlo en «Mi plan» o pedir que el link ofrezca solo CoDi.
@@ -319,6 +352,10 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   1. Registrarse → capturar CLABE de prueba `012180015826225713` → recibir `bank.account.updated` → estatus `Active`.
   2. Venta por monto directo → escanear QR con app bancaria → pantalla cambia a "Pago recibido" sin recargar → aparece en el historial.
   3. Venta con carrito, cobro por celular y QR fijo.
-  4. Con el precio de prueba en $0.01, pagar un link de suscripción con CoDi → webhook → Pro. Simular el vencimiento → gracia → baja al gratuito (catálogo de solo lectura, carrito bloqueado) → pago → Pro desde el día del pago.
+  4. Con el precio de prueba en $0.01, pagar un link de suscripción con CoDi → webhook → Pro. Simular el vencimiento → gracia → baja al gratuito (catálogo de solo lectura, carrito bloqueado) → pago → Pro desde el día del pago. *(Desde la 5.12:)*
+     - el primer cobro pagado inicia la prueba;
+     - un pedido de Básico por el checkout → webhook → «Básico empieza el …»;
+     - subir a Pro → conversión de los días;
+     - vencimiento → Cobrar bloqueado → pago → vuelve a cobrar ([detalle](actualizaciones/planes_basico_pro_2026_11_26.md#16-verificación)).
   5. Afiliados: registrarse con el código de otro vendedor → primer pago con 30 % de descuento → 10 días más para el que refirió. Admin: cambiar un precio → solo afecta los links nuevos.
 - Exponer el webhook en local con un túnel HTTPS (ngrok / dev tunnels) y revisar "Webhook Logs" en el portal de Pey.
