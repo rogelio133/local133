@@ -160,7 +160,7 @@ public partial class WebhookLogTests(Local133WebFactory factory) : AdminTestBase
         Assert.Contains("\"codiQrId\": \"IDCSINVENTA000000001\"", html);
         Assert.Contains("data-webhook-payload", html);
         Assert.DoesNotContain(TestClabe, list);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/webhooks\""), html);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/webhooks\""), html);
     }
 
     [Fact]

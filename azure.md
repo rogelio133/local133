@@ -272,3 +272,6 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Caché de `sw.js`**: `MapStaticAssets` lo sirve con `Cache-Control: no-cache`. Si algún día se pone un CDN o Front Door delante, **no** debe guardar `/sw.js` (ni `/manifest.webmanifest`), o los navegadores tardarán en recibir la versión nueva.
 - `.webmanifest` lo sirve `MapStaticAssets` como `application/manifest+json`: no hace falta configurar tipos MIME en el App Service.
 - Publicar las dos apps no es necesario aquí: la PWA es solo del portal.
+
+### Ajustes 2026-11-26 — Bloque 5: menú del admin
+- Punto 13 (menú del admin): sin cambios para Azure. Solo vista, CSS y `wwwroot/js/admin-menu.js`; el estado del menú (oculto o visible) se guarda en el navegador (`localStorage`), no en el servidor.

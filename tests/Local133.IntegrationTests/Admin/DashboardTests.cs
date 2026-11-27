@@ -32,7 +32,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         Assert.Contains("data-dashboard-fair-use-empty", html);
         Assert.Contains("data-dashboard-conversion data-ended=\"0\" data-paid=\"0\"", html);
         Assert.DoesNotContain("data-dashboard-webhook-alert", html);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/tablero\""), html);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/tablero\""), html);
         Assert.Contains("data-dashboard-refresh", html);
         Assert.DoesNotContain("data-coming-soon", html);
     }

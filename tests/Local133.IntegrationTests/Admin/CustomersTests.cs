@@ -53,7 +53,7 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
         var html = await GetHtmlAsync(await AdminAsync(), ListUrl);
 
         Assert.Contains("data-customers-empty", html);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/clientes\""), html);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/clientes\""), html);
     }
 
     [Fact]
