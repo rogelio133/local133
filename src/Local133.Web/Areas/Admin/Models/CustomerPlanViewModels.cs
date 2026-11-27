@@ -164,6 +164,8 @@ public static class PlanLabels
         SubscriptionPeriodKind.Paid => "Pagado",
         SubscriptionPeriodKind.ReferralReward => "Premio de referido",
         SubscriptionPeriodKind.AdminGrant => "Regalo del admin",
+        SubscriptionPeriodKind.Conversion => "Conversión a Pro",
+        SubscriptionPeriodKind.Transition => "Transición",
         _ => kind.ToString(),
     };
 
@@ -222,6 +224,7 @@ public static class PlanLabels
         AuditAction.ChargeCreditedManually => "Abono manual",
         AuditAction.ReferralRewardRevoked => "Premio anulado",
         AuditAction.PendingReferralRewardsGranted => "Premios pendientes",
+        AuditAction.PlanTransition => "Transición a Básico",
         _ => action.ToString(),
     };
 }

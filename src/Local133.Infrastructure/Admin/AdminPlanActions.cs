@@ -64,7 +64,7 @@ internal sealed class AdminPlanActions(
 
             var graceDays = await GraceDaysAsync(cancellationToken);
             var before = subscription.ProUntil;
-            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, days, now, graceDays);
+            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, subscription.ChainEndPlan, days, now, graceDays);
             proUntil = subscription.ProUntil;
             await db.SaveChangesAsync(cancellationToken); // id del periodo para la bitácora y el aviso
 

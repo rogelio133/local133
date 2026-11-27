@@ -201,7 +201,7 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
         var annual = await CreateChargeAsync(client, SubscriptionPackage.Annual);
         await PostWebhookAsync(LinkWebhookBody(annual, "paid", (NewTransactionId(), annual.Amount)));
 
-        await WithSettingsAsync(s => s.FounderAnnualPrice = 1690m, async () =>
+        await WithSettingsAsync(s => s.ProFounderAnnualPrice = 1690m, async () =>
         {
             var renewal = await CreateChargeAsync(client, SubscriptionPackage.Annual);
 

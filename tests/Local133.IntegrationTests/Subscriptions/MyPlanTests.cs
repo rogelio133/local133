@@ -188,7 +188,7 @@ public class MyPlanTests(Local133WebFactory factory) : SubscriptionPaymentTestBa
         var client = await TrialMerchantAsync(Email);
         var first = await CreateChargeAsync(client);
 
-        await WithSettingsAsync(s => s.FounderMonthlyPrice = 159m, async () =>
+        await WithSettingsAsync(s => s.ProFounderMonthlyPrice = 159m, async () =>
         {
             var second = await CreateChargeAsync(client);
 

@@ -275,3 +275,14 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 
 ### Ajustes 2026-11-26 — Bloque 5: menú del admin
 - Punto 13 (menú del admin): sin cambios para Azure. Solo vista, CSS y `wwwroot/js/admin-menu.js`; el estado del menú (oculto o visible) se guarda en el navegador (`localStorage`), no en el servidor.
+
+### Fase 5.12 — Planes y vigencia v2 (Básico y Pro)
+- **Se publica junto con la 5.13 a la 5.18** (rama aparte): publicar solo la 5.12 dejaría a los vendedores del gratuito con una transición de Básico sin el checkout para pagarlo.
+- **Migración `BasicAndProPlans`** (corre al arrancar, como las demás):
+  - renombra los precios de `SystemSettings` a `Pro*` y `ProFairUseMonthlyPaid` a `FairUseMonthlyPaid`; agrega los cuatro precios de Básico (99, 990, 69, 690) y pone `TrialDays = 15`;
+  - agrega `Plan` a `SubscriptionPeriods` y `SubscriptionCharges` (lo existente queda en Pro), `LastPlan` y `LockedAnnualPlan` a `Subscriptions`, y `TermsVersion`/`TermsAcceptedAt` a `SubscriptionCharges`;
+  - **crea la transición de los vendedores existentes con la hora del servidor** (`SYSUTCDATETIME()`): 15 días de Básico al gratuito desde ese momento, al que está en prueba al terminarla y al que está en gracia hasta 15 días después. Cada una deja un renglón en `AuditLogs` (`PlanTransition`, actor `sistema`). Por eso **la publicación va en un horario acordado** y se anuncia (el correo del anuncio es de la 5.16).
+  - Corre una sola vez: si se aplicó a mano antes (`dotnet ef database update` o un script), al arrancar no se repite.
+  - Antes de publicar, respaldar la base (o tener a mano un punto de restauración de Azure SQL): el `Down` quita la transición, pero no deshace las conversiones de Básico a Pro que haya después.
+- Las columnas `Free*` de `SystemSettings` se quedan hasta la 5.14, que las borra con su propia migración.
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.

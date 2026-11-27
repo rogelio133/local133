@@ -37,17 +37,17 @@ public static class SystemSettingsRules
     /// </summary>
     public static readonly IReadOnlySet<string> InTerms = new HashSet<string>(StringComparer.Ordinal)
     {
-        nameof(SystemSettings.MonthlyPrice),
-        nameof(SystemSettings.AnnualPrice),
-        nameof(SystemSettings.FounderMonthlyPrice),
-        nameof(SystemSettings.FounderAnnualPrice),
+        nameof(SystemSettings.ProMonthlyPrice),
+        nameof(SystemSettings.ProAnnualPrice),
+        nameof(SystemSettings.ProFounderMonthlyPrice),
+        nameof(SystemSettings.ProFounderAnnualPrice),
         nameof(SystemSettings.FounderSlots),
         nameof(SystemSettings.TrialDays),
         nameof(SystemSettings.GraceDays),
         nameof(SystemSettings.FreeMonthlyPaidLimit),
         nameof(SystemSettings.FreeMonthlyGeneratedLimit),
         nameof(SystemSettings.FreeHistoryDays),
-        nameof(SystemSettings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear),
         nameof(SystemSettings.ReferralWelcomeDiscountRate),
@@ -56,17 +56,17 @@ public static class SystemSettingsRules
     /// <summary>Todos los parámetros editables, en el orden de la pantalla.</summary>
     public static readonly IReadOnlyList<string> Fields =
     [
-        nameof(SystemSettings.MonthlyPrice),
-        nameof(SystemSettings.AnnualPrice),
-        nameof(SystemSettings.FounderMonthlyPrice),
-        nameof(SystemSettings.FounderAnnualPrice),
+        nameof(SystemSettings.ProMonthlyPrice),
+        nameof(SystemSettings.ProAnnualPrice),
+        nameof(SystemSettings.ProFounderMonthlyPrice),
+        nameof(SystemSettings.ProFounderAnnualPrice),
         nameof(SystemSettings.FounderSlots),
         nameof(SystemSettings.TrialDays),
         nameof(SystemSettings.GraceDays),
         nameof(SystemSettings.FreeMonthlyPaidLimit),
         nameof(SystemSettings.FreeMonthlyGeneratedLimit),
         nameof(SystemSettings.FreeHistoryDays),
-        nameof(SystemSettings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear),
         nameof(SystemSettings.ReferralWelcomeDiscountRate),
@@ -81,18 +81,18 @@ public static class SystemSettingsRules
         ArgumentNullException.ThrowIfNull(settings);
         var errors = new List<SettingsError>();
 
-        Price(errors, nameof(SystemSettings.MonthlyPrice), settings.MonthlyPrice);
-        Price(errors, nameof(SystemSettings.AnnualPrice), settings.AnnualPrice);
-        Price(errors, nameof(SystemSettings.FounderMonthlyPrice), settings.FounderMonthlyPrice);
-        Price(errors, nameof(SystemSettings.FounderAnnualPrice), settings.FounderAnnualPrice);
-        if (settings.FounderMonthlyPrice > settings.MonthlyPrice)
+        Price(errors, nameof(SystemSettings.ProMonthlyPrice), settings.ProMonthlyPrice);
+        Price(errors, nameof(SystemSettings.ProAnnualPrice), settings.ProAnnualPrice);
+        Price(errors, nameof(SystemSettings.ProFounderMonthlyPrice), settings.ProFounderMonthlyPrice);
+        Price(errors, nameof(SystemSettings.ProFounderAnnualPrice), settings.ProFounderAnnualPrice);
+        if (settings.ProFounderMonthlyPrice > settings.ProMonthlyPrice)
         {
-            errors.Add(new(nameof(SystemSettings.FounderMonthlyPrice), "El precio de fundador no puede ser mayor que el normal."));
+            errors.Add(new(nameof(SystemSettings.ProFounderMonthlyPrice), "El precio de fundador no puede ser mayor que el normal."));
         }
 
-        if (settings.FounderAnnualPrice > settings.AnnualPrice)
+        if (settings.ProFounderAnnualPrice > settings.ProAnnualPrice)
         {
-            errors.Add(new(nameof(SystemSettings.FounderAnnualPrice), "El precio de fundador no puede ser mayor que el normal."));
+            errors.Add(new(nameof(SystemSettings.ProFounderAnnualPrice), "El precio de fundador no puede ser mayor que el normal."));
         }
 
         Range(errors, nameof(SystemSettings.FounderSlots), settings.FounderSlots, 0, MaxCount);
@@ -113,7 +113,7 @@ public static class SystemSettingsRules
         }
 
         Range(errors, nameof(SystemSettings.FreeHistoryDays), settings.FreeHistoryDays, 1, MaxHistoryDays);
-        Range(errors, nameof(SystemSettings.ProFairUseMonthlyPaid), settings.ProFairUseMonthlyPaid, 1, MaxCount);
+        Range(errors, nameof(SystemSettings.FairUseMonthlyPaid), settings.FairUseMonthlyPaid, 1, MaxCount);
         Range(errors, nameof(SystemSettings.ReferralRewardDays), settings.ReferralRewardDays, 1, MaxRewardDays);
         Range(errors, nameof(SystemSettings.ReferralRewardsPerYear), settings.ReferralRewardsPerYear, 0, MaxRewardsPerYear);
         Rate(errors, nameof(SystemSettings.ReferralWelcomeDiscountRate), settings.ReferralWelcomeDiscountRate, MaxWelcomeDiscountRate);
@@ -143,22 +143,25 @@ public static class SystemSettingsRules
         return changes;
     }
 
-    /// <summary>Copia los parámetros editables (no el id).</summary>
+    /// <summary>
+    /// Copia los parámetros editables (no el id). Los precios de Básico todavía no se editan en la pantalla: entran aquí
+    /// con sus reglas en la 5.17.
+    /// </summary>
     public static void CopyValues(SystemSettings from, SystemSettings to)
     {
         ArgumentNullException.ThrowIfNull(from);
         ArgumentNullException.ThrowIfNull(to);
-        to.MonthlyPrice = from.MonthlyPrice;
-        to.AnnualPrice = from.AnnualPrice;
-        to.FounderMonthlyPrice = from.FounderMonthlyPrice;
-        to.FounderAnnualPrice = from.FounderAnnualPrice;
+        to.ProMonthlyPrice = from.ProMonthlyPrice;
+        to.ProAnnualPrice = from.ProAnnualPrice;
+        to.ProFounderMonthlyPrice = from.ProFounderMonthlyPrice;
+        to.ProFounderAnnualPrice = from.ProFounderAnnualPrice;
         to.FounderSlots = from.FounderSlots;
         to.TrialDays = from.TrialDays;
         to.GraceDays = from.GraceDays;
         to.FreeMonthlyPaidLimit = from.FreeMonthlyPaidLimit;
         to.FreeMonthlyGeneratedLimit = from.FreeMonthlyGeneratedLimit;
         to.FreeHistoryDays = from.FreeHistoryDays;
-        to.ProFairUseMonthlyPaid = from.ProFairUseMonthlyPaid;
+        to.FairUseMonthlyPaid = from.FairUseMonthlyPaid;
         to.ReferralRewardDays = from.ReferralRewardDays;
         to.ReferralRewardsPerYear = from.ReferralRewardsPerYear;
         to.ReferralWelcomeDiscountRate = from.ReferralWelcomeDiscountRate;
@@ -170,17 +173,17 @@ public static class SystemSettingsRules
     /// <summary>Valor en texto invariante (los decimales sin ceros de sobra: 199, 0.3).</summary>
     public static string ValueOf(SystemSettings settings, string field) => field switch
     {
-        nameof(SystemSettings.MonthlyPrice) => Text(settings.MonthlyPrice),
-        nameof(SystemSettings.AnnualPrice) => Text(settings.AnnualPrice),
-        nameof(SystemSettings.FounderMonthlyPrice) => Text(settings.FounderMonthlyPrice),
-        nameof(SystemSettings.FounderAnnualPrice) => Text(settings.FounderAnnualPrice),
+        nameof(SystemSettings.ProMonthlyPrice) => Text(settings.ProMonthlyPrice),
+        nameof(SystemSettings.ProAnnualPrice) => Text(settings.ProAnnualPrice),
+        nameof(SystemSettings.ProFounderMonthlyPrice) => Text(settings.ProFounderMonthlyPrice),
+        nameof(SystemSettings.ProFounderAnnualPrice) => Text(settings.ProFounderAnnualPrice),
         nameof(SystemSettings.FounderSlots) => Text(settings.FounderSlots),
         nameof(SystemSettings.TrialDays) => Text(settings.TrialDays),
         nameof(SystemSettings.GraceDays) => Text(settings.GraceDays),
         nameof(SystemSettings.FreeMonthlyPaidLimit) => Text(settings.FreeMonthlyPaidLimit),
         nameof(SystemSettings.FreeMonthlyGeneratedLimit) => Text(settings.FreeMonthlyGeneratedLimit),
         nameof(SystemSettings.FreeHistoryDays) => Text(settings.FreeHistoryDays),
-        nameof(SystemSettings.ProFairUseMonthlyPaid) => Text(settings.ProFairUseMonthlyPaid),
+        nameof(SystemSettings.FairUseMonthlyPaid) => Text(settings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays) => Text(settings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear) => Text(settings.ReferralRewardsPerYear),
         nameof(SystemSettings.ReferralWelcomeDiscountRate) => Text(settings.ReferralWelcomeDiscountRate),

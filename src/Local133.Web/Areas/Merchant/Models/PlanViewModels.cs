@@ -124,6 +124,7 @@ public sealed record MyPlanViewModel(
     public string OffersTitle => Plan?.Tier switch
     {
         PlanTier.Pro => "Agrega más tiempo de Pro",
+        PlanTier.Basic => "Cambia a Pro",
         PlanTier.Grace => "Renueva tu plan",
         PlanTier.Trial => "Paga Pro y sigue después de tu prueba",
         _ => "Paga Pro",
@@ -133,9 +134,9 @@ public sealed record MyPlanViewModel(
     public string? OffersNote => Plan?.Tier switch
     {
         PlanTier.Trial => "Tu prueba no se acorta: lo que pagues empieza cuando termine.",
-        PlanTier.Pro => "Lo que pagues empieza cuando termine tu plan actual: no pierdes ningún día.",
+        PlanTier.Pro or PlanTier.Basic => "Lo que pagues empieza cuando termine tu plan actual: no pierdes ningún día.",
         PlanTier.Grace => "Lo que pagues cuenta desde que venció tu plan.",
-        PlanTier.Free => "Pro empieza en cuanto se confirme tu pago.",
+        PlanTier.Expired => "Pro empieza en cuanto se confirme tu pago.",
         _ => null,
     };
 
@@ -258,7 +259,7 @@ public sealed record PlanOfferViewModel(
             Money(amount),
             perMonth,
             highlight,
-            $"Pro hasta el {SaleFormats.Date(offer.LastProDay, today)}",
+            $"{offer.Plan.Label()} hasta el {SaleFormats.Date(offer.LastDay, today)}",
             offer.IsFounderPrice,
             offer.Package == SubscriptionPackage.Annual,
             offer.Package == currentPackage,

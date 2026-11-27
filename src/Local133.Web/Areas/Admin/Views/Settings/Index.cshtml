@@ -68,10 +68,10 @@
                 <div class="card-body">
                     <h2 class="h6 card-title">Precios de Pro (IVA incluido)</h2>
                     <div class="row g-3">
-                        @{ Field(nameof(SystemSettings.MonthlyPrice), prefix: "$", decimals: true); }
-                        @{ Field(nameof(SystemSettings.AnnualPrice), prefix: "$", decimals: true); }
-                        @{ Field(nameof(SystemSettings.FounderMonthlyPrice), prefix: "$", decimals: true); }
-                        @{ Field(nameof(SystemSettings.FounderAnnualPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.ProMonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.ProAnnualPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.ProFounderMonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.ProFounderAnnualPrice), prefix: "$", decimals: true); }
                         @{ Field(nameof(SystemSettings.FounderSlots)); }
                     </div>
                     <p class="small text-body-secondary mt-2 mb-0" data-assigned-founders>Lugares de fundador asignados: @Model.AssignedFounders.</p>
@@ -95,7 +95,7 @@
                         @{ Field(nameof(SystemSettings.FreeMonthlyPaidLimit)); }
                         @{ Field(nameof(SystemSettings.FreeMonthlyGeneratedLimit)); }
                         @{ Field(nameof(SystemSettings.FreeHistoryDays), suffix: "días"); }
-                        @{ Field(nameof(SystemSettings.ProFairUseMonthlyPaid)); }
+                        @{ Field(nameof(SystemSettings.FairUseMonthlyPaid)); }
                     </div>
                 </div>
             </div>

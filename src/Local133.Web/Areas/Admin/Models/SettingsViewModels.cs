@@ -21,22 +21,22 @@ public sealed class SettingsInput
     [Display(Name = "Pro, 1 mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
-    public string? MonthlyPrice { get; set; }
+    public string? ProMonthlyPrice { get; set; }
 
     [Display(Name = "Pro, anual")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
-    public string? AnnualPrice { get; set; }
+    public string? ProAnnualPrice { get; set; }
 
     [Display(Name = "Fundador, 1 mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
-    public string? FounderMonthlyPrice { get; set; }
+    public string? ProFounderMonthlyPrice { get; set; }
 
     [Display(Name = "Fundador, anual")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
-    public string? FounderAnnualPrice { get; set; }
+    public string? ProFounderAnnualPrice { get; set; }
 
     [Display(Name = "Lugares de fundador")]
     [Required(ErrorMessage = RequiredMessage)]
@@ -71,7 +71,7 @@ public sealed class SettingsInput
     [Display(Name = "Uso justo: cobros concretados al mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [Range(1, SystemSettingsRules.MaxCount, ErrorMessage = "Escribe un número entre 1 y 1,000,000.")]
-    public int? ProFairUseMonthlyPaid { get; set; }
+    public int? FairUseMonthlyPaid { get; set; }
 
     [Display(Name = "Días de Pro por referido que paga")]
     [Required(ErrorMessage = RequiredMessage)]
@@ -106,17 +106,17 @@ public sealed class SettingsInput
 
     public static SettingsInput From(SystemSettings settings) => new()
     {
-        MonthlyPrice = Price(settings.MonthlyPrice),
-        AnnualPrice = Price(settings.AnnualPrice),
-        FounderMonthlyPrice = Price(settings.FounderMonthlyPrice),
-        FounderAnnualPrice = Price(settings.FounderAnnualPrice),
+        ProMonthlyPrice = Price(settings.ProMonthlyPrice),
+        ProAnnualPrice = Price(settings.ProAnnualPrice),
+        ProFounderMonthlyPrice = Price(settings.ProFounderMonthlyPrice),
+        ProFounderAnnualPrice = Price(settings.ProFounderAnnualPrice),
         FounderSlots = settings.FounderSlots,
         TrialDays = settings.TrialDays,
         GraceDays = settings.GraceDays,
         FreeMonthlyPaidLimit = settings.FreeMonthlyPaidLimit,
         FreeMonthlyGeneratedLimit = settings.FreeMonthlyGeneratedLimit,
         FreeHistoryDays = settings.FreeHistoryDays,
-        ProFairUseMonthlyPaid = settings.ProFairUseMonthlyPaid,
+        FairUseMonthlyPaid = settings.FairUseMonthlyPaid,
         ReferralRewardDays = settings.ReferralRewardDays,
         ReferralRewardsPerYear = settings.ReferralRewardsPerYear,
         ReferralWelcomeDiscountRate = Percent(settings.ReferralWelcomeDiscountRate),
@@ -128,17 +128,17 @@ public sealed class SettingsInput
     /// <summary>Los valores como <see cref="SystemSettings"/> (ya pasó la validación del formulario).</summary>
     public SystemSettings ToSettings() => new()
     {
-        MonthlyPrice = ParseDecimal(MonthlyPrice),
-        AnnualPrice = ParseDecimal(AnnualPrice),
-        FounderMonthlyPrice = ParseDecimal(FounderMonthlyPrice),
-        FounderAnnualPrice = ParseDecimal(FounderAnnualPrice),
+        ProMonthlyPrice = ParseDecimal(ProMonthlyPrice),
+        ProAnnualPrice = ParseDecimal(ProAnnualPrice),
+        ProFounderMonthlyPrice = ParseDecimal(ProFounderMonthlyPrice),
+        ProFounderAnnualPrice = ParseDecimal(ProFounderAnnualPrice),
         FounderSlots = FounderSlots ?? 0,
         TrialDays = TrialDays ?? 0,
         GraceDays = GraceDays ?? 0,
         FreeMonthlyPaidLimit = FreeMonthlyPaidLimit ?? 0,
         FreeMonthlyGeneratedLimit = FreeMonthlyGeneratedLimit ?? 0,
         FreeHistoryDays = FreeHistoryDays ?? 0,
-        ProFairUseMonthlyPaid = ProFairUseMonthlyPaid ?? 0,
+        FairUseMonthlyPaid = FairUseMonthlyPaid ?? 0,
         ReferralRewardDays = ReferralRewardDays ?? 0,
         ReferralRewardsPerYear = ReferralRewardsPerYear ?? 0,
         ReferralWelcomeDiscountRate = ParseDecimal(ReferralWelcomeDiscountRate) / 100m,
@@ -179,17 +179,17 @@ public static class SettingsLabels
 
     public static string Help(string field) => field switch
     {
-        nameof(SystemSettings.MonthlyPrice) => "IVA incluido. Los paquetes de 3 y 6 meses son múltiplos. Solo afecta a los links nuevos.",
-        nameof(SystemSettings.AnnualPrice) => "IVA incluido. Solo afecta a los links nuevos; quien renueva el anual conserva su precio congelado.",
-        nameof(SystemSettings.FounderMonthlyPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
-        nameof(SystemSettings.FounderAnnualPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
+        nameof(SystemSettings.ProMonthlyPrice) => "IVA incluido. Los paquetes de 3 y 6 meses son múltiplos. Solo afecta a los links nuevos.",
+        nameof(SystemSettings.ProAnnualPrice) => "IVA incluido. Solo afecta a los links nuevos; quien renueva el anual conserva su precio congelado.",
+        nameof(SystemSettings.ProFounderMonthlyPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
+        nameof(SystemSettings.ProFounderAnnualPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
         nameof(SystemSettings.FounderSlots) => "Los primeros que paguen Pro. No puede bajar de los lugares ya asignados.",
         nameof(SystemSettings.TrialDays) => "Solo afecta a las pruebas que empiecen después del cambio.",
         nameof(SystemSettings.GraceDays) => "Cambia de inmediato el estado de quien tenga un pago vencido (gracia o gratuito).",
         nameof(SystemSettings.FreeMonthlyPaidLimit) => "En el gratuito, por mes calendario. Cambia de inmediato.",
         nameof(SystemSettings.FreeMonthlyGeneratedLimit) => "Tope técnico contra abusos. No puede ser menor que el límite de concretados.",
         nameof(SystemSettings.FreeHistoryDays) => "Ventas visibles en el gratuito. Cambia de inmediato.",
-        nameof(SystemSettings.ProFairUseMonthlyPaid) => "Al pasarlo se alerta al admin, sin bloquear.",
+        nameof(SystemSettings.FairUseMonthlyPaid) => "Al pasarlo se alerta al admin, sin bloquear.",
         nameof(SystemSettings.ReferralRewardDays) => "Para los premios que se den después del cambio.",
         nameof(SystemSettings.ReferralRewardsPerYear) => "En 12 meses móviles. 0 = sin premios.",
         nameof(SystemSettings.ReferralWelcomeDiscountRate) => "Sobre el precio de un mes, en el primer pago. Solo afecta a los links nuevos.",

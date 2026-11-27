@@ -107,7 +107,7 @@ public static class SubscriptionReminders
         PlanStatus status, SubscriptionPeriodKind lastKind, SubscriptionPackage? lastPackage, DateTimeOffset now, bool wholeGrace)
     {
         ArgumentNullException.ThrowIfNull(status);
-        if (status.Tier == PlanTier.Onboarding || status.ProUntil is not { } proUntil || status.LastProDay is not { } lastDay)
+        if (status.Tier == PlanTier.Onboarding || status.ProUntil is not { } proUntil || status.LastActiveDay is not { } lastDay)
         {
             return null;
         }
@@ -120,7 +120,7 @@ public static class SubscriptionReminders
 
         switch (status.Tier)
         {
-            case PlanTier.Free:
+            case PlanTier.Expired:
             {
                 var dropDay = MexicoTime.DateOf(status.GraceEndsAt ?? proUntil);
                 var sinceDrop = today.DayNumber - dropDay.DayNumber;
@@ -143,7 +143,7 @@ public static class SubscriptionReminders
                     : null;
             }
 
-            case PlanTier.Trial or PlanTier.Pro:
+            case PlanTier.Trial or PlanTier.Basic or PlanTier.Pro:
             {
                 var paid = lastKind == SubscriptionPeriodKind.Paid;
                 if (paid && daysToEnd == 0)

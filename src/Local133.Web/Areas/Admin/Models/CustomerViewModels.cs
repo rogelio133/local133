@@ -60,18 +60,20 @@ public static class AdminLabels
     {
         PlanTier.Onboarding => "Sin prueba",
         PlanTier.Trial => "Prueba",
+        PlanTier.Basic => "Básico",
         PlanTier.Pro => "Pro",
         PlanTier.Grace => "Gracia",
-        PlanTier.Free => "Gratuito",
+        PlanTier.Expired => "Vencido",
         _ => tier.ToString(),
     };
 
     public static string PlanBadge(PlanTier tier) => tier switch
     {
         PlanTier.Trial => "text-bg-info",
+        PlanTier.Basic => "text-bg-success",
         PlanTier.Pro => "text-bg-primary",
         PlanTier.Grace => "text-bg-warning",
-        PlanTier.Free => "text-bg-secondary",
+        PlanTier.Expired => "text-bg-secondary",
         _ => "text-bg-light border",
     };
 
@@ -101,10 +103,11 @@ public static class AdminLabels
     /// <summary>«Pro hasta el 12 de diciembre», «Venció el 3 de noviembre»…; <c>null</c> en el onboarding.</summary>
     public static string? PlanDate(PlanStatus status, DateOnly today) => status.Tier switch
     {
-        PlanTier.Trial when (status.LastTrialDay ?? status.LastProDay) is { } day => $"Prueba hasta el {SaleFormats.Date(day, today)}",
-        PlanTier.Pro when status.LastProDay is { } day => $"Pro hasta el {SaleFormats.Date(day, today)}",
+        PlanTier.Trial when (status.LastTrialDay ?? status.LastActiveDay) is { } day => $"Prueba hasta el {SaleFormats.Date(day, today)}",
+        PlanTier.Basic or PlanTier.Pro when (status.LastPlanDay ?? status.LastActiveDay) is { } day =>
+            $"{status.Plan!.Value.Label()} hasta el {SaleFormats.Date(day, today)}",
         PlanTier.Grace when status.LastGraceDay is { } day => $"Gracia hasta el {SaleFormats.Date(day, today)}",
-        PlanTier.Free when status.LastProDay is { } day => $"Pro hasta el {SaleFormats.Date(day, today)} (vencido)",
+        PlanTier.Expired when status.LastActiveDay is { } day => $"Venció el {SaleFormats.Date(day, today)}",
         _ => null,
     };
 }
@@ -139,8 +142,9 @@ public static class PlanTierFilters
 {
     public const string QueryKey = "plan";
 
+    /// <summary>Hasta la 5.17 (filtro v2) Básico se cuenta dentro de «pro».</summary>
     public static readonly IReadOnlyList<PlanTier> All =
-        [PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Free];
+        [PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Expired];
 
     public static string Slug(PlanTier tier) => tier switch
     {
@@ -148,7 +152,8 @@ public static class PlanTierFilters
         PlanTier.Trial => "prueba",
         PlanTier.Pro => "pro",
         PlanTier.Grace => "gracia",
-        PlanTier.Free => "gratuito",
+        PlanTier.Basic => "basico",
+        PlanTier.Expired => "vencido",
         _ => tier.ToString().ToLowerInvariant(),
     };
 

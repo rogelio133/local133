@@ -25,7 +25,7 @@ public static class DashboardQuery
     {
         var settings = await db.SystemSettings.AsNoTracking()
             .Where(s => s.Id == SystemSettings.SingletonId)
-            .Select(s => new { s.GraceDays, s.FounderSlots, s.VatRate, s.ProFairUseMonthlyPaid })
+            .Select(s => new { s.GraceDays, s.FounderSlots, s.VatRate, s.FairUseMonthlyPaid })
             .SingleAsync(cancellationToken);
         var today = MexicoTime.Today(now);
 
@@ -60,8 +60,8 @@ public static class DashboardQuery
             FounderSlots = settings.FounderSlots,
             FailedWebhooks = await db.WebhookEvents.CountAsync(e => e.Status == WebhookEventStatus.Failed, cancellationToken),
             StuckWebhooks = await StuckWebhooks(db, now).CountAsync(cancellationToken),
-            FairUseLimit = settings.ProFairUseMonthlyPaid,
-            FairUse = await FairUseAsync(db, monthStart, monthEnd, settings.ProFairUseMonthlyPaid, cancellationToken),
+            FairUseLimit = settings.FairUseMonthlyPaid,
+            FairUse = await FairUseAsync(db, monthStart, monthEnd, settings.FairUseMonthlyPaid, cancellationToken),
         };
     }
 

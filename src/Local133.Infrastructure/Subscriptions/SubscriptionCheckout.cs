@@ -50,8 +50,9 @@ internal sealed class SubscriptionCheckout(
             return new SubscriptionOffersResult(false, [], context.Subscription?.IsFounder ?? false, context.FounderSlotsLeft);
         }
 
+        // Hasta la 5.15 «Mi plan» solo vende Pro: el checkout por plan llega con ella.
         var offers = SubscriptionOffers.For(
-            context.Subscription, context.Settings, clock.GetUtcNow(), context.FounderSlotAvailable, context.WelcomeDiscount);
+            context.Subscription, SubscriptionPlan.Pro, context.Settings, clock.GetUtcNow(), context.FounderSlotAvailable, context.WelcomeDiscount);
         var discount = offers.Select(o => o.Quote.DiscountAmount).Where(d => d > 0).DefaultIfEmpty().Max();
         return new SubscriptionOffersResult(true, offers, context.Subscription.IsFounder, context.FounderSlotsLeft,
             discount > 0 ? discount : null);
@@ -80,12 +81,13 @@ internal sealed class SubscriptionCheckout(
         var now = clock.GetUtcNow();
         var status = subscription.StatusAt(now, context.Settings.GraceDays);
         var (quote, isFounderPrice) = subscription.QuoteFor(
-            command.Package, context.Settings, status, context.FounderSlotAvailable, context.WelcomeDiscount);
+            SubscriptionPlan.Pro, command.Package, context.Settings, status, context.FounderSlotAvailable, context.WelcomeDiscount);
 
         var reusableSince = SubscriptionCharge.ReusableSince(now, context.Settings.GraceDays);
         var reusable = await db.SubscriptionCharges.IgnoreQueryFilters()
             .Where(c => c.MerchantId == command.MerchantId
                 && c.Status == SubscriptionChargeStatus.Pending
+                && c.Plan == quote.Plan
                 && c.Package == quote.Package
                 && c.Amount == quote.Amount
                 && c.PeyPaymentLinkId != null

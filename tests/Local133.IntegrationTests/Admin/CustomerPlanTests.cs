@@ -444,7 +444,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         {
             var subscription = await db.Subscriptions.IgnoreQueryFilters().Include(s => s.Periods)
                 .SingleAsync(s => s.MerchantId == referrer.Id);
-            subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, now, graceDays: 5, referral.Id);
+            subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, now, graceDays: 5, referral.Id);
             referral.MarkRewarded(now.AddDays(-1));
             await db.SaveChangesAsync();
         }

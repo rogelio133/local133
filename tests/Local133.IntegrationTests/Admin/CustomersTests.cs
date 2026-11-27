@@ -110,7 +110,7 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
             ["regalo@prueba.mx"] = [(SubscriptionPeriodKind.Trial, trialStart, trialEnd), (SubscriptionPeriodKind.AdminGrant, trialEnd, now.AddDays(2))],
             ["gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-62), now.AddDays(-32)), (SubscriptionPeriodKind.Paid, now.AddDays(-32), now.AddHours(-1))],
             ["fin-gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-80), now.AddDays(-50)), (SubscriptionPeriodKind.Paid, now.AddDays(-50), now.AddDays(-graceDays).AddHours(-1))],
-            ["gratuito@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10))],
+            ["vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10))],
             // Premio anulado en curso (6.2): se cortó y el regalo que seguía se recorrió hasta el corte, sin hueco.
             ["premio-cortado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-10), now.AddHours(-1)), (SubscriptionPeriodKind.AdminGrant, now.AddHours(-1), now.AddDays(4))],
             ["premio-vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-50), now.AddDays(-20)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-20), now.AddDays(-1))],
@@ -131,13 +131,13 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
                 : PlanStatus.For(periods.Select(p => new SubscriptionPeriod { Kind = p.Item1, StartsAt = p.Item2, EndsAt = p.Item3 }), now, graceDays).Tier;
         }
 
-        // Cubre todos los estados.
-        Assert.Equal(Enum.GetValues<PlanTier>().Order(), expected.Values.Distinct().Order());
+        // Cubre todos los estados salvo Básico, que el filtro cuenta dentro de «pro» hasta la 5.17 (WithPlan v2).
+        Assert.Equal(Enum.GetValues<PlanTier>().Where(t => t != PlanTier.Basic).Order(), expected.Values.Distinct().Order());
         var admin = await AdminAsync();
         foreach (var (tier, slug) in new[]
                  {
                      (PlanTier.Onboarding, "sin-prueba"), (PlanTier.Trial, "prueba"), (PlanTier.Pro, "pro"),
-                     (PlanTier.Grace, "gracia"), (PlanTier.Free, "gratuito"),
+                     (PlanTier.Grace, "gracia"), (PlanTier.Expired, "vencido"),
                  })
         {
             var html = await GetHtmlAsync(admin, $"{ListUrl}?plan={slug}");

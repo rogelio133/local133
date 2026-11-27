@@ -79,7 +79,8 @@ public sealed class MonthlySummaryNotifier(
             .Select(s => s.IsFounder)
             .SingleOrDefaultAsync(cancellationToken);
         var plan = await services.GetRequiredService<IPlanAccess>().GetForMerchantAsync(total.MerchantId, cancellationToken);
-        var isFree = plan.Tier == PlanTier.Free;
+        // Hasta la 5.16 (resumen por plan) el vencido recibe el texto que tenía el gratuito.
+        var isFree = plan.Tier == PlanTier.Expired;
 
         var summary = Domain.Subscriptions.MonthlySummary.For(total.Collected, total.SalesCount, settings, isFounder);
         var message = MerchantEmails.MonthlySummary(

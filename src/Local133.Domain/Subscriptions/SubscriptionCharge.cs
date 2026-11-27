@@ -14,7 +14,7 @@ public enum SubscriptionChargeOrigin
 }
 
 /// <summary>
-/// Cargo de la suscripción: un paquete con su precio congelado y <b>un</b> link de pago de Pey (§4 del diseño). El
+/// Cargo de la suscripción (un pedido): un plan y un paquete con su precio congelado y <b>un</b> link de pago de Pey (§4 del diseño). El
 /// monto se guarda al crearlo; cambiar un precio en <c>SystemSettings</c> no lo altera. Se abona con el webhook
 /// <c>payment_link.status_updated</c> o con una consulta a Pey; el regreso del navegador nunca abona.
 /// </summary>
@@ -25,7 +25,12 @@ public class SubscriptionCharge : Entity
 
     public const int FailureReasonMaxLength = 500;
 
+    public const int TermsVersionMaxLength = 20;
+
     public int MerchantId { get; set; }
+
+    /// <summary>Plan del pedido (2026-11-26); los cargos de antes quedaron en Pro.</summary>
+    public SubscriptionPlan Plan { get; set; } = SubscriptionPlan.Pro;
 
     public SubscriptionPackage Package { get; set; }
 
@@ -66,17 +71,23 @@ public class SubscriptionCharge : Entity
     /// <summary>Última consulta a Pey del estado del link (conciliación).</summary>
     public DateTimeOffset? PaymentCheckedAt { get; set; }
 
+    /// <summary>Versión de los Términos (<c>LegalDocuments</c>) que aceptó al pagar este pedido (5.15); <c>null</c> en los de antes.</summary>
+    public string? TermsVersion { get; set; }
+
+    /// <summary>Cuándo aceptó esos Términos (5.15).</summary>
+    public DateTimeOffset? TermsAcceptedAt { get; set; }
+
     public List<SubscriptionPayment> Payments { get; set; } = [];
 
     public string ClientReferenceId => ClientReferenceFor(Id);
 
     /// <summary>
-    /// Se puede reutilizar el link: pendiente, con link, del mismo paquete y monto, y creado hace a lo más
+    /// Se puede reutilizar el link: pendiente, con link, del mismo plan, paquete y monto, y creado hace a lo más
     /// <paramref name="maxAgeDays"/> días (los días de gracia, 5.7). Uno más viejo se abandona y se crea otro.
     /// </summary>
     public bool CanBeReusedFor(SubscriptionQuote quote, DateTimeOffset now, int maxAgeDays) =>
         Status == SubscriptionChargeStatus.Pending && PeyPaymentLinkId is not null && Url is not null
-        && Package == quote.Package && Amount == quote.Amount
+        && Plan == quote.Plan && Package == quote.Package && Amount == quote.Amount
         && CreatedAt >= ReusableSince(now, maxAgeDays);
 
     /// <summary>Fecha de creación más vieja que todavía se reutiliza.</summary>
@@ -90,6 +101,7 @@ public class SubscriptionCharge : Entity
         return new SubscriptionCharge
         {
             MerchantId = merchantId,
+            Plan = quote.Plan,
             Package = quote.Package,
             Months = quote.Months,
             ListPrice = quote.ListPrice,

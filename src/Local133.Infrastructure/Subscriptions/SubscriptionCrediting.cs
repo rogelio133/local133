@@ -46,13 +46,14 @@ internal sealed class SubscriptionCrediting(
 
         // El periodo se encadena desde el momento del pago (no desde que nos enteramos), sin pasar de ahora.
         var paidAt = charge.Payments.Max(p => (DateTimeOffset?)p.PaidAt) is { } last && last < now ? last : now;
-        var extendsPaidPro = subscription.Periods.Any(p => p.Kind == SubscriptionPeriodKind.Paid && p.EndsAt > paidAt);
+        var extendsPaidPro = subscription.Periods.Any(p =>
+            p.Kind == SubscriptionPeriodKind.Paid && p.Plan == SubscriptionPlan.Pro && p.EndsAt > paidAt);
 
         charge.MarkPaid(paidAt, manual ? now : null);
-        var period = subscription.AddPaidPeriod(charge.Package, paidAt, settings.GraceDays, charge.Id);
+        var period = subscription.AddPaidPeriod(charge.Plan, charge.Package, paidAt, settings.GraceDays, charge.Id);
         if (charge.Package == SubscriptionPackage.Annual)
         {
-            subscription.LockAnnualPrice(charge.ListPrice);
+            subscription.LockAnnualPrice(charge.Plan, charge.ListPrice);
         }
 
         int? founderNumber = null;

@@ -30,7 +30,7 @@ public class MonthlySummaryTests
     [Fact]
     public void Usa_los_numeros_de_SystemSettings()
     {
-        var settings = new SystemSettings { ReferenceTerminalFeeRate = 0.04m, VatRate = 0.16m, MonthlyPrice = 250m };
+        var settings = new SystemSettings { ReferenceTerminalFeeRate = 0.04m, VatRate = 0.16m, ProMonthlyPrice = 250m };
 
         var summary = MonthlySummary.For(1_000m, 1, settings, isFounder: false);
 

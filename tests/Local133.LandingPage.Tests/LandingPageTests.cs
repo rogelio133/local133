@@ -11,6 +11,12 @@ namespace Local133.LandingPage.Tests;
 
 public class LandingPageTests
 {
+    /// <summary>
+    /// Días de prueba que dicen los textos publicados. <c>SystemSettings.DefaultTrialDays</c> ya es 15 (5.12); la portada
+    /// y los Términos se actualizan en la 5.18, y entonces esta constante se quita.
+    /// </summary>
+    private const int PublishedTrialDays = 30;
+
     private const string AppUrl = "https://app.example.test";
 
     private static WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
@@ -174,18 +180,18 @@ public class LandingPageTests
         static string Money(decimal amount) =>
             "$" + amount.ToString(amount == decimal.Truncate(amount) ? "#,0" : "#,0.00", CultureInfo.InvariantCulture);
 
-        var monthly = SystemSettings.DefaultMonthlyPrice;
-        var annual = SystemSettings.DefaultAnnualPrice;
+        var monthly = SystemSettings.DefaultProMonthlyPrice;
+        var annual = SystemSettings.DefaultProAnnualPrice;
         Assert.Contains($"{Money(monthly)} al mes", text);
         Assert.Contains($"{Money(annual)} al año", text);
         Assert.Contains($"Equivale a {Money(decimal.Round(annual / 12, 2))} al mes", text);
         Assert.Contains($"Ahorras {Money(monthly * 12 - annual)} al año", text);
         Assert.Contains($"3 meses ({Money(monthly * 3)}) y 6 meses ({Money(monthly * 6)})", text);
         Assert.Contains($"los primeros {SystemSettings.DefaultFounderSlots} vendedores que paguen Pro pagan " +
-            $"{Money(SystemSettings.DefaultFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultFounderAnnualPrice)} al año", text);
+            $"{Money(SystemSettings.DefaultProFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultProFounderAnnualPrice)} al año", text);
         Assert.Contains($"{SystemSettings.DefaultFreeMonthlyPaidLimit} cobros al mes", text);
         Assert.Contains($"Historial de los últimos {SystemSettings.DefaultFreeHistoryDays} días", text);
-        Assert.Contains($"Prueba todo gratis {SystemSettings.DefaultTrialDays} días", text);
+        Assert.Contains($"Prueba todo gratis {PublishedTrialDays} días", text);
         Assert.Contains($"+{SystemSettings.DefaultReferralRewardDays} días de Pro para ti", text);
         Assert.Contains($"-{SystemSettings.DefaultReferralWelcomeDiscountRate * 100:0}% de descuento", text);
         Assert.Contains($"Tienes {SystemSettings.DefaultGraceDays} días de gracia", text);

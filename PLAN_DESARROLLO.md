@@ -73,11 +73,10 @@ enum ChargeMethod    { DynamicQr, StaticQr, PushNotification }
 enum SaleSource      { Cart, DirectAmount, OpenAmount }      // OpenAmount = QR fijo
 enum SaleStatus      { Pending, Paid, Expired, Cancelled }
 enum SuspensionReason{ Admin, BankAccountError }             // la falta de pago ya no suspende (2026-11-18)
-enum PlanTier        { Onboarding, Trial, Pro, Grace, Free } // calculado, no se guarda
-                                                             // 5.12: { Onboarding, Trial, Basic, Pro, Grace, Expired }
+enum PlanTier        { Onboarding, Trial, Basic, Pro, Grace, Expired } // calculado, no se guarda (5.12; antes Free)
 enum SubscriptionPlan         { Basic, Pro }                 // 5.12, en periodos y cargos
 enum SubscriptionPackage      { OneMonth, ThreeMonths, SixMonths, Annual }
-enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant } // 5.12: + Conversion, Transition
+enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant, Conversion, Transition } // los dos últimos desde la 5.12
 enum SubscriptionChargeStatus { Pending, Processing, Paid, Partial, Failed }
 ```
 
@@ -237,7 +236,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - conversión de Básico a Pro al subir de plan;
     - migración con la transición de los vendedores existentes.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.13 a la 5.18; las columnas y banderas del gratuito se quedan hasta la 5.14)* — [bitácora](log_plan/fase-5.12-planes-y-vigencia-v2.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
 13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
 14. **Acceso por plan y vencido**:
     - el vencido no genera cobros (se valida en el servidor) y ve el banner y la tarjeta para elegir plan;

@@ -9,6 +9,9 @@ public sealed record MerchantPlan(PlanStatus Status, PlanEntitlements Entitlemen
 {
     public PlanTier Tier => Status.Tier;
 
+    /// <summary>Plan cuyas funciones aplican ahora (<see cref="PlanStatus.Plan"/>); <c>null</c> en el onboarding y el vencido.</summary>
+    public SubscriptionPlan? Plan => Status.Plan;
+
     /// <summary>
     /// Desde cuándo ve el historial: <c>null</c> con historial completo; en el gratuito, la medianoche (México) de
     /// hace <see cref="FreeHistoryDays"/> días contando hoy. Lo anterior se oculta, no se borra.

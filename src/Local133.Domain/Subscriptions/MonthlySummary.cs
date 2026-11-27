@@ -28,6 +28,6 @@ public sealed record MonthlySummary(
             salesCount,
             fee,
             settings.ReferenceTerminalFeeRate,
-            isFounder ? settings.FounderMonthlyPrice : settings.MonthlyPrice);
+            isFounder ? settings.ProFounderMonthlyPrice : settings.ProMonthlyPrice);
     }
 }

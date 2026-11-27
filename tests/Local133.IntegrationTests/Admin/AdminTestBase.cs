@@ -27,7 +27,7 @@ public abstract class AdminTestBase(Local133WebFactory factory) : SubscriptionPa
     {
         var merchant = await MerchantOfAsync(db, email);
         var charge = SubscriptionCharge.Create(
-            merchant.Id, new SubscriptionQuote(SubscriptionPackage.OneMonth, 1, amount, 0m, null, amount), false,
+            merchant.Id, new SubscriptionQuote(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, 1, amount, 0m, null, amount), false,
             SubscriptionChargeOrigin.Merchant, createdAt);
         charge.AttachLink($"plink_{Guid.NewGuid():N}"[..20], "https://pey.mx/link");
         charge.Status = status;

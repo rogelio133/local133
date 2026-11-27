@@ -123,7 +123,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
 
         var html = await GetHtmlAsync(await AdminAsync(), Url);
 
-        foreach (var tier in new[] { PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Free })
+        foreach (var tier in new[] { PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Expired })
         {
             Assert.Contains($"data-plan-count=\"{tier}\" data-count=\"1\"", html);
         }
@@ -202,7 +202,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
     [Fact]
     public async Task Uso_justo_lista_a_quien_lo_paso_este_mes()
     {
-        await WithSettingsAsync(s => s.ProFairUseMonthlyPaid = 2, async () =>
+        await WithSettingsAsync(s => s.FairUseMonthlyPaid = 2, async () =>
         {
             var now = DateTimeOffset.UtcNow;
             await ActiveMerchantAsync(Email);

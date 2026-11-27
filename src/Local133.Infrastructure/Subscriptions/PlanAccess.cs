@@ -38,7 +38,7 @@ internal sealed class PlanAccess(AppDbContext db, ITenantContext tenant, TimePro
             .ToListAsync(cancellationToken);
 
         var status = PlanStatus.For(periods, clock.GetUtcNow(), _settings);
-        var plan = new MerchantPlan(status, PlanEntitlements.For(status.Tier), _settings.TrialDays, _settings.FreeHistoryDays);
+        var plan = new MerchantPlan(status, PlanEntitlements.For(status), _settings.TrialDays, _settings.FreeHistoryDays);
         _cache[merchantId] = plan;
         return plan;
     }

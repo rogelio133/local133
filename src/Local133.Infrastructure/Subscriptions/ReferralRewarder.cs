@@ -104,8 +104,9 @@ internal static class ReferralRewarder
         switch (decision)
         {
             case ReferralRewardDecision.Grant:
+                // El premio es del plan del final de su cadena, donde se encadena (§8; la prueba es de Pro).
                 subscription!.AddDaysPeriod(
-                    SubscriptionPeriodKind.ReferralReward, settings.ReferralRewardDays, now, settings.GraceDays, referral.Id);
+                    SubscriptionPeriodKind.ReferralReward, subscription.ChainEndPlan, settings.ReferralRewardDays, now, settings.GraceDays, referral.Id);
                 referral.MarkRewarded(now);
                 break;
             case ReferralRewardDecision.Skip:

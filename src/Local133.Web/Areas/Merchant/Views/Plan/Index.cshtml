@@ -18,8 +18,8 @@
 
         @if (Model.Plan is { } plan)
         {
-            <div class="card card-body mb-3 d-flex flex-row align-items-center gap-3 @(plan.Tier == PlanTier.Grace ? "border-warning" : "")" data-plan-tier="@plan.Tier">
-                <i class="bi @plan.Icon fs-3 @(plan.Tier == PlanTier.Free ? "text-body-secondary" : plan.Tier == PlanTier.Grace ? "text-warning" : "text-primary")" aria-hidden="true"></i>
+            <div class="card card-body mb-3 d-flex flex-row align-items-center gap-3 @plan.BorderClass" data-plan-tier="@plan.Tier">
+                <i class="bi @plan.Icon fs-3 @plan.IconClass" aria-hidden="true"></i>
                 <span class="flex-grow-1">
                     <span class="d-block fw-bold" data-plan-title>@plan.Title</span>
                     <span class="d-block small text-body-secondary" data-plan-detail>@plan.Detail</span>

@@ -162,7 +162,7 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
             Assert.Contains("Te quedan 18 cobros este mes", html);
         }
 
-        Assert.Contains("data-plan-tier=\"Free\"", home);
+        Assert.Contains("data-plan-tier=\"Expired\"", home);
         Assert.Contains("href=\"/app/plan\"", home);
     }
 
@@ -411,7 +411,7 @@ public class FreePlanLimitsTests(Local133WebFactory factory) : SaleFlowTestBase(
         var html = WebUtility.HtmlDecode(await GetHtmlAsync(client, "/app/plan"));
         var more = await GetHtmlAsync(client, "/app/mas");
 
-        Assert.Contains("data-plan-tier=\"Free\"", html);
+        Assert.Contains("data-plan-tier=\"Expired\"", html);
         Assert.Contains("12 de 100 cobros este mes", html);
         Assert.Contains("data-plan-features", html);
         Assert.Contains("<td>100</td>", html);

@@ -68,11 +68,11 @@ public sealed record MonthlyChargeAllowance(
         return thresholds.Distinct().Where(t => t > previousPaid && t <= currentPaid).Order().ToList();
     }
 
-    /// <summary>Se cruzó el uso justo de Pro (<c>ProFairUseMonthlyPaid</c>): se alerta al admin, sin bloquear.</summary>
+    /// <summary>Se cruzó el uso justo (<c>FairUseMonthlyPaid</c>): se alerta al admin, sin bloquear.</summary>
     public static bool ProFairUseCrossed(int previousPaid, int currentPaid, SystemSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return previousPaid < settings.ProFairUseMonthlyPaid && currentPaid >= settings.ProFairUseMonthlyPaid;
+        return previousPaid < settings.FairUseMonthlyPaid && currentPaid >= settings.FairUseMonthlyPaid;
     }
 
     private static int WarningThresholdFor(int limit) => (int)Math.Ceiling(limit * WarningPercent / 100m);

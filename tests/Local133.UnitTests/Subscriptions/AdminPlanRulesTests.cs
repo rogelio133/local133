@@ -20,8 +20,8 @@ public class AdminPlanRulesTests
     {
         // Prueba del 1 al 31 de noviembre, premio de 10 días después y un mes pagado después del premio.
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), trialDays: 30);
-        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 11, 6, 10), GraceDays);
+        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 11, 6, 10), GraceDays);
         var paidLength = paid.EndsAt - paid.StartsAt;
         Assert.Equal(reward.EndsAt, paid.StartsAt);
 
@@ -41,8 +41,8 @@ public class AdminPlanRulesTests
     public void Premio_en_curso_se_corta_ahora_y_lo_que_sigue_se_recorre()
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), trialDays: 30);
-        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
-        var grant = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, 5, Mx(2026, 11, 5, 10), GraceDays);
+        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
+        var grant = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, SubscriptionPlan.Pro, 5, Mx(2026, 11, 5, 10), GraceDays);
         var now = Mx(2026, 12, 4, 10); // van 3 de los 10 días del premio
 
         var (removed, removePeriod) = subscription.RemoveUnusedDays(reward, now);
@@ -60,7 +60,7 @@ public class AdminPlanRulesTests
     public void Premio_ya_usado_no_cambia_nada()
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), trialDays: 30);
-        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
+        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
         var proUntil = subscription.ProUntil;
 
         var (removed, removePeriod) = subscription.RemoveUnusedDays(reward, Mx(2026, 12, 20, 10));
@@ -76,20 +76,20 @@ public class AdminPlanRulesTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), trialDays: 30);
         var trialEnd = subscription.ProUntil;
-        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
+        var reward = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2026, 11, 5, 10), GraceDays, referralId: 9);
 
         subscription.RemoveUnusedDays(reward, Mx(2026, 11, 10, 10));
 
         Assert.Equal(trialEnd, subscription.ProUntil);
         Assert.Equal(SubscriptionPeriodKind.Trial, subscription.LastPeriodKind);
-        Assert.Equal(PlanTier.Free, subscription.StatusAt(trialEnd.AddHours(1), GraceDays).Tier);
+        Assert.Equal(PlanTier.Expired, subscription.StatusAt(trialEnd.AddHours(1), GraceDays).Tier);
     }
 
     [Fact]
     public void Solo_se_quitan_dias_de_un_premio_de_referido()
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), trialDays: 30);
-        var grant = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, 10, Mx(2026, 11, 5, 10), GraceDays);
+        var grant = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, SubscriptionPlan.Pro, 10, Mx(2026, 11, 5, 10), GraceDays);
 
         Assert.Throws<ArgumentException>(() => subscription.RemoveUnusedDays(grant, Mx(2026, 11, 5, 10)));
         Assert.Throws<ArgumentException>(() => subscription.RemoveUnusedDays(subscription.Periods[0], Mx(2026, 11, 5, 10)));
@@ -145,7 +145,7 @@ public class AdminPlanRulesTests
     public void El_abono_manual_sella_cuando_lo_abono_el_admin()
     {
         var charge = SubscriptionCharge.Create(
-            1, SubscriptionPricing.Quote(SubscriptionPackage.OneMonth, new SystemSettings(), false, null), false,
+            1, SubscriptionPricing.Quote(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, new SystemSettings(), false, null), false,
             SubscriptionChargeOrigin.Merchant, Mx(2026, 11, 1, 10));
         charge.MarkPartial();
 
@@ -164,8 +164,8 @@ public class AdminPlanRulesTests
     }
 
     [Theory]
-    [InlineData(nameof(SystemSettings.MonthlyPrice))]
-    [InlineData(nameof(SystemSettings.FounderMonthlyPrice))]
+    [InlineData(nameof(SystemSettings.ProMonthlyPrice))]
+    [InlineData(nameof(SystemSettings.ProFounderMonthlyPrice))]
     [InlineData(nameof(SystemSettings.FounderSlots))]
     [InlineData(nameof(SystemSettings.TrialDays))]
     [InlineData(nameof(SystemSettings.GraceDays))]
@@ -179,8 +179,8 @@ public class AdminPlanRulesTests
         var assigned = 0;
         switch (field)
         {
-            case nameof(SystemSettings.MonthlyPrice): settings.MonthlyPrice = 199.999m; settings.FounderMonthlyPrice = 1m; break;
-            case nameof(SystemSettings.FounderMonthlyPrice): settings.FounderMonthlyPrice = 250m; break;
+            case nameof(SystemSettings.ProMonthlyPrice): settings.ProMonthlyPrice = 199.999m; settings.ProFounderMonthlyPrice = 1m; break;
+            case nameof(SystemSettings.ProFounderMonthlyPrice): settings.ProFounderMonthlyPrice = 250m; break;
             case nameof(SystemSettings.FounderSlots): settings.FounderSlots = 10; assigned = 11; break;
             case nameof(SystemSettings.TrialDays): settings.TrialDays = 0; break;
             case nameof(SystemSettings.GraceDays): settings.GraceDays = 31; break;
@@ -201,10 +201,10 @@ public class AdminPlanRulesTests
     {
         var settings = new SystemSettings
         {
-            MonthlyPrice = 0.01m,
-            FounderMonthlyPrice = 0.01m,
-            AnnualPrice = 99_999.99m,
-            FounderAnnualPrice = 99_999.99m,
+            ProMonthlyPrice = 0.01m,
+            ProFounderMonthlyPrice = 0.01m,
+            ProAnnualPrice = 99_999.99m,
+            ProFounderAnnualPrice = 99_999.99m,
             FounderSlots = 3,
             GraceDays = 0,
             FreeMonthlyPaidLimit = 300,
@@ -223,15 +223,15 @@ public class AdminPlanRulesTests
         var before = new SystemSettings();
         var after = new SystemSettings();
         SystemSettingsRules.CopyValues(before, after);
-        after.MonthlyPrice = 249m;
+        after.ProMonthlyPrice = 249m;
         after.VatRate = 0.08m;
 
         var changes = SystemSettingsRules.Changes(before, after);
 
         Assert.Equal(
-            [new SettingsChange(nameof(SystemSettings.MonthlyPrice), "199", "249"), new SettingsChange(nameof(SystemSettings.VatRate), "0.16", "0.08")],
+            [new SettingsChange(nameof(SystemSettings.ProMonthlyPrice), "199", "249"), new SettingsChange(nameof(SystemSettings.VatRate), "0.16", "0.08")],
             changes);
-        Assert.Contains(nameof(SystemSettings.MonthlyPrice), SystemSettingsRules.InTerms);
+        Assert.Contains(nameof(SystemSettings.ProMonthlyPrice), SystemSettingsRules.InTerms);
         Assert.DoesNotContain(nameof(SystemSettings.VatRate), SystemSettingsRules.InTerms);
         Assert.All(SystemSettingsRules.Fields, f => SystemSettingsRules.ValueOf(before, f));
     }

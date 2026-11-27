@@ -6,6 +6,7 @@ using Local133.Domain.BankAccounts;
 using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
+using Local133.Domain.Settings;
 using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.IntegrationTests.Infrastructure;
@@ -87,7 +88,7 @@ public class TrialTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
         await AssertTrialAsync(await MerchantIdAsync(Email), before);
         var html = await GetHtmlAsync(client, "/app");
         Assert.Contains("data-plan-tier=\"Trial\"", html);
-        Assert.Contains("Prueba: te quedan 30 días", html);
+        Assert.Contains("Prueba: te quedan 15 días", html);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class TrialTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
 
         var plans = scope.ServiceProvider.GetRequiredService<IPlanAccess>();
         Assert.Equal(PlanTier.Trial, (await plans.GetForMerchantAsync(uno)).Tier);
-        Assert.Equal(PlanTier.Free, (await plans.GetForMerchantAsync(dos)).Tier);
+        Assert.Equal(PlanTier.Expired, (await plans.GetForMerchantAsync(dos)).Tier);
         Assert.False((await plans.GetForMerchantAsync(dos)).Entitlements.CanChargeWithCart);
         Assert.Equal(PlanTier.Onboarding, (await plans.GetForMerchantAsync(-1)).Tier);
         // Sin vendedor en sesión (aquí, el contexto del sistema) no hay plan "actual".
@@ -172,7 +173,7 @@ public class TrialTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
         var trial = Assert.Single(subscription.Periods);
         Assert.Equal(SubscriptionPeriodKind.Trial, trial.Kind);
         Assert.InRange(trial.StartsAt, before.AddSeconds(-1), DateTimeOffset.UtcNow.AddSeconds(1));
-        Assert.Equal(MexicoTime.AddDays(trial.StartsAt, 30), trial.EndsAt);
+        Assert.Equal(MexicoTime.AddDays(trial.StartsAt, SystemSettings.DefaultTrialDays), trial.EndsAt);
         Assert.Equal(trial.StartsAt, subscription.TrialStartedAt);
         Assert.Equal(trial.EndsAt, subscription.ProUntil);
         Assert.Equal(SubscriptionPeriodKind.Trial, subscription.LastPeriodKind);

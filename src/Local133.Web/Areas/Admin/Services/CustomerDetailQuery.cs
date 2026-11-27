@@ -191,7 +191,7 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
             PlanDateText = AdminLabels.PlanDate(status, today),
             DaysLeft = status.DaysLeft(now),
             TrialStartedText = subscription is null ? null : SaleFormats.DateTime(subscription.TrialStartedAt, today),
-            ProUntilText = status.LastProDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
+            ProUntilText = status.LastActiveDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
             GraceUntilText = status.LastGraceDay is { } lastGrace ? SaleFormats.Date(lastGrace, today) : null,
             IsFounder = subscription?.IsFounder ?? false,
             FounderNumber = subscription?.FounderNumber,

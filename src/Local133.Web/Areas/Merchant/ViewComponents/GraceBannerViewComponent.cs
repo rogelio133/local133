@@ -9,7 +9,7 @@ namespace Local133.Web.Areas.Merchant.ViewComponents;
 
 /// <summary>
 /// Banner de gracia en el layout del vendedor (5.7): «Tu plan Pro venció el … Paga a más tardar el … para no perder
-/// Pro», con «Renovar ahora» a «Mi plan» (ahí elige el paquete y se genera el link). Solo en <see cref="PlanTier.Grace"/>.
+/// Pro» (o Básico, el plan que pagó), con «Renovar ahora» a «Mi plan» (ahí elige el paquete y se genera el link). Solo en <see cref="PlanTier.Grace"/>.
 /// </summary>
 public sealed class GraceBannerViewComponent(IPlanAccess plans, ITenantContext tenant, TimeProvider clock) : ViewComponent
 {
@@ -21,13 +21,15 @@ public sealed class GraceBannerViewComponent(IPlanAccess plans, ITenantContext t
         }
 
         var plan = await plans.GetCurrentAsync(HttpContext.RequestAborted);
-        if (plan.Tier != PlanTier.Grace || plan.Status.LastProDay is not { } lastDay || plan.Status.LastGraceDay is not { } graceDay)
+        if (plan.Tier != PlanTier.Grace || plan.Plan is not { } paidPlan
+            || plan.Status.LastActiveDay is not { } lastDay || plan.Status.LastGraceDay is not { } graceDay)
         {
             return Content(string.Empty);
         }
 
         var today = MexicoTime.Today(clock.GetUtcNow());
         return View(new GraceBannerViewModel(
+            paidPlan.Label(),
             SaleFormats.Date(lastDay, today),
             graceDay == today ? "hoy" : SaleFormats.Date(graceDay, today)));
     }
