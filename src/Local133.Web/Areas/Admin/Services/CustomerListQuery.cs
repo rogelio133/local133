@@ -183,7 +183,7 @@ public static class CustomerListQuery
     /// <list type="bullet">
     /// <item>sin suscripción ⇒ onboarding;</item>
     /// <item>antes de <c>ProUntil</c>: prueba si solo la prueba cubre el instante y no hay un pago de Pro por delante; si
-    /// no, Pro (hasta la 5.17 incluye a Básico);</item>
+    /// no, Pro si algún periodo de Pro cubre el instante (la prueba es de Pro) y Básico si no;</item>
     /// <item>después: gracia si el último periodo es pagado y venció hace menos de <c>GraceDays</c>; si no, vencido.</item>
     /// </list>
     /// </summary>
@@ -193,19 +193,24 @@ public static class CustomerListQuery
         var periods = db.SubscriptionPeriods;
         // La gracia termina en MexicoTime.AddDays(ProUntil, GraceDays) > now ⇔ ProUntil > MexicoTime.AddDays(now, -GraceDays).
         var graceFrom = MexicoTime.AddDays(now, -graceDays);
+        var current = query.Where(m => m.ProUntil != null && m.ProUntil > now);
+        var notTrial = current.Where(m =>
+            !(periods.Any(p => p.MerchantId == m.Id && p.Kind == SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
+                && !periods.Any(p => p.MerchantId == m.Id
+                    && ((p.Kind != SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
+                        || (p.Kind == SubscriptionPeriodKind.Paid && p.Plan == SubscriptionPlan.Pro && p.EndsAt > now)))));
         return tier switch
         {
             PlanTier.Onboarding => query.Where(m => m.ProUntil == null),
-            PlanTier.Trial => query.Where(m => m.ProUntil != null && m.ProUntil > now
-                && periods.Any(p => p.MerchantId == m.Id && p.Kind == SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
+            PlanTier.Trial => current.Where(m =>
+                periods.Any(p => p.MerchantId == m.Id && p.Kind == SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
                 && !periods.Any(p => p.MerchantId == m.Id
                     && ((p.Kind != SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
                         || (p.Kind == SubscriptionPeriodKind.Paid && p.Plan == SubscriptionPlan.Pro && p.EndsAt > now)))),
-            PlanTier.Pro => query.Where(m => m.ProUntil != null && m.ProUntil > now
-                && !(periods.Any(p => p.MerchantId == m.Id && p.Kind == SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
-                    && !periods.Any(p => p.MerchantId == m.Id
-                        && ((p.Kind != SubscriptionPeriodKind.Trial && p.StartsAt <= now && p.EndsAt > now)
-                            || (p.Kind == SubscriptionPeriodKind.Paid && p.Plan == SubscriptionPlan.Pro && p.EndsAt > now))))),
+            PlanTier.Pro => notTrial.Where(m =>
+                periods.Any(p => p.MerchantId == m.Id && p.Plan == SubscriptionPlan.Pro && p.StartsAt <= now && p.EndsAt > now)),
+            PlanTier.Basic => notTrial.Where(m =>
+                !periods.Any(p => p.MerchantId == m.Id && p.Plan == SubscriptionPlan.Pro && p.StartsAt <= now && p.EndsAt > now)),
             PlanTier.Grace => query.Where(m => m.ProUntil != null && m.ProUntil <= now && m.ProUntil > graceFrom
                 && m.LastPeriodKind == SubscriptionPeriodKind.Paid),
             PlanTier.Expired => query.Where(m => m.ProUntil != null && m.ProUntil <= now

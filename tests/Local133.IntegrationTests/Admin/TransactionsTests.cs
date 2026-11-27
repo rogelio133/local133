@@ -131,8 +131,8 @@ public partial class TransactionsTests(Local133WebFactory factory) : AdminTestBa
         await SeedTrialAsync(OtherEmail);
         var codiCharge = await InsertChargeAsync(Email, 199m, now.AddDays(-3), paidAt: now.AddDays(-3));
         var codi = await InsertSubscriptionPaymentAsync(codiCharge, "CODI", 199m, now.AddDays(-3));
-        var cardCharge = await InsertChargeAsync(OtherEmail, 149m, now.AddDays(-1), paidAt: now.AddDays(-1));
-        var card = await InsertSubscriptionPaymentAsync(cardCharge, "CARD", 149m, now.AddDays(-1), fee: 5.5m);
+        var cardCharge = await InsertChargeAsync(OtherEmail, 99m, now.AddDays(-1), paidAt: now.AddDays(-1), plan: SubscriptionPlan.Basic);
+        var card = await InsertSubscriptionPaymentAsync(cardCharge, "CARD", 99m, now.AddDays(-1), fee: 5.5m);
         var admin = await AdminAsync();
 
         var all = WebUtility.HtmlDecode(await GetHtmlAsync(admin, Url + "/suscripciones"));
@@ -141,6 +141,7 @@ public partial class TransactionsTests(Local133WebFactory factory) : AdminTestBa
         Assert.Contains("data-subscription-payments-count=\"2\"", all);
         Assert.Contains("comisión $5.50", all);
         Assert.Contains("Pro, 1 mes", all);
+        Assert.Contains("data-subscription-payment-plan=\"Basic\">Básico, 1 mes", all);
         Assert.Contains("data-transaction-tab=\"Subscriptions\"", all);
         Assert.Equal([card.Id], PaymentIds(await GetHtmlAsync(admin, Url + "/suscripciones?metodo=tarjeta")));
         Assert.Equal([codi.Id], PaymentIds(await GetHtmlAsync(admin, Url + "/suscripciones?q=" + codi.PeyTransactionId)));

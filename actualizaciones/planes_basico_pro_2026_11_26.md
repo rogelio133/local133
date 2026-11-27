@@ -489,6 +489,15 @@ Cambios frente a lo de aquí:
   - el anuncio, una sola vez por vendedor.
 
 ### 5.17 Admin
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.16 y la 5.18.* — [bitácora](../log_plan/fase-5.17-admin.md)
+
+Cambios frente a lo de aquí:
+- Básico < Pro también aplica a los precios de fundador (confirmado por el usuario). Para la verificación de extremo a extremo de §16 no se pueden poner los dos en $0.01: Básico $0.01 y Pro $0.02.
+- Regalar Pro con Básico por delante no convierte el Básico: se encadena al final, como los premios.
+- Las subidas de Básico a Pro se cuentan por los periodos `Conversion` creados en 30 días.
+- `AuditAction.ProDaysGranted` y `NotificationType.ProDaysGranted` conservan el nombre (se guardan como texto); solo cambian los textos.
+- `InTerms` suma los 4 precios de Básico (15 campos).
+
 - **Parámetros**:
   - los campos nuevos en `SettingsInput`;
   - `SystemSettingsRules`: fundador ≤ normal en cada plan, Básico < Pro en el mensual y en el anual, y los campos `InTerms` actualizados.

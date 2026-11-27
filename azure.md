@@ -314,3 +314,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - Como `BasicAndProPlans`, se publica en el horario acordado: el anuncio sale a las 9:00 (México) del día siguiente a la publicación. Con Resend configurado, esos correos **salen de verdad** a todos los vendedores existentes.
 - El job es el mismo (`suscripciones-diario`, 9:00 México) y sigue sin crear links de Pey. Los botones de los recordatorios llevan al checkout (`{App__PublicBaseUrl}/app/plan/checkout…`), así que `App__PublicBaseUrl` debe ser la URL pública con HTTPS, como ya se exige.
 - Sin recursos, App Settings, secretos ni webhooks nuevos.
+
+### Fase 5.17 — Admin
+- **Se publica junto con la 5.12 a la 5.16 y la 5.18.**
+- Sin cambios para Azure: sin migración (los precios de Básico y el `Plan` de periodos y cargos ya los creó `BasicAndProPlans`), recursos, App Settings, secretos, jobs ni webhooks nuevos.
+- Antes de publicar, revisar los precios en `/admin/parametros`: la regla nueva exige Básico < Pro (también entre los de fundador). Si en producción quedó algún precio de prueba (p. ej. Pro fundador en $0.01), la pantalla no dejará guardar hasta corregirlo.

@@ -258,7 +258,9 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - resumen mensual por plan y anuncio del cambio.
 
     ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.15, la 5.17 y la 5.18)* — [bitácora](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
-17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
+17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan.
+
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.16 y la 5.18; Básico < Pro también en los precios de fundador)* — [bitácora](log_plan/fase-5.17-admin.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
 18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
@@ -289,6 +291,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
 - [5.13](log_plan/fase-5.13-prueba-al-primer-cobro.md): el primer cobro real de $0.01 empieza la prueba de 15 días de Pro (punto 1 de la verificación de extremo a extremo de los planes Básico y Pro).
+- [5.17](log_plan/fase-5.17-admin.md): para la verificación de extremo a extremo con $0.01, la regla «Básico < Pro» no deja poner los dos en $0.01 desde Parámetros: usar Básico $0.01 y Pro $0.02 (también los de fundador).
 - [5.15](log_plan/fase-5.15-checkout-por-pasos.md): pagar Básico durante la prueba y subir a Pro con links reales ⇒ webhook ⇒ conversión de los días; «Regresar» de Pey vuelve al resumen del pedido (puntos 2 y 3 de la verificación de extremo a extremo).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 

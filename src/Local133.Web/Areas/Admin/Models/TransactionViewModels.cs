@@ -246,7 +246,7 @@ public sealed record SubscriptionPaymentFilters(
 
 /// <summary>Un pago de la suscripción recibido de Pey.</summary>
 public sealed record SubscriptionPaymentRow(
-    int Id, int MerchantId, string MerchantName, string? BusinessName, int ChargeId, SubscriptionPackage Package,
+    int Id, int MerchantId, string MerchantName, string? BusinessName, int ChargeId, SubscriptionPlan Plan, SubscriptionPackage Package,
     SubscriptionChargeStatus ChargeStatus, string PaidAtText, string MethodText, string AmountText, string BaseText,
     string? FeeText, string PeyTransactionId);
 

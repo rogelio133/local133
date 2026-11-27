@@ -32,10 +32,15 @@ public static class SystemSettingsRules
 
     /// <summary>
     /// Parámetros que aparecen escritos en los Términos (los que compara <c>LegalPagesTests</c>). Cambiar uno exige
-    /// publicar una versión nueva de los Términos.
+    /// publicar una versión nueva de los Términos. Los precios de Básico se escriben en los Términos de la 5.18, que se
+    /// publica junto con la 5.17.
     /// </summary>
     public static readonly IReadOnlySet<string> InTerms = new HashSet<string>(StringComparer.Ordinal)
     {
+        nameof(SystemSettings.BasicMonthlyPrice),
+        nameof(SystemSettings.BasicAnnualPrice),
+        nameof(SystemSettings.BasicFounderMonthlyPrice),
+        nameof(SystemSettings.BasicFounderAnnualPrice),
         nameof(SystemSettings.ProMonthlyPrice),
         nameof(SystemSettings.ProAnnualPrice),
         nameof(SystemSettings.ProFounderMonthlyPrice),
@@ -52,6 +57,10 @@ public static class SystemSettingsRules
     /// <summary>Todos los parámetros editables, en el orden de la pantalla.</summary>
     public static readonly IReadOnlyList<string> Fields =
     [
+        nameof(SystemSettings.BasicMonthlyPrice),
+        nameof(SystemSettings.BasicAnnualPrice),
+        nameof(SystemSettings.BasicFounderMonthlyPrice),
+        nameof(SystemSettings.BasicFounderAnnualPrice),
         nameof(SystemSettings.ProMonthlyPrice),
         nameof(SystemSettings.ProAnnualPrice),
         nameof(SystemSettings.ProFounderMonthlyPrice),
@@ -74,19 +83,27 @@ public static class SystemSettingsRules
         ArgumentNullException.ThrowIfNull(settings);
         var errors = new List<SettingsError>();
 
-        Price(errors, nameof(SystemSettings.ProMonthlyPrice), settings.ProMonthlyPrice);
-        Price(errors, nameof(SystemSettings.ProAnnualPrice), settings.ProAnnualPrice);
-        Price(errors, nameof(SystemSettings.ProFounderMonthlyPrice), settings.ProFounderMonthlyPrice);
-        Price(errors, nameof(SystemSettings.ProFounderAnnualPrice), settings.ProFounderAnnualPrice);
-        if (settings.ProFounderMonthlyPrice > settings.ProMonthlyPrice)
+        foreach (var field in PriceFields)
         {
-            errors.Add(new(nameof(SystemSettings.ProFounderMonthlyPrice), "El precio de fundador no puede ser mayor que el normal."));
+            Price(errors, field, PriceOf(settings, field));
         }
 
-        if (settings.ProFounderAnnualPrice > settings.ProAnnualPrice)
-        {
-            errors.Add(new(nameof(SystemSettings.ProFounderAnnualPrice), "El precio de fundador no puede ser mayor que el normal."));
-        }
+        // Fundador ≤ normal en cada plan.
+        NotAbove(errors, nameof(SystemSettings.BasicFounderMonthlyPrice), settings.BasicFounderMonthlyPrice, settings.BasicMonthlyPrice,
+            "El precio de fundador no puede ser mayor que el normal.");
+        NotAbove(errors, nameof(SystemSettings.BasicFounderAnnualPrice), settings.BasicFounderAnnualPrice, settings.BasicAnnualPrice,
+            "El precio de fundador no puede ser mayor que el normal.");
+        NotAbove(errors, nameof(SystemSettings.ProFounderMonthlyPrice), settings.ProFounderMonthlyPrice, settings.ProMonthlyPrice,
+            "El precio de fundador no puede ser mayor que el normal.");
+        NotAbove(errors, nameof(SystemSettings.ProFounderAnnualPrice), settings.ProFounderAnnualPrice, settings.ProAnnualPrice,
+            "El precio de fundador no puede ser mayor que el normal.");
+
+        // Básico < Pro, también entre los precios de fundador: si no, subir de plan no tendría sentido (la conversión
+        // de los días de Básico a Pro usa la proporción de los mensuales).
+        Below(errors, nameof(SystemSettings.BasicMonthlyPrice), settings.BasicMonthlyPrice, settings.ProMonthlyPrice);
+        Below(errors, nameof(SystemSettings.BasicAnnualPrice), settings.BasicAnnualPrice, settings.ProAnnualPrice);
+        Below(errors, nameof(SystemSettings.BasicFounderMonthlyPrice), settings.BasicFounderMonthlyPrice, settings.ProFounderMonthlyPrice);
+        Below(errors, nameof(SystemSettings.BasicFounderAnnualPrice), settings.BasicFounderAnnualPrice, settings.ProFounderAnnualPrice);
 
         Range(errors, nameof(SystemSettings.FounderSlots), settings.FounderSlots, 0, MaxCount);
         if (settings.FounderSlots < assignedFounders)
@@ -127,14 +144,15 @@ public static class SystemSettingsRules
         return changes;
     }
 
-    /// <summary>
-    /// Copia los parámetros editables (no el id). Los precios de Básico todavía no se editan en la pantalla: entran aquí
-    /// con sus reglas en la 5.17.
-    /// </summary>
+    /// <summary>Copia los parámetros editables (no el id).</summary>
     public static void CopyValues(SystemSettings from, SystemSettings to)
     {
         ArgumentNullException.ThrowIfNull(from);
         ArgumentNullException.ThrowIfNull(to);
+        to.BasicMonthlyPrice = from.BasicMonthlyPrice;
+        to.BasicAnnualPrice = from.BasicAnnualPrice;
+        to.BasicFounderMonthlyPrice = from.BasicFounderMonthlyPrice;
+        to.BasicFounderAnnualPrice = from.BasicFounderAnnualPrice;
         to.ProMonthlyPrice = from.ProMonthlyPrice;
         to.ProAnnualPrice = from.ProAnnualPrice;
         to.ProFounderMonthlyPrice = from.ProFounderMonthlyPrice;
@@ -154,10 +172,7 @@ public static class SystemSettingsRules
     /// <summary>Valor en texto invariante (los decimales sin ceros de sobra: 199, 0.3).</summary>
     public static string ValueOf(SystemSettings settings, string field) => field switch
     {
-        nameof(SystemSettings.ProMonthlyPrice) => Text(settings.ProMonthlyPrice),
-        nameof(SystemSettings.ProAnnualPrice) => Text(settings.ProAnnualPrice),
-        nameof(SystemSettings.ProFounderMonthlyPrice) => Text(settings.ProFounderMonthlyPrice),
-        nameof(SystemSettings.ProFounderAnnualPrice) => Text(settings.ProFounderAnnualPrice),
+        _ when PriceFields.Contains(field) => Text(PriceOf(settings, field)),
         nameof(SystemSettings.FounderSlots) => Text(settings.FounderSlots),
         nameof(SystemSettings.TrialDays) => Text(settings.TrialDays),
         nameof(SystemSettings.GraceDays) => Text(settings.GraceDays),
@@ -170,6 +185,48 @@ public static class SystemSettingsRules
         nameof(SystemSettings.ReferenceTerminalFeeRate) => Text(settings.ReferenceTerminalFeeRate),
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Parámetro desconocido."),
     };
+
+    /// <summary>Los 8 precios (Básico y Pro, normal y de fundador).</summary>
+    private static readonly IReadOnlyList<string> PriceFields =
+    [
+        nameof(SystemSettings.BasicMonthlyPrice),
+        nameof(SystemSettings.BasicAnnualPrice),
+        nameof(SystemSettings.BasicFounderMonthlyPrice),
+        nameof(SystemSettings.BasicFounderAnnualPrice),
+        nameof(SystemSettings.ProMonthlyPrice),
+        nameof(SystemSettings.ProAnnualPrice),
+        nameof(SystemSettings.ProFounderMonthlyPrice),
+        nameof(SystemSettings.ProFounderAnnualPrice),
+    ];
+
+    private static decimal PriceOf(SystemSettings settings, string field) => field switch
+    {
+        nameof(SystemSettings.BasicMonthlyPrice) => settings.BasicMonthlyPrice,
+        nameof(SystemSettings.BasicAnnualPrice) => settings.BasicAnnualPrice,
+        nameof(SystemSettings.BasicFounderMonthlyPrice) => settings.BasicFounderMonthlyPrice,
+        nameof(SystemSettings.BasicFounderAnnualPrice) => settings.BasicFounderAnnualPrice,
+        nameof(SystemSettings.ProMonthlyPrice) => settings.ProMonthlyPrice,
+        nameof(SystemSettings.ProAnnualPrice) => settings.ProAnnualPrice,
+        nameof(SystemSettings.ProFounderMonthlyPrice) => settings.ProFounderMonthlyPrice,
+        nameof(SystemSettings.ProFounderAnnualPrice) => settings.ProFounderAnnualPrice,
+        _ => throw new ArgumentOutOfRangeException(nameof(field), field, "No es un precio."),
+    };
+
+    private static void NotAbove(List<SettingsError> errors, string field, decimal value, decimal max, string message)
+    {
+        if (value > max)
+        {
+            errors.Add(new(field, message));
+        }
+    }
+
+    private static void Below(List<SettingsError> errors, string field, decimal basic, decimal pro)
+    {
+        if (basic >= pro)
+        {
+            errors.Add(new(field, "Básico debe costar menos que Pro."));
+        }
+    }
 
     private static string Text(decimal value) => value.ToString("0.####", CultureInfo.InvariantCulture);
 

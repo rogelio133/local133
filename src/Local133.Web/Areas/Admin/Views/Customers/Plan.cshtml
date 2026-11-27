@@ -38,19 +38,23 @@
                             {
                                 <span class="small text-body-secondary ms-1">@planDate</span>
                             }
+                            @if (Model.NextPlanText is { } nextPlan)
+                            {
+                                <div class="small text-body-secondary" data-plan-next>@nextPlan</div>
+                            }
                         </dd>
 
                         @* En la gracia el Pro ya terminó (DaysLeft vale 0): la fecha de la gracia va junto a la insignia. *@
                         @if (status.Tier is PlanTier.Trial or PlanTier.Basic or PlanTier.Pro && Model.DaysLeft is { } daysLeft)
                         {
-                            <dt class="col-sm-4">Días de Pro</dt>
+                            <dt class="col-sm-4">Días vigentes</dt>
                             <dd class="col-sm-8" data-days-left="@daysLeft">@(daysLeft == 0 ? "Hoy es el último día" : daysLeft == 1 ? "Queda 1 día" : $"Quedan {daysLeft} días")</dd>
                         }
 
                         <dt class="col-sm-4">Inicio de la prueba</dt>
                         <dd class="col-sm-8">@(Model.TrialStartedText ?? "—")</dd>
 
-                        <dt class="col-sm-4">Último día de Pro</dt>
+                        <dt class="col-sm-4">Vigente hasta</dt>
                         <dd class="col-sm-8" data-pro-until>@(Model.ProUntilText ?? "—")</dd>
 
                         @if (Model.GraceUntilText is { } grace)
@@ -60,7 +64,7 @@
                         }
 
                         <dt class="col-sm-4">Último paquete pagado</dt>
-                        <dd class="col-sm-8">@(Model.LastPackage?.Label() ?? "Ninguno")</dd>
+                        <dd class="col-sm-8" data-plan-last-paid>@(Model.LastPackage is { } lastPackage ? $"{(Model.LastPlan ?? SubscriptionPlan.Pro).Label()} · {lastPackage.Label()}" : "Ninguno")</dd>
 
                         <dt class="col-sm-4">Fundador</dt>
                         <dd class="col-sm-8">@(Model.IsFounder ? $"Sí, lugar {Model.FounderNumber}" : "No")</dd>
@@ -68,7 +72,7 @@
                         @if (Model.LockedAnnualPriceText is { } locked)
                         {
                             <dt class="col-sm-4">Anual congelado</dt>
-                            <dd class="col-sm-8 mb-0">@locked</dd>
+                            <dd class="col-sm-8 mb-0">@locked@(Model.LockedAnnualPlan is { } lockedPlan ? $" ({lockedPlan.Label()})" : null)</dd>
                         }
                     </dl>
                 }
@@ -80,19 +84,32 @@
         {
             <div class="card mb-3" data-grant-days>
                 <div class="card-body">
-                    <h2 class="h6 card-title"><i class="bi bi-gift me-1" aria-hidden="true"></i> Regalar días de Pro</h2>
-                    <p class="small text-body-secondary">Se suman al final de su Pro (o desde hoy si su plan venció), como un premio.</p>
+                    <h2 class="h6 card-title"><i class="bi bi-gift me-1" aria-hidden="true"></i> Regalar días</h2>
+                    <p class="small text-body-secondary">
+                        Se suman al final de su cadena (o desde hoy si su plan venció), como un premio. Por defecto, del plan
+                        con el que termina su cadena (@Model.ChainEndPlan.Label()). Regalar Pro no convierte el Básico que tenga por delante.
+                    </p>
                     <form method="post" action="@Url.Content("~" + CustomerPlanUrls.GrantDays(id))" data-grant-days-form data-disable-on-submit>
                         @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
                         @Html.AntiForgeryToken()
                         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                         <div class="row g-3">
-                            <div class="col-sm-4 col-lg-3">
+                            <div class="col-sm-6 col-lg-3">
+                                <label asp-for="Grant.Plan" class="form-label"></label>
+                                <select asp-for="Grant.Plan" class="form-select" data-grant-plan>
+                                    @foreach (var plan in new[] { SubscriptionPlan.Basic, SubscriptionPlan.Pro })
+                                    {
+                                        <option value="@plan" selected="@(Model.Grant.Plan == plan)">@plan.Label()</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Grant.Plan" class="d-block text-danger small mt-1"></span>
+                            </div>
+                            <div class="col-sm-6 col-lg-2">
                                 <label asp-for="Grant.Days" class="form-label"></label>
                                 <input asp-for="Grant.Days" type="number" inputmode="numeric" min="1" max="@AdminPlanLimits.MaxGrantDays" step="1" class="form-control" />
                                 <span asp-validation-for="Grant.Days" class="d-block text-danger small mt-1"></span>
                             </div>
-                            <div class="col-sm-8 col-lg-9">
+                            <div class="col-12 col-lg-7">
                                 <label asp-for="Grant.Note" class="form-label"></label>
                                 <input asp-for="Grant.Note" type="text" maxlength="@AdminPlanLimits.NoteMaxLength" class="form-control" placeholder="Ej. Compensación por la falla del 20 de noviembre" data-val-trim />
                                 <span asp-validation-for="Grant.Note" class="d-block text-danger small mt-1"></span>
@@ -111,7 +128,7 @@
         @* --- Periodos --------------------------------------------------------------------------------------------- *@
         <div class="card mb-3" data-plan-periods>
             <div class="card-body">
-                <h2 class="h6 card-title">Periodos de Pro</h2>
+                <h2 class="h6 card-title">Periodos</h2>
                 @if (Model.Periods.Count == 0)
                 {
                     <p class="mb-0 text-body-secondary">Todavía no tiene periodos.</p>
@@ -123,6 +140,7 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Tipo</th>
+                                    <th scope="col">Plan</th>
                                     <th scope="col">Desde</th>
                                     <th scope="col">Último día</th>
                                     <th scope="col" class="text-end">Días</th>
@@ -132,7 +150,7 @@
                             <tbody>
                                 @foreach (var p in Model.Periods)
                                 {
-                                    <tr data-plan-period="@p.Id" data-period-kind="@p.Kind">
+                                    <tr data-plan-period="@p.Id" data-period-kind="@p.Kind" data-period-plan="@p.Plan">
                                         <td class="text-nowrap">
                                             <span class="badge @PlanLabels.PeriodBadge(p.Kind)">@PlanLabels.PeriodKind(p.Kind)</span>
                                             @if (p.IsCurrent)
@@ -144,6 +162,7 @@
                                                 <span class="badge text-bg-light border">Por empezar</span>
                                             }
                                         </td>
+                                        <td><span class="badge @PlanLabels.PlanBadge(p.Plan)">@p.Plan.Label()</span></td>
                                         <td class="text-nowrap">@p.StartsText</td>
                                         <td class="text-nowrap">@p.LastDayText</td>
                                         <td class="text-end">@p.Days</td>
@@ -155,6 +174,10 @@
                                             else if (p.ReferralId is { } referralId)
                                             {
                                                 <a href="#referido-@referralId">Referido #@referralId</a>
+                                            }
+                                            else if (PlanLabels.PeriodOrigin(p.Kind) is { } origin)
+                                            {
+                                                <span class="text-body-secondary">@origin</span>
                                             }
                                             else
                                             {
@@ -187,9 +210,10 @@
                     <ul class="list-group">
                         @foreach (var c in Model.Charges)
                         {
-                            <li class="list-group-item" id="cargo-@c.Id" data-plan-charge="@c.Id" data-charge-status="@c.Status">
+                            <li class="list-group-item" id="cargo-@c.Id" data-plan-charge="@c.Id" data-charge-status="@c.Status" data-charge-plan="@c.Plan">
                                 <div class="d-flex flex-wrap align-items-center gap-2">
                                     <strong>#@c.Id</strong>
+                                    <span class="badge @PlanLabels.PlanBadge(c.Plan)">@c.Plan.Label()</span>
                                     <span>@c.Package.Label()</span>
                                     <span class="fw-semibold">@c.AmountText</span>
                                     <span class="badge @PlanLabels.ChargeBadge(c.Status)">@PlanLabels.ChargeStatus(c.Status)</span>
@@ -351,7 +375,7 @@
     <partial name="_PlanConfirmModal" model='new PlanConfirmModalViewModel(
         $"credit-charge-{c.Id}",
         $"¿Abonar a mano el cargo #{c.Id}?",
-        $"Se abonará {c.Package.Label()} por {c.AmountText} como si Pey hubiera confirmado el pago. Úsalo solo si confirmaste el pago en el portal de Pey o con el vendedor.",
+        $"Se abonará {c.Plan.Label()} · {c.Package.Label()} por {c.AmountText} como si Pey hubiera confirmado el pago. Úsalo solo si confirmaste el pago en el portal de Pey o con el vendedor.",
         CustomerPlanUrls.CreditCharge(id, c.Id),
         "Sí, abonar",
         "btn-primary")' />

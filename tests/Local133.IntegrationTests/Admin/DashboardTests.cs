@@ -92,7 +92,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         await ActiveMerchantAsync(Email);
         await SeedTrialAsync(Email);
         await InsertChargeAsync(Email, 199m, monthStart, paidAt: monthStart.AddDays(2));
-        await InsertChargeAsync(Email, 149m, monthStart, paidAt: monthStart.AddDays(3), manual: true);
+        await InsertChargeAsync(Email, 149m, monthStart, paidAt: monthStart.AddDays(3), manual: true, plan: SubscriptionPlan.Basic);
         await InsertChargeAsync(Email, 199m, monthStart.AddDays(-5), paidAt: monthStart.AddDays(-3));
         await InsertChargeAsync(Email, 199m, monthStart.AddDays(4)); // pendiente: no cuenta
         await InsertChargeAsync(Email, 199m, monthStart.AddDays(4), status: SubscriptionChargeStatus.Partial);
@@ -103,6 +103,10 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         Assert.Contains("$300.00 sin IVA · IVA $48.00", html);
         Assert.Contains("data-dashboard-revenue-charges=\"2\" data-dashboard-revenue-manual=\"1\"", html);
         Assert.Contains("data-dashboard-revenue=\"previous\">$199.00</div>", html);
+        // Por plan: el primero de cada uno es el de este mes.
+        Assert.Contains("data-dashboard-revenue-plan=\"Basic\" data-amount=\"149.00\" data-charges=\"1\"", html);
+        Assert.Contains("data-dashboard-revenue-plan=\"Pro\" data-amount=\"199.00\" data-charges=\"1\"", html);
+        Assert.Contains("data-dashboard-revenue-plan=\"Basic\" data-amount=\"0\" data-charges=\"0\"", html); // mes anterior
     }
 
     [Fact]
@@ -117,21 +121,24 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         await CreateMerchantAsync("gracia@prueba.mx");
         await SeedPlanAsync("gracia@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-70), now.AddDays(-40)),
             (SubscriptionPeriodKind.Paid, now.AddDays(-40), now.AddDays(-2)));
+        await CreateMerchantAsync("basico@prueba.mx");
+        await SeedBasicPlanAsync("basico@prueba.mx");
         await ActiveMerchantAsync("pro@prueba.mx");
         await SeedPlanAsync("pro@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)),
             (SubscriptionPeriodKind.Paid, now.AddDays(-10), now.AddDays(20)));
 
         var html = await GetHtmlAsync(await AdminAsync(), Url);
 
-        foreach (var tier in new[] { PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Expired })
+        foreach (var tier in Enum.GetValues<PlanTier>())
         {
             Assert.Contains($"data-plan-count=\"{tier}\" data-count=\"1\"", html);
         }
 
-        Assert.Contains("data-status-count=\"PendingBankAccount\" data-count=\"4\"", html);
+        Assert.Contains("data-status-count=\"PendingBankAccount\" data-count=\"5\"", html);
         Assert.Contains("data-status-count=\"Active\" data-count=\"1\"", html);
-        Assert.Contains("data-dashboard-total-merchants=\"5\"", html);
+        Assert.Contains("data-dashboard-total-merchants=\"6\"", html);
         Assert.Contains("href=\"/admin/clientes?plan=gracia\"", html);
+        Assert.Contains("href=\"/admin/clientes?plan=basico\"", html);
         Assert.Contains("href=\"/admin/clientes?estatus=activos\"", html);
     }
 
@@ -142,7 +149,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         // Terminó hace 10 días y pagó.
         await CreateMerchantAsync("a@prueba.mx");
         await SeedPlanAsync("a@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)));
-        await InsertChargeAsync("a@prueba.mx", 199m, now.AddDays(-12), paidAt: now.AddDays(-11));
+        await InsertChargeAsync("a@prueba.mx", 99m, now.AddDays(-12), paidAt: now.AddDays(-11), plan: SubscriptionPlan.Basic); // cualquier plan cuenta
         // Terminó hace 40 días sin pagar (solo cuenta en el histórico).
         await CreateMerchantAsync("b@prueba.mx");
         await SeedPlanAsync("b@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-70), now.AddDays(-40)));
@@ -161,6 +168,42 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         Assert.Contains("33 %", html);
         Assert.Contains("data-dashboard-recent-conversion data-ended=\"2\" data-paid=\"1\"", html);
         Assert.Contains("50 %", html);
+    }
+
+    [Fact]
+    public async Task Subidas_de_Basico_a_Pro_en_los_ultimos_30_dias()
+    {
+        var now = DateTimeOffset.UtcNow;
+        const SubscriptionPlan Pro = SubscriptionPlan.Pro;
+        const SubscriptionPlan Basic = SubscriptionPlan.Basic;
+        // Subió hace 3 días; la conversión dejó dos tramos de Pro: cuenta una vez.
+        await CreateMerchantAsync("a@prueba.mx");
+        await SeedPlanAsync("a@prueba.mx",
+            (SubscriptionPeriodKind.Trial, Pro, now.AddDays(-30), now.AddDays(-15)),
+            (SubscriptionPeriodKind.Paid, Basic, now.AddDays(-15), now.AddDays(-3)),
+            (SubscriptionPeriodKind.Conversion, Pro, now.AddDays(-3), now.AddDays(5)),
+            (SubscriptionPeriodKind.Conversion, Pro, now.AddDays(-3).AddSeconds(1), now.AddDays(5).AddSeconds(1)));
+        // Subió hace 20 días.
+        await CreateMerchantAsync("b@prueba.mx");
+        await SeedPlanAsync("b@prueba.mx",
+            (SubscriptionPeriodKind.Trial, Pro, now.AddDays(-50), now.AddDays(-35)),
+            (SubscriptionPeriodKind.Paid, Basic, now.AddDays(-35), now.AddDays(-20)),
+            (SubscriptionPeriodKind.Conversion, Pro, now.AddDays(-20), now.AddDays(-10)));
+        // Subió hace 40 días: ya no cuenta.
+        await CreateMerchantAsync("c@prueba.mx");
+        await SeedPlanAsync("c@prueba.mx",
+            (SubscriptionPeriodKind.Trial, Pro, now.AddDays(-70), now.AddDays(-55)),
+            (SubscriptionPeriodKind.Paid, Basic, now.AddDays(-55), now.AddDays(-40)),
+            (SubscriptionPeriodKind.Conversion, Pro, now.AddDays(-40), now.AddDays(-30)));
+        // Pagó Pro sin Básico por delante: no es subida.
+        await CreateMerchantAsync("d@prueba.mx");
+        await SeedPlanAsync("d@prueba.mx",
+            (SubscriptionPeriodKind.Trial, Pro, now.AddDays(-20), now.AddDays(-5)),
+            (SubscriptionPeriodKind.Paid, Pro, now.AddDays(-5), now.AddDays(25)));
+
+        var html = await GetHtmlAsync(await AdminAsync(), Url);
+
+        Assert.Contains("data-dashboard-upgrades=\"2\"", html);
     }
 
     [Fact]

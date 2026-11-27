@@ -83,6 +83,33 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         Assert.Contains("data-referred-by", html);
         Assert.Contains("Lo invitó", html);
         Assert.DoesNotContain("data-plan-coming-soon", html);
+        Assert.Contains($"data-plan-charge=\"{charge.Id}\" data-charge-status=\"Partial\" data-charge-plan=\"Pro\"", html);
+    }
+
+    [Fact]
+    public async Task Muestra_el_plan_de_cada_periodo_la_conversion_la_transicion_y_lo_que_sigue()
+    {
+        await CreateMerchantAsync(Email);
+        var id = await MerchantIdAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        await SeedPlanAsync(Email,
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-40), now.AddDays(-25)),
+            (SubscriptionPeriodKind.Transition, SubscriptionPlan.Basic, now.AddDays(-25), now.AddDays(-10)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, now.AddDays(-10), now.AddDays(-1)),
+            (SubscriptionPeriodKind.Conversion, SubscriptionPlan.Pro, now.AddDays(-1), now.AddDays(5)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, now.AddDays(5), now.AddDays(35)));
+
+        var html = WebUtility.HtmlDecode(await GetHtmlAsync(await AdminAsync(), PlanTab(id)));
+
+        Assert.Contains("data-plan-tier=\"Pro\"", html);
+        Assert.Contains("data-period-kind=\"Conversion\" data-period-plan=\"Pro\"", html);
+        Assert.Contains("data-period-kind=\"Transition\" data-period-plan=\"Basic\"", html);
+        Assert.Contains("Básico convertido", html);
+        Assert.Contains("Cambio de planes 2026-12", html);
+        Assert.Contains("data-plan-next>Después Básico hasta el", html);
+        // El regalo propone el plan con el que termina su cadena: Básico.
+        Assert.Matches(new Regex("<option value=\"Basic\" selected=\"selected\">"), html);
+        Assert.DoesNotMatch(new Regex("<option value=\"Pro\" selected"), html);
     }
 
     [Fact]
@@ -137,6 +164,77 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
     }
 
     [Fact]
+    public async Task Regalar_dias_de_Basico_con_la_prueba_los_encadena_al_final_y_lo_dice()
+    {
+        await TrialMerchantAsync(Email);
+        var id = await MerchantIdAsync(Email);
+        var before = (await LoadSubscriptionAsync(Email)).ProUntil;
+        var admin = await AdminAsync();
+
+        var html = await GetHtmlAsync(admin, PlanTab(id));
+        Assert.Matches(new Regex("<option value=\"Pro\" selected=\"selected\">"), html); // la prueba es de Pro
+
+        var response = await GrantDaysAsync(admin, id, days: "10", note: "Prueba de Básico", notify: true, plan: "Basic");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var subscription = await LoadSubscriptionAsync(Email);
+        var grant = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.AdminGrant);
+        Assert.Equal(SubscriptionPlan.Basic, grant.Plan);
+        Assert.Equal(before, grant.StartsAt);
+        Assert.Equal(PlanTier.Trial, subscription.StatusAt(DateTimeOffset.UtcNow, graceDays: 5).Tier);
+
+        var email = Factory.Emails.Last(Email);
+        Assert.Equal("Te regalamos 10 días de Básico · Local133", email.Subject);
+        Assert.Contains("Tus días de Básico van del", WebUtility.HtmlDecode(email.Html)); // empiezan al terminar la prueba
+        var audit = Assert.Single(await AuditAsync());
+        Assert.Contains("10 días de Básico", audit.Summary);
+        Assert.Contains("\"plan\":\"Basic\"", audit.Details!);
+
+        var after = WebUtility.HtmlDecode(await GetHtmlAsync(admin, PlanTab(id)));
+        Assert.Contains("se regalaron 10 días de Básico", after);
+        Assert.Matches(new Regex("<option value=\"Basic\" selected=\"selected\">"), after); // ahora la cadena termina en Básico
+    }
+
+    [Fact]
+    public async Task Regalar_dias_de_Pro_a_un_vencido_lo_reactiva_desde_hoy()
+    {
+        await ActiveMerchantAsync(Email);
+        await SeedExpiredPlanAsync(Email);
+        var id = await MerchantIdAsync(Email);
+
+        await GrantDaysAsync(await AdminAsync(), id, days: "7", note: "Compensación", notify: true);
+
+        var subscription = await LoadSubscriptionAsync(Email);
+        Assert.Equal(PlanTier.Pro, subscription.StatusAt(DateTimeOffset.UtcNow, graceDays: 5).Tier);
+        Assert.Contains("Ahora tienes Pro hasta el", WebUtility.HtmlDecode(Factory.Emails.Last(Email).Html));
+    }
+
+    [Theory]
+    [InlineData("7")]
+    [InlineData("Oro")]
+    [InlineData("")]
+    public async Task Un_plan_invalido_no_regala_nada(string plan)
+    {
+        await TrialMerchantAsync(Email);
+        var id = await MerchantIdAsync(Email);
+        var admin = await AdminAsync();
+
+        var response = await GrantDaysAsync(admin, id, "10", "Motivo", notify: true, plan: plan);
+
+        Assert.Single((await LoadSubscriptionAsync(Email)).Periods);
+        Assert.Empty(await AuditAsync());
+        if (response.StatusCode == HttpStatusCode.Redirect)
+        {
+            Assert.Contains("Elige el plan", WebUtility.HtmlDecode(await GetHtmlAsync(admin, PlanTab(id))));
+        }
+        else
+        {
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains("field-validation-error", await response.Content.ReadAsStringAsync());
+        }
+    }
+
+    [Fact]
     public async Task Sin_la_casilla_no_se_avisa_al_vendedor()
     {
         await TrialMerchantAsync(Email);
@@ -178,6 +276,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
 
         Assert.Contains("data-val-range=\"Regala entre 1 y 365 días.\"", html);
         Assert.Contains("data-val-required=\"Escribe el motivo.\"", html);
+        Assert.Contains("data-val-required=\"Elige el plan.\"", html);
     }
 
     [Fact]
@@ -380,12 +479,13 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         return client;
     }
 
-    private static Task<HttpResponseMessage> GrantDaysAsync(HttpClient admin, int id, string days, string note, bool notify)
+    private static Task<HttpResponseMessage> GrantDaysAsync(
+        HttpClient admin, int id, string days, string note, bool notify, string plan = "Pro")
     {
         // Como el navegador: la casilla manda «true» si está marcada y el campo oculto siempre manda «false».
         var fields = new Dictionary<string, string>
         {
-            ["Grant.Days"] = days, ["Grant.Note"] = note, ["Grant.Notify"] = notify ? "true" : "false",
+            ["Grant.Plan"] = plan, ["Grant.Days"] = days, ["Grant.Note"] = note, ["Grant.Notify"] = notify ? "true" : "false",
         };
 
         // El token se toma del listado: la pestaña de un vendedor que no existe responde 404.

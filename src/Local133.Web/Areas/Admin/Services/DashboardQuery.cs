@@ -15,7 +15,7 @@ namespace Local133.Web.Areas.Admin.Services;
 /// <list type="bullet">
 /// <item>GMV = suma de <c>Payments.Amount</c> por <c>PaidAt</c> en hora de México (el mismo criterio del resumen del día);
 /// las ventas se cuentan distintas.</item>
-/// <item>Ingresos por suscripción = cargos <c>Paid</c> por <c>PaidAt</c> (también los abonados a mano).</item>
+/// <item>Ingresos por suscripción = cargos <c>Paid</c> por <c>PaidAt</c> (también los abonados a mano), en total y por plan.</item>
 /// <item>Vendedores por plan con el filtro del listado de clientes (<see cref="CustomerListQuery.CountByPlanAsync"/>).</item>
 /// </list>
 /// </summary>
@@ -56,6 +56,11 @@ public static class DashboardQuery
             ByStatus = byStatus,
             Conversion = await ConversionAsync(db, null, now, cancellationToken),
             RecentConversion = await ConversionAsync(db, recentFrom, now, cancellationToken),
+            RecentUpgrades = await db.SubscriptionPeriods.AsNoTracking()
+                .Where(p => p.Kind == SubscriptionPeriodKind.Conversion && p.CreatedAt > recentFrom && p.CreatedAt <= now)
+                .Select(p => p.MerchantId)
+                .Distinct()
+                .CountAsync(cancellationToken),
             FoundersAssigned = await db.Subscriptions.CountAsync(s => s.FounderNumber != null, cancellationToken),
             FounderSlots = settings.FounderSlots,
             FailedWebhooks = await db.WebhookEvents.CountAsync(e => e.Status == WebhookEventStatus.Failed, cancellationToken),
@@ -103,29 +108,40 @@ public static class DashboardQuery
             .Select(g => new { Month = g.Key, Amount = g.Sum(p => p.Amount), Sales = g.Select(p => p.SaleId).Distinct().Count() })
             .ToDictionaryAsync(g => g.Month, cancellationToken);
 
-        var revenue = await db.SubscriptionCharges.AsNoTracking()
-            .Where(c => c.Status == SubscriptionChargeStatus.Paid && c.PaidAt >= first && c.PaidAt < end)
-            .GroupBy(MonthIndex<SubscriptionCharge>(c => c.PaidAt!.Value, starts))
-            .Select(g => new
-            {
-                Month = g.Key,
-                Amount = g.Sum(c => c.Amount),
-                Charges = g.Count(),
-                Manual = g.Count(c => c.CreditedManuallyAt != null),
-            })
-            .ToDictionaryAsync(g => g.Month, cancellationToken);
+        // Una consulta por plan (agrupada por mes como la del GMV); los totales del mes se suman aquí.
+        var revenue = new List<(SubscriptionPlan Plan, int Month, decimal Amount, int Charges, int Manual)>();
+        foreach (var plan in RevenueFigure.Plans)
+        {
+            var rows = await db.SubscriptionCharges.AsNoTracking()
+                .Where(c => c.Status == SubscriptionChargeStatus.Paid && c.Plan == plan && c.PaidAt >= first && c.PaidAt < end)
+                .GroupBy(MonthIndex<SubscriptionCharge>(c => c.PaidAt!.Value, starts))
+                .Select(g => new
+                {
+                    Month = g.Key,
+                    Amount = g.Sum(c => c.Amount),
+                    Charges = g.Count(),
+                    Manual = g.Count(c => c.CreditedManuallyAt != null),
+                })
+                .ToListAsync(cancellationToken);
+            revenue.AddRange(rows.Select(r => (plan, r.Month, r.Amount, r.Charges, r.Manual)));
+        }
+
+        var revenueByMonth = revenue.ToLookup(r => r.Month);
 
         return monthDays.Select((month, i) =>
         {
             var g = gmv.GetValueOrDefault(i);
-            var r = revenue.GetValueOrDefault(i);
-            var amount = r?.Amount ?? 0m;
+            var r = revenueByMonth[i].ToList();
+            var amount = r.Sum(x => x.Amount);
             var (net, vat) = SubscriptionPricing.VatBreakdown(amount, vatRate);
+            var byPlan = RevenueFigure.Plans.ToDictionary(
+                plan => plan,
+                plan => new PlanRevenue(r.Where(x => x.Plan == plan).Sum(x => x.Amount), r.Where(x => x.Plan == plan).Sum(x => x.Charges)));
             return new DashboardMonthRow(
                 month,
                 DashboardFormats.Month(month),
                 new GmvFigure(g?.Amount ?? 0m, g?.Sales ?? 0),
-                new RevenueFigure(amount, net, vat, r?.Charges ?? 0, r?.Manual ?? 0));
+                new RevenueFigure(amount, net, vat, r.Sum(x => x.Charges), r.Sum(x => x.Manual), byPlan));
         }).ToList();
     }
 
@@ -147,7 +163,7 @@ public static class DashboardQuery
 
     /// <summary>
     /// De los vendedores cuya prueba terminó (desde <paramref name="endedFrom"/>, o en cualquier momento), los que
-    /// tienen al menos un cargo pagado.
+    /// tienen al menos un cargo pagado, de cualquier plan.
     /// </summary>
     private static async Task<TrialConversion> ConversionAsync(
         AppDbContext db, DateTimeOffset? endedFrom, DateTimeOffset now, CancellationToken cancellationToken)
@@ -166,7 +182,7 @@ public static class DashboardQuery
         return new TrialConversion(ended, paid);
     }
 
-    /// <summary>Vendedores con cobros concretados este mes en el uso justo de Pro o más (los que más cobran primero).</summary>
+    /// <summary>Vendedores con cobros concretados este mes en el uso justo o más, en los dos planes (los que más cobran primero).</summary>
     private static async Task<IReadOnlyList<FairUseRow>> FairUseAsync(
         AppDbContext db, DateTimeOffset monthStart, DateTimeOffset monthEnd, int limit, CancellationToken cancellationToken)
     {
