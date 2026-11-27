@@ -47,7 +47,7 @@ public partial class TransactionsTests(Local133WebFactory factory) : AdminTestBa
         Assert.Contains(PhoneNumber.Mask("5512345678"), all);
         Assert.Contains("data-transactions-collected", all);
         Assert.Contains("$150.00", all);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/transacciones\""), all);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/transacciones\""), all);
 
         Assert.Equal([paid.Id], RowIds(await GetHtmlAsync(admin, Url + "?estado=pagadas")));
         Assert.Equal([expired.Id], RowIds(await GetHtmlAsync(admin, Url + "?estado=vencidas")));
@@ -116,7 +116,7 @@ public partial class TransactionsTests(Local133WebFactory factory) : AdminTestBa
         Assert.Contains("Taco al pastor", cartHtml);
         Assert.Contains("data-sale-no-payments", cartHtml);
         Assert.Contains("data-sale-no-webhooks", cartHtml);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/transacciones\""), html);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/transacciones\""), html);
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{Url}/ventas/999999")).StatusCode);
     }
 

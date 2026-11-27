@@ -65,17 +65,108 @@ body {
   }
 }
 
-/* Admin: sidebar fijo en ≥lg; en móvil el mismo bloque es un Offcanvas. El contenido ancho (tablas del tablero) no
-   lo encoge: se desplaza dentro de su table-responsive. */
+/* Admin: sidebar fijo de 15rem en ≥lg; en móvil el mismo bloque es un Offcanvas. El contenido ancho (tablas del
+   tablero) no lo encoge: se desplaza dentro de su table-responsive. Cada liga es una rejilla ícono | etiqueta: una
+   etiqueta larga se parte en su columna y el ícono no se mueve. Con admin-menu-collapsed en <html> (admin-menu.js),
+   el menú queda como riel de íconos de 4rem; la etiqueta se oculta solo a la vista (sigue siendo el nombre de la liga). */
+.admin-nav-link {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  column-gap: 0.75rem;
+  align-items: start;
+}
+
+.admin-nav-icon {
+  text-align: center;
+}
+
+/* Pestaña de ocultar o mostrar el menú (solo ≥lg): columna de ancho 0 junto al menú y botón redondo montado sobre su
+   borde derecho. Es sticky a media altura de la parte visible del menú (debajo de la barra de ~3.5rem), así que se
+   queda ahí al desplazar listas largas. La flecha apunta a la izquierda (ocultar) y gira con el riel (mostrar). */
+.admin-menu-handle {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  width: 0;
+}
+
+.admin-menu-toggle {
+  position: sticky;
+  top: calc(50vh + 0.75rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  margin-left: -1rem;
+  font-size: 0.875rem;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-body-bg);
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: 50%;
+  box-shadow: var(--bs-box-shadow-sm);
+
+  &:hover {
+    color: var(--bs-primary);
+    border-color: var(--bs-primary);
+  }
+
+  &:focus-visible {
+    outline: 0;
+    box-shadow: $focus-ring-box-shadow;
+  }
+
+  .bi::before {
+    transition: transform 0.2s ease;
+  }
+}
+
+.admin-menu-collapsed .admin-menu-toggle .bi::before {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-menu-toggle .bi::before {
+    transition: none;
+  }
+}
+
 @media (min-width: 992px) {
   .admin-sidebar {
     width: 15rem;
+    min-width: 15rem;
+    max-width: 15rem;
     flex-shrink: 0;
     min-height: calc(100vh - 3.5rem);
+    overflow-x: hidden;
   }
 
   .admin-main {
     min-width: 0;
+  }
+
+  .admin-menu-collapsed .admin-sidebar {
+    width: 4rem;
+    min-width: 4rem;
+    max-width: 4rem;
+  }
+
+  .admin-menu-collapsed .admin-nav-link {
+    grid-template-columns: 1.5rem;
+    justify-content: center;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .admin-menu-collapsed .admin-nav-label {
+    @include visually-hidden();
+  }
+}
+
+@media (min-width: 992px) and (prefers-reduced-motion: no-preference) {
+  .admin-sidebar {
+    transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease;
   }
 }
 

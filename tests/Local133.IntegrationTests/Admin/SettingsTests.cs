@@ -36,7 +36,7 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
         Assert.Contains("value=\"199\"", html);
         Assert.Contains("value=\"16\"", html); // IVA en %
         Assert.Contains("data-setting-in-terms", html);
-        Assert.Matches(new Regex("class=\"nav-link active\" href=\"/admin/parametros\""), html);
+        Assert.Matches(new Regex("class=\"nav-link admin-nav-link active\" href=\"/admin/parametros\""), html);
         Assert.Contains("data-val-regex-pattern", html); // validación en cliente
         Assert.Contains("__RequestVerificationToken", html);
     }
