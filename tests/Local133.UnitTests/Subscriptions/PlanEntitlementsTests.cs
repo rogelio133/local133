@@ -2,7 +2,7 @@ using Local133.Domain.Subscriptions;
 
 namespace Local133.UnitTests.Subscriptions;
 
-/// <summary>Lo que permite cada estado del plan (§2 del diseño de planes Básico y Pro, 5.12).</summary>
+/// <summary>Lo que permite cada estado del plan (§2 del diseño de planes Básico y Pro, 5.12 y 5.14).</summary>
 public class PlanEntitlementsTests
 {
     private static readonly DateTimeOffset Until = new(2026, 12, 20, 16, 0, 0, TimeSpan.Zero);
@@ -29,7 +29,6 @@ public class PlanEntitlementsTests
         Assert.True(e.HasDailyCashCut);
         Assert.True(e.CanPublishCatalog);
         Assert.True(e.HasBrandedReceipt);
-        AssertWithoutFreeLimits(e);
     }
 
     [Fact]
@@ -44,7 +43,6 @@ public class PlanEntitlementsTests
         Assert.True(e.HasDailyCashCut);
         Assert.False(e.CanPublishCatalog);
         Assert.True(e.HasBrandedReceipt);
-        AssertWithoutFreeLimits(e);
     }
 
     [Theory]
@@ -61,7 +59,6 @@ public class PlanEntitlementsTests
         Assert.False(e.CanExportHistory);
         Assert.False(e.CanPublishCatalog);
         Assert.False(e.HasBrandedReceipt);
-        AssertWithoutFreeLimits(e);
     }
 
     [Fact]
@@ -76,10 +73,6 @@ public class PlanEntitlementsTests
         Assert.False(e.CanExportHistory);
         Assert.False(e.CanPublishCatalog);
         Assert.False(e.HasBrandedReceipt);
-        // Hasta la 5.14 conserva los límites del gratuito, que es lo que hoy se aplica en el servidor.
-        Assert.False(e.CanShareReceipt);
-        Assert.False(e.HasFullHistory);
-        Assert.True(e.HasMonthlyChargeLimit);
     }
 
     [Fact]
@@ -89,12 +82,4 @@ public class PlanEntitlementsTests
     [Fact]
     public void Estado_desconocido_se_rechaza() =>
         Assert.Throws<ArgumentOutOfRangeException>(() => PlanEntitlements.For(Status((PlanTier)99, null)));
-
-    /// <summary>Fuera del vencido, las banderas del gratuito no limitan nada (la 5.14 las retira).</summary>
-    private static void AssertWithoutFreeLimits(PlanEntitlements e)
-    {
-        Assert.True(e.CanShareReceipt);
-        Assert.True(e.HasFullHistory);
-        Assert.False(e.HasMonthlyChargeLimit);
-    }
 }

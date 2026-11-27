@@ -12,6 +12,12 @@ public static class PlanUrls
     /// <summary>«Mi plan»: estado, paquetes y pagos.</summary>
     public const string Plan = "/app/plan";
 
+    /// <summary>
+    /// «Elegir plan» del vencido (Cobrar, Inicio, banner, corte y productos, 5.14). Hoy es «Mi plan»; la 5.15 lo
+    /// cambia al checkout.
+    /// </summary>
+    public const string ChoosePlan = Plan;
+
     /// <summary>POST con el paquete: crea el link de Pey y redirige a su página.</summary>
     public const string Pay = "/app/plan/pagar";
 
@@ -29,71 +35,27 @@ public static class PlanUrls
 public sealed record ProRequiredViewModel(string Title, string Message, string? Detail = null, string Icon = "bi-stars");
 
 /// <summary>
-/// Contador del mes del gratuito (parcial <c>_ChargeUsage</c>): «82 de 100 cobros este mes», aviso al 80 % y bloqueo
-/// al llegar al límite. Solo se muestra cuando el plan tiene <see cref="PlanEntitlements.HasMonthlyChargeLimit"/>.
+/// Plan vencido (5.14, parcial <c>_PlanExpired</c>): «Tu plan venció el 3 de diciembre · Elige un plan para seguir
+/// cobrando», con el botón «Elegir plan». Lo muestran Cobrar (monto y carrito), Inicio, el corte y Productos.
 /// </summary>
-public sealed record ChargeUsageViewModel(
-    ChargeAllowanceState State,
-    string Title,
-    string Message,
-    int Percent,
-    string BarClass,
-    bool IsBlocked)
+/// <param name="LastActiveDayText">Último día del plan («3 de diciembre»); <c>null</c> si no se conoce.</param>
+/// <param name="Detail">Texto propio de la pantalla; sin él, <see cref="DefaultMessage"/>.</param>
+public sealed record PlanExpiredViewModel(string? LastActiveDayText, string? Detail = null)
 {
-    public static ChargeUsageViewModel From(MonthlyChargeUsage usage, DateOnly today)
+    public const string DefaultMessage = "Elige un plan para seguir cobrando.";
+
+    public string Title => LastActiveDayText is null ? "Tu plan venció" : $"Tu plan venció el {LastActiveDayText}";
+
+    public string Message => Detail ?? DefaultMessage;
+
+    public static PlanExpiredViewModel For(PlanStatus status, DateTimeOffset now, string? detail = null)
     {
-        var a = usage.Allowance;
-        var resetsOn = SaleFormats.Date(usage.ResetsOn, today);
-        var percent = a.PaidLimit <= 0 ? 100 : Math.Min(100, a.Paid * 100 / a.PaidLimit);
-        var title = $"{Count(Math.Min(a.Paid, a.PaidLimit))} de {Count(a.PaidLimit)} cobros este mes";
-
-        return a.State switch
-        {
-            ChargeAllowanceState.Exhausted => new(a.State, title,
-                $"Llegaste al límite del mes. No puedes generar cobros hasta el {resetsOn} o hasta que pagues Pro.",
-                100, "bg-danger", IsBlocked: true),
-            ChargeAllowanceState.GenerationCapReached => new(a.State, title,
-                $"Generaste {Count(a.Generated)} cobros este mes, el máximo del plan gratuito. Podrás generar más el {resetsOn} o con Pro.",
-                percent, "bg-danger", IsBlocked: true),
-            ChargeAllowanceState.NearLimit => new(a.State, title,
-                a.Remaining == 1
-                    ? "Te queda 1 cobro este mes. Con Pro cobras sin límite."
-                    : $"Te quedan {Count(a.Remaining)} cobros este mes. Con Pro cobras sin límite.",
-                percent, "bg-warning", IsBlocked: false),
-            _ => new(a.State, title,
-                $"El plan gratuito incluye {Count(a.PaidLimit)} cobros al mes. Se reinician el {resetsOn}.",
-                percent, "bg-success", IsBlocked: false),
-        };
-    }
-
-    /// <summary>Hay que llamar la atención (aviso o bloqueo).</summary>
-    public bool IsWarning => State is not ChargeAllowanceState.Normal;
-
-    private static string Count(int n) => n.ToString("#,0", CultureInfo.GetCultureInfo("es-MX"));
-}
-
-/// <summary>Avisos del bloqueo de cobro por el plan (formulario de Cobrar).</summary>
-public static class PlanBlockedNotices
-{
-    public static ChargeBlockedNotice? For(MonthlyChargeUsage usage, DateOnly today)
-    {
-        var resetsOn = SaleFormats.Date(usage.ResetsOn, today);
-        return usage.Allowance.State switch
-        {
-            ChargeAllowanceState.Exhausted => new(
-                "Llegaste a tus cobros del mes",
-                $"Usaste los {usage.Allowance.PaidLimit} cobros del mes del plan gratuito. Podrás cobrar de nuevo el {resetsOn}, o desde hoy con Pro.",
-                "~" + PlanUrls.Plan, "Conoce Pro"),
-            ChargeAllowanceState.GenerationCapReached => new(
-                "Llegaste al máximo de cobros generados",
-                $"Generaste {usage.Allowance.Generated} cobros este mes, el máximo del plan gratuito. Podrás cobrar de nuevo el {resetsOn}, o desde hoy con Pro.",
-                "~" + PlanUrls.Plan, "Conoce Pro"),
-            _ => null,
-        };
+        ArgumentNullException.ThrowIfNull(status);
+        return new(status.LastActiveDay is { } lastDay ? SaleFormats.Date(lastDay, MexicoTime.Today(now)) : null, detail);
     }
 }
 
-/// <summary>«Mi plan» (5.6): tarjeta del plan, contador del mes, paquetes para pagar, pagos y lo que incluye cada plan.</summary>
+/// <summary>«Mi plan» (5.6): tarjeta del plan, paquetes para pagar, pagos y lo que incluye cada plan.</summary>
 /// <param name="Plan">Tarjeta del plan; <c>null</c> en el onboarding (la prueba empieza al activarse la cuenta).</param>
 /// <param name="Offers">Paquetes; vacío si todavía no puede pagar (onboarding) o está dado de baja.</param>
 /// <param name="FounderNotice">«Eres fundador…» o «Quedan N lugares de fundador»; <c>null</c> si ya no hay.</param>
@@ -101,7 +63,6 @@ public static class PlanBlockedNotices
 /// <param name="RenewalNotice">Aviso de que toca renovar (5.7): antes del vencimiento, ese día y en la gracia.</param>
 public sealed record MyPlanViewModel(
     PlanSummaryViewModel? Plan,
-    ChargeUsageViewModel? Usage,
     int TrialDays,
     IReadOnlyList<PlanFeatureRow> Features,
     bool CanPay,
@@ -141,28 +102,27 @@ public sealed record MyPlanViewModel(
     };
 
     /// <summary>
-    /// Lo que incluye cada plan (§2 del diseño), con los números de <see cref="SystemSettings"/>. <c>ComingSoon</c> =
-    /// se anuncia, todavía no existe.
+    /// Lo que incluye cada plan (§2 del diseño de planes Básico y Pro). <c>ComingSoon</c> = se anuncia, todavía no existe.
     /// </summary>
-    public static IReadOnlyList<PlanFeatureRow> FeaturesFor(SystemSettings settings) =>
+    public static IReadOnlyList<PlanFeatureRow> FeaturesFor() =>
     [
         new("Cobro por monto con QR o al celular", "Sí", "Sí"),
-        new("Cobros concretados al mes", $"{settings.FreeMonthlyPaidLimit:N0}", "Sin límite"),
+        new("Cobros concretados al mes", "Ilimitados, con uso justo", "Ilimitados, con uso justo"),
+        new("Historial de ventas", "Completo, con fechas y búsqueda", "Completo, con fechas y búsqueda"),
+        new("Corte de caja diario", "Sí", "Sí"),
+        new("Recibo por WhatsApp y «Compartir»", "Sí, con «Cobrado con Local133»", "Sí, con tu logo"),
+        new("Exportar ventas a Excel", "—", "Sí"),
         new("Catálogo de productos", "Solo lectura", "Sí"),
         new("Cobro con productos (carrito)", "—", "Sí"),
-        new("Recibo", "Liga para copiar, con «Cobrado con Local133»", "WhatsApp y compartir, con tu logo"),
-        new("Historial de ventas", $"Últimos {settings.FreeHistoryDays:N0} días", "Completo, con fechas y búsqueda"),
-        new("Exportar ventas a Excel", "—", "Sí"),
-        new("Corte de caja diario", "—", "Sí"),
         new("Catálogo en línea con liga", "—", "Sí"),
-        new("Invita y gana días de Pro", "Sí", "Sí"),
+        new("Invita y gana días", "Sí", "Sí"),
         new("Vendedores adicionales", "—", "3", ComingSoon: true),
         new("QR impreso del puesto", "—", "Sí", ComingSoon: true),
         new("Reportes", "—", "Sí", ComingSoon: true),
     ];
 }
 
-public sealed record PlanFeatureRow(string Feature, string Free, string Pro, bool ComingSoon = false);
+public sealed record PlanFeatureRow(string Feature, string Basic, string Pro, bool ComingSoon = false);
 
 /// <summary>
 /// Aviso de «Mi plan» de que toca renovar (5.7), con la misma etapa que el recordatorio
@@ -201,9 +161,9 @@ public sealed record RenewalNoticeViewModel(string Title, string Message, bool I
             {
                 SubscriptionPeriodKind.Paid => new($"Tu plan Pro vence {When(notice.DaysLeft)}", $"Vence el {lastDay}. {choose}", IsUrgent: false),
                 SubscriptionPeriodKind.Trial => new($"Tu prueba termina {When(notice.DaysLeft)}",
-                    $"Termina el {lastDay}; después pasas al plan gratuito. Elige tu paquete para seguir con Pro.", IsUrgent: false),
+                    $"Termina el {lastDay}; después tu plan vence y ya no puedes cobrar. Elige tu paquete para seguir.", IsUrgent: false),
                 _ => new($"Tus días de Pro terminan {When(notice.DaysLeft)}",
-                    $"Terminan el {lastDay}; después pasas al plan gratuito. Elige tu paquete para seguir con Pro.", IsUrgent: false),
+                    $"Terminan el {lastDay}; después tu plan vence y ya no puedes cobrar. Elige tu paquete para seguir.", IsUrgent: false),
             },
             _ => null,
         };

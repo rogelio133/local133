@@ -1,14 +1,17 @@
+using System.Net;
+using Local133.Domain.Merchants;
 using Local133.Domain.Subscriptions;
 using Local133.IntegrationTests.Infrastructure;
+using Local133.Web.Areas.Merchant.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Local133.IntegrationTests.Subscriptions;
 
 /// <summary>
-/// 5.7: banner de gracia en el portal y aviso de renovación en «Mi plan». Ninguno lleva a un link de Pey: el vendedor
-/// elige su paquete en «Mi plan» y ahí se genera el link. Un link que generó y no pagó no se muestra.
+/// 5.7 y 5.14: banner de gracia y de vencido en el portal, y aviso de renovación en «Mi plan». Ninguno lleva a un link
+/// de Pey: el vendedor elige su paquete en «Mi plan» y ahí se genera el link. Un link que generó y no pagó no se muestra.
 /// </summary>
-public class GraceBannerTests(Local133WebFactory factory) : SubscriptionPaymentTestBase(factory)
+public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTestBase(factory)
 {
     private const string AbandonedUrl = "https://pay.example.test/01ABANDONADO57";
 
@@ -22,14 +25,14 @@ public class GraceBannerTests(Local133WebFactory factory) : SubscriptionPaymentT
         foreach (var page in new[] { "/app", "/app/cobrar", "/app/ventas" })
         {
             var html = await client.GetStringAsync(page);
-            Assert.Contains("data-grace-banner", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"/app/plan\" data-grace-pay", html, StringComparison.Ordinal);
+            Assert.Contains("data-plan-banner=\"grace\"", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/app/plan\" data-plan-banner-action", html, StringComparison.Ordinal);
             Assert.Contains("Renovar ahora", html, StringComparison.Ordinal);
             Assert.DoesNotContain(AbandonedUrl, html, StringComparison.Ordinal);
         }
 
         var plan = await client.GetStringAsync(PlanUrl);
-        Assert.DoesNotContain("data-grace-banner", plan, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-banner", plan, StringComparison.Ordinal);
         Assert.Contains("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.Contains("Renueva antes del", plan, StringComparison.Ordinal);
         Assert.Contains("data-plan-offer-current", plan, StringComparison.Ordinal);
@@ -43,7 +46,7 @@ public class GraceBannerTests(Local133WebFactory factory) : SubscriptionPaymentT
         var client = await ActiveMerchantAsync(Email);
         await SeedPaidAsync(Email, endedDaysAgo: -2);
 
-        Assert.DoesNotContain("data-grace-banner", await client.GetStringAsync("/app"), StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-banner", await client.GetStringAsync("/app"), StringComparison.Ordinal);
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.Contains("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.Contains("Tu plan Pro vence", plan, StringComparison.Ordinal);
@@ -56,23 +59,45 @@ public class GraceBannerTests(Local133WebFactory factory) : SubscriptionPaymentT
         await SeedPaidAsync(Email, endedDaysAgo: -10);
         await SeedPendingChargeAsync(Email);
 
-        Assert.DoesNotContain("data-grace-banner", await client.GetStringAsync("/app"), StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-banner", await client.GetStringAsync("/app"), StringComparison.Ordinal);
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.DoesNotContain("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.DoesNotContain(AbandonedUrl, plan, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task En_el_gratuito_no_hay_banner_ni_aviso_de_renovar()
+    public async Task Vencido_el_banner_pide_elegir_plan_salvo_en_Inicio_Cobrar_y_Mi_plan()
     {
         var client = await ActiveMerchantAsync(Email);
         await SeedPaidAsync(Email, endedDaysAgo: 10); // la gracia terminó hace 5 días
         await SeedPendingChargeAsync(Email);
 
-        Assert.DoesNotContain("data-grace-banner", await client.GetStringAsync("/app"), StringComparison.Ordinal);
+        foreach (var page in new[] { "/app/ventas", "/app/productos", "/app/mas" })
+        {
+            var html = WebUtility.HtmlDecode(await client.GetStringAsync(page));
+            Assert.Contains("data-plan-banner=\"expired\"", html, StringComparison.Ordinal);
+            Assert.Contains("Tu plan venció", html, StringComparison.Ordinal);
+            Assert.Contains($"href=\"{PlanUrls.ChoosePlan}\" data-plan-banner-action", html, StringComparison.Ordinal);
+            Assert.DoesNotContain(AbandonedUrl, html, StringComparison.Ordinal);
+        }
+
+        foreach (var page in new[] { "/app", "/app/cobrar", "/app/cobrar/productos", PlanUrl })
+        {
+            Assert.DoesNotContain("data-plan-banner", await client.GetStringAsync(page), StringComparison.Ordinal);
+        }
+
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.DoesNotContain("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.DoesNotContain(AbandonedUrl, plan, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Dado_de_baja_y_vencido_no_hay_banner()
+    {
+        var client = await ActiveMerchantAsync(Email, status: MerchantStatus.Disabled);
+        await SeedPaidAsync(Email, endedDaysAgo: 10);
+
+        Assert.DoesNotContain("data-plan-banner", await client.GetStringAsync("/app/ventas"), StringComparison.Ordinal);
     }
 
     /// <summary>Prueba y un mes pagado que terminó hace <paramref name="endedDaysAgo"/> días (negativo: aún no termina).</summary>

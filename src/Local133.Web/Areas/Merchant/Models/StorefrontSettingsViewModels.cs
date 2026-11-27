@@ -60,7 +60,7 @@ public sealed class StorefrontSettingsViewModel
 
     public int ProductCount { get; init; }
 
-    /// <summary>Aviso de Pro en el gratuito.</summary>
+    /// <summary>Aviso de Pro en el onboarding, Básico o vencido.</summary>
     public ProRequiredViewModel? ProRequired { get; init; }
 
     /// <summary>Mensaje para compartir la liga (solo publicado).</summary>

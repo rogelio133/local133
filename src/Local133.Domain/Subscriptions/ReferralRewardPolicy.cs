@@ -19,7 +19,7 @@ public enum ReferralRewardDecision
 
 /// <summary>
 /// Reglas del premio de referidos (§6 del diseño): 10 días por referido que paga, hasta 12 premios en 12 meses
-/// móviles; los gratuitos también ganan; un vendedor dado de baja no gana.
+/// móviles; los vencidos también ganan; un vendedor dado de baja no gana.
 /// </summary>
 public static class ReferralRewardPolicy
 {

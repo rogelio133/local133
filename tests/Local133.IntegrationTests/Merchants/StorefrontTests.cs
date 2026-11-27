@@ -130,15 +130,15 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     }
 
     [Fact]
-    public async Task En_el_gratuito_no_se_publica_y_la_liga_dice_no_disponible()
+    public async Task En_Basico_no_se_publica_y_la_liga_dice_no_disponible()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedBasicPlanAsync(Email);
         await CreateProductAsync(Email, "Taco al pastor", 25m);
 
         var settings = WebUtility.HtmlDecode(await GetHtmlAsync(client, SettingsUrl));
         Assert.Contains("data-pro-required", settings);
-        Assert.Contains("Tu catálogo de 1 producto te espera.", settings);
+        Assert.Contains("Tu catálogo de 1 producto te espera en Pro.", settings);
         Assert.DoesNotContain("data-storefront-form", settings);
 
         var response = await PublishAsync(client, "tacos-don-ramon");
@@ -267,7 +267,7 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     public async Task La_vista_previa_se_ve_sin_publicar_con_las_imagenes_privadas()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         var logoKey = await StoreMerchantImageAsync(Email, MerchantImageKind.Logo);
         await CreateProductAsync(Email, "Taco al pastor", 25m);
 

@@ -47,10 +47,9 @@ public abstract partial class WebTestBase
     }
 
     /// <summary>
-    /// Plan vencido (antes «gratuito»): la prueba terminó hace 10 días (sin gracia, porque no fue un periodo pagado). La
-    /// 5.14 lo renombra a <c>SeedExpiredPlanAsync</c>.
+    /// Plan vencido: la prueba terminó hace 10 días (sin gracia, porque no fue un periodo pagado). No genera cobros.
     /// </summary>
-    protected Task SeedFreePlanAsync(string email)
+    protected Task SeedExpiredPlanAsync(string email)
     {
         var now = DateTimeOffset.UtcNow;
         return SeedPlanAsync(email, (SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)));

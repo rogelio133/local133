@@ -90,12 +90,15 @@ public class SalesExportTests(Local133WebFactory factory) : SaleFlowTestBase(fac
     }
 
     [Fact]
-    public async Task El_gratuito_recibe_403()
+    public async Task Basico_y_vencido_reciben_403()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedBasicPlanAsync(Email);
         await InsertSaleAsync(Email, 10m, DateTimeOffset.UtcNow.AddMinutes(-5));
 
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync(Url)).StatusCode);
+
+        await SeedExpiredPlanAsync(Email);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync(Url)).StatusCode);
     }
 

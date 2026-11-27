@@ -54,7 +54,7 @@ public class BrandedReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(
     public async Task En_el_gratuito_dice_Cobrado_con_Local133_con_el_codigo_y_no_sirve_el_logo()
     {
         var sale = await PaidSaleAsync();
-        await SeedFreePlanAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         await StoreLogoAsync(Email);
         var code = (await WithDbAsync(db => MerchantOfAsync(db, Email))).ReferralCode;
 

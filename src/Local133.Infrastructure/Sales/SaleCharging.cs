@@ -4,7 +4,6 @@ using Local133.Application.Payments;
 using Local133.Application.Sales;
 using Local133.Application.Subscriptions;
 using Local133.Domain.Pey;
-using Local133.Domain.Subscriptions;
 using Local133.Domain.Sales;
 using Local133.Domain.Settings;
 using Local133.Infrastructure.Persistence;
@@ -26,7 +25,6 @@ internal sealed class SaleCharging(
     IValidator<CreateDirectSaleCommand> validator,
     IValidator<CreateCartSaleCommand> cartValidator,
     IPlanAccess plans,
-    IChargeUsage usage,
     TimeProvider clock,
     ILogger<SaleCharging> logger) : ISaleCharging
 {
@@ -126,38 +124,26 @@ internal sealed class SaleCharging(
         new(new Dictionary<string, string[]> { [field] = [message] }.AsReadOnly());
 
     /// <summary>
-    /// Límites del plan (§5): el carrito es de Pro, y en el gratuito no se genera un cobro con el límite del mes
-    /// concretado ni con el tope de generados. Se revisa antes de insertar la venta y de llamar a Pey. Dos
-    /// cobros simultáneos en el borde pueden pasar los dos (se acepta: el tope es un freno, no un saldo).
+    /// Lo que permite el plan (5.14): el vencido no genera cobros (monto, celular ni carrito) y el carrito es de Pro. Se
+    /// revisa antes de insertar la venta y de llamar a Pey. Lo ya generado se paga siempre: el dinero va directo a la
+    /// CLABE del vendedor.
     /// </summary>
     private async Task<CreateSaleResult?> PlanBlockAsync(int merchantId, bool withCart, CancellationToken cancellationToken)
     {
         var plan = await plans.GetForMerchantAsync(merchantId, cancellationToken);
+        if (!plan.Entitlements.CanCharge)
+        {
+            logger.LogInformation("Vendedor {MerchantId} (plan {Tier}) intentó cobrar con el plan vencido", merchantId, plan.Tier);
+            return new CreateSaleResult.PlanExpired();
+        }
+
         if (withCart && !plan.Entitlements.CanChargeWithCart)
         {
             logger.LogInformation("Vendedor {MerchantId} (plan {Tier}) intentó cobrar con carrito", merchantId, plan.Tier);
             return new CreateSaleResult.PlanRequired();
         }
 
-        if (!plan.Entitlements.HasMonthlyChargeLimit)
-        {
-            return null;
-        }
-
-        var month = await usage.GetMonthAsync(merchantId, cancellationToken);
-        CreateSaleResult? blocked = month.Allowance.State switch
-        {
-            ChargeAllowanceState.Exhausted => new CreateSaleResult.MonthlyLimitReached(month.ResetsOn),
-            ChargeAllowanceState.GenerationCapReached => new CreateSaleResult.GenerationLimitReached(month.ResetsOn),
-            _ => null,
-        };
-        if (blocked is not null)
-        {
-            logger.LogInformation("Vendedor {MerchantId} (gratuito) sin cobros disponibles en el mes: {Paid} concretados, {Generated} generados ({State})",
-                merchantId, month.Paid, month.Generated, month.Allowance.State);
-        }
-
-        return blocked;
+        return null;
     }
 
     /// <summary>Vendedor y cuenta bancaria, solo si puede cobrar.</summary>

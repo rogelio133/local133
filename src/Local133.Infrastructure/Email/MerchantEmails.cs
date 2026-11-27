@@ -68,9 +68,9 @@ public static class MerchantEmails
         var lastDay = LongDate(reminder.LastProDay);
         var graceDay = reminder.LastGraceDay is { } g ? LongDate(g) : null;
         const string choosePackage = "Entra a «Mi plan» y elige tu paquete para renovar.";
-        string FreePlan(string intro) =>
-            $"{intro} sigues cobrando por monto con QR o por celular, hasta {settings.FreeMonthlyPaidLimit.ToString("N0", Mexico)} cobros al mes. "
-            + $"Tu catálogo queda de solo lectura, sin cobro con carrito ni WhatsApp en el recibo, y ves el historial de los últimos {settings.FreeHistoryDays.ToString(Mexico)} días.";
+        // 5.14: sin plan gratuito. Al vencer ya no se generan cobros; lo demás se conserva.
+        const string expiredPlan =
+            "Con el plan vencido ya no puedes generar cobros nuevos. Conservas tu catálogo, tu historial y tus datos, y vuelves a cobrar en cuanto pagues.";
         var noDaysLost = "Si pagas antes, no pierdes ningún día: lo nuevo empieza cuando termine lo que tienes.";
 
         string title, body, subject, emailTitle, action = "Ver mi plan";
@@ -106,22 +106,22 @@ public static class MerchantEmails
 
             case SubscriptionReminderStage.Upcoming when reminder.EndingKind == SubscriptionPeriodKind.Trial:
                 title = $"Tu prueba termina {When(reminder.DaysLeft)}";
-                body = $"Tu prueba de Pro termina el {lastDay}. Después pasas al plan gratuito; paga Pro en «Mi plan» para conservar todo.";
+                body = $"Tu prueba de Pro termina el {lastDay}. Después tu plan vence y ya no puedes cobrar; elige tu plan en «Mi plan» para seguir.";
                 subject = $"Tu prueba de Pro termina {When(reminder.DaysLeft)} · Local133";
                 emailTitle = "Tu prueba termina pronto";
-                paragraphs.Add($"Tu prueba de Pro termina el {lastDay}. Después pasas al plan gratuito.");
-                paragraphs.Add(FreePlan("En el plan gratuito"));
+                paragraphs.Add($"Tu prueba de Pro termina el {lastDay}. Después tu plan vence.");
+                paragraphs.Add(expiredPlan);
                 paragraphs.Add("Paga Pro en «Mi plan» y sigues con todo. Lo que pagues empieza cuando termine tu prueba: no pierdes ningún día.");
                 action = "Conocer Pro";
                 break;
 
             case SubscriptionReminderStage.Upcoming:
                 title = $"Tus días de Pro terminan {When(reminder.DaysLeft)}";
-                body = $"Tus días de Pro regalados terminan el {lastDay}. Después pasas al plan gratuito; paga Pro en «Mi plan» para seguir con todo.";
+                body = $"Tus días de Pro regalados terminan el {lastDay}. Después tu plan vence y ya no puedes cobrar; elige tu plan en «Mi plan» para seguir.";
                 subject = $"Tus días de Pro terminan {When(reminder.DaysLeft)} · Local133";
                 emailTitle = "Tus días de Pro terminan pronto";
-                paragraphs.Add($"Tus días de Pro regalados terminan el {lastDay}. Después pasas al plan gratuito.");
-                paragraphs.Add(FreePlan("En el plan gratuito"));
+                paragraphs.Add($"Tus días de Pro regalados terminan el {lastDay}. Después tu plan vence.");
+                paragraphs.Add(expiredPlan);
                 paragraphs.Add("Paga Pro en «Mi plan» y sigues con todo: elige tu paquete y ahí mismo pagas.");
                 paragraphs.Add(noDaysLost);
                 action = "Pagar Pro";
@@ -151,29 +151,28 @@ public static class MerchantEmails
                     1 => "Te queda 1 día para pagar Pro",
                     _ => $"Te quedan {reminder.DaysLeft.ToString(Mexico)} días para pagar Pro",
                 };
-                body = $"Tu plan venció el {lastDay}. Paga a más tardar el {graceDay} para no pasar al plan gratuito.";
+                body = $"Tu plan venció el {lastDay}. Paga a más tardar el {graceDay} para seguir cobrando.";
                 subject = $"{title} · Local133";
                 emailTitle = "No pierdas tu plan Pro";
                 paragraphs.Add($"Tu plan Pro venció el {lastDay} y tienes hasta el {graceDay} para pagar sin perder Pro.");
                 paragraphs.Add(choosePackage);
-                paragraphs.Add(FreePlan("Si no pagas, pasas al plan gratuito. Ahí"));
+                paragraphs.Add($"Si no pagas a tiempo, terminan tus días de gracia. {expiredPlan}");
                 action = "Pagar Pro";
                 break;
 
             case SubscriptionReminderStage.Downgraded:
-                title = "Pasaste al plan gratuito";
-                body = "Conservas tu catálogo, tu historial y tus datos. Paga Pro en «Mi plan» cuando quieras.";
-                subject = "Pasaste al plan gratuito · Local133";
-                emailTitle = "Pasaste al plan gratuito";
+                title = "Tu plan venció: ya no puedes cobrar";
+                body = "Conservas tu catálogo, tu historial y tus datos. Elige tu plan en «Mi plan» para volver a cobrar.";
+                subject = "Tu plan venció · Local133";
+                emailTitle = "Tu plan venció";
                 paragraphs.Add(reminder.EndingKind switch
                 {
                     SubscriptionPeriodKind.Paid => $"Tu plan Pro venció el {lastDay} y terminaron tus días de gracia.",
                     SubscriptionPeriodKind.Trial => $"Tu prueba de Pro terminó el {lastDay}.",
                     _ => $"Tus días de Pro regalados terminaron el {lastDay}.",
                 });
-                paragraphs.Add(FreePlan("En el plan gratuito"));
-                paragraphs.Add("Conservas tu catálogo, tu historial y tus datos. Cuando pagues Pro vuelves a tener todo desde ese día.");
-                action = "Volver a Pro";
+                paragraphs.Add(expiredPlan);
+                action = "Elegir mi plan";
                 break;
 
             default:

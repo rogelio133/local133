@@ -109,17 +109,32 @@ public class CashCutTests(Local133WebFactory factory) : SaleFlowTestBase(factory
     }
 
     [Fact]
-    public async Task El_gratuito_ve_el_aviso_de_Pro()
+    public async Task Basico_ve_su_corte()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedBasicPlanAsync(Email);
+        var sale = await InsertSaleAsync(Email, 80m, DateTimeOffset.UtcNow.AddMinutes(-5));
+        await AddPaymentAsync(sale, 80m, DateTimeOffset.UtcNow.AddMinutes(-4));
+
+        var html = await GetHtmlAsync(client, Url);
+
+        Assert.DoesNotContain("data-cash-cut-locked", html);
+        Assert.Contains("data-cash-cut-collected", html);
+    }
+
+    [Fact]
+    public async Task El_vencido_ve_el_aviso_de_elegir_plan()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         var sale = await InsertSaleAsync(Email, 80m, DateTimeOffset.UtcNow.AddMinutes(-5));
         await AddPaymentAsync(sale, 80m, DateTimeOffset.UtcNow.AddMinutes(-4));
 
         var html = await GetHtmlAsync(client, Url);
 
         Assert.Contains("data-cash-cut-locked", html);
-        Assert.Contains("data-pro-required", html);
+        Assert.Contains("data-plan-expired", html);
+        Assert.DoesNotContain("data-pro-required", html);
         Assert.DoesNotContain("data-cash-cut-collected", html);
     }
 

@@ -81,7 +81,7 @@
             <div class="card mb-3" data-grant-days>
                 <div class="card-body">
                     <h2 class="h6 card-title"><i class="bi bi-gift me-1" aria-hidden="true"></i> Regalar días de Pro</h2>
-                    <p class="small text-body-secondary">Se suman al final de su Pro (o desde hoy si está en el gratuito), como un premio.</p>
+                    <p class="small text-body-secondary">Se suman al final de su Pro (o desde hoy si su plan venció), como un premio.</p>
                     <form method="post" action="@Url.Content("~" + CustomerPlanUrls.GrantDays(id))" data-grant-days-form data-disable-on-submit>
                         @* Con «action» explícito el tag helper no agrega el token: va a mano. *@
                         @Html.AntiForgeryToken()

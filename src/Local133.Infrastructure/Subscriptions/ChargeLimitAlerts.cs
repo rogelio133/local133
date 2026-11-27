@@ -9,14 +9,13 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Subscriptions;
 
 /// <summary>
-/// Umbrales del mes al registrar un cobro concretado. El pago que acaba de dejar la venta pagada es el último del
-/// conteo, así que se compara <c>n − 1</c> contra <c>n</c>. Un pago tardío (con <c>PaidAt</c> de otro mes) no avisa.
-/// Lo detectado va a <see cref="IChargeLimitNotifier"/>.
+/// Uso justo del mes al registrar un cobro concretado (5.14; Básico y Pro). El pago que acaba de dejar la venta pagada
+/// es el último del conteo, así que se compara <c>n − 1</c> contra <c>n</c>. Un pago tardío (con <c>PaidAt</c> de otro
+/// mes) no avisa. El conteo es por <c>MerchantId</c> explícito y sin filtro multi-tenant (índice
+/// <c>(MerchantId, PaidAt)</c>). Lo detectado va a <see cref="IChargeLimitNotifier"/>.
 /// </summary>
 internal sealed class ChargeLimitAlerts(
     AppDbContext db,
-    IPlanAccess plans,
-    IChargeUsage usage,
     IChargeLimitNotifier notifier,
     TimeProvider clock,
     ILogger<ChargeLimitAlerts> logger) : IChargeLimitAlerts
@@ -25,59 +24,38 @@ internal sealed class ChargeLimitAlerts(
     {
         try
         {
-            var paidAt = await db.Sales.IgnoreQueryFilters().AsNoTracking()
-                .Where(s => s.Id == saleId && s.MerchantId == merchantId)
-                .Select(s => s.PaidAt)
-                .SingleOrDefaultAsync(cancellationToken);
-            var (startUtc, endUtc) = MexicoTime.MonthRange(MexicoTime.Today(clock.GetUtcNow()));
+            var sales = db.Sales.IgnoreQueryFilters().AsNoTracking().Where(s => s.MerchantId == merchantId);
+            var paidAt = await sales.Where(s => s.Id == saleId).Select(s => s.PaidAt).SingleOrDefaultAsync(cancellationToken);
+            var today = MexicoTime.Today(clock.GetUtcNow());
+            var (startUtc, endUtc) = MexicoTime.MonthRange(today);
             if (paidAt is not { } at || at < startUtc || at >= endUtc)
             {
                 return;
             }
 
-            var plan = await plans.GetForMerchantAsync(merchantId, cancellationToken);
-            var month = await usage.GetMonthAsync(merchantId, cancellationToken);
+            var current = await sales.CountAsync(s => s.PaidAt >= startUtc && s.PaidAt < endUtc, cancellationToken);
             var settings = await db.SystemSettings.AsNoTracking()
                 .SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
-            var current = month.Paid;
-
-            if (plan.Entitlements.HasMonthlyChargeLimit)
+            if (FairUse.Crossed(current - 1, current, settings))
             {
-                foreach (var threshold in MonthlyChargeAllowance.ThresholdsCrossed(current - 1, current, settings))
-                {
-                    await notifier.FreeLimitThresholdReachedAsync(merchantId, threshold, month, cancellationToken);
-                }
-            }
-            else if (MonthlyChargeAllowance.ProFairUseCrossed(current - 1, current, settings))
-            {
-                await notifier.ProFairUseReachedAsync(merchantId, month, cancellationToken);
+                await notifier.FairUseReachedAsync(merchantId, MexicoTime.MonthStart(today), current, cancellationToken);
             }
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "No se pudieron revisar los límites del mes del vendedor {MerchantId} tras la venta {SaleId}",
+            logger.LogWarning(ex, "No se pudo revisar el uso justo del mes del vendedor {MerchantId} tras la venta {SaleId}",
                 merchantId, saleId);
         }
     }
 }
 
-/// <summary>Aviso de los umbrales en el log (5.5). La 5.4 lo reemplaza por avisos en el sitio y correos.</summary>
+/// <summary>Aviso del uso justo en el log. El tablero del admin (6.4) lo muestra con su propia consulta.</summary>
 internal sealed class LoggingChargeLimitNotifier(ILogger<LoggingChargeLimitNotifier> logger) : IChargeLimitNotifier
 {
-    public Task FreeLimitThresholdReachedAsync(
-        int merchantId, int threshold, MonthlyChargeUsage month, CancellationToken cancellationToken = default)
+    public Task FairUseReachedAsync(int merchantId, DateOnly month, int paidCount, CancellationToken cancellationToken = default)
     {
-        logger.LogInformation(
-            "Vendedor {MerchantId} (plan gratuito) llegó a {Threshold} cobros concretados en {Month:yyyy-MM} (límite {Limit})",
-            merchantId, threshold, month.Month, month.Allowance.PaidLimit);
-        return Task.CompletedTask;
-    }
-
-    public Task ProFairUseReachedAsync(int merchantId, MonthlyChargeUsage month, CancellationToken cancellationToken = default)
-    {
-        // Fase 6: alerta en el admin.
-        logger.LogWarning("Vendedor {MerchantId} pasó el uso justo de Pro: {Count} cobros concretados en {Month:yyyy-MM}",
-            merchantId, month.Paid, month.Month);
+        logger.LogWarning("Vendedor {MerchantId} pasó el uso justo: {Count} cobros concretados en {Month:yyyy-MM}",
+            merchantId, paidCount, month);
         return Task.CompletedTask;
     }
 }

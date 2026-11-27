@@ -25,6 +25,16 @@ public partial class LegalPagesTests
     /// </summary>
     private const int PublishedTrialDays = 30;
 
+    /// <summary>
+    /// Límites del gratuito que dicen los textos publicados. Sus parámetros se borraron en la 5.14; la portada y los
+    /// Términos los quitan en la 5.18, y entonces estas constantes se quitan.
+    /// </summary>
+    private const int PublishedFreeMonthlyPaidLimit = 100;
+
+    private const int PublishedFreeHistoryDays = 30;
+
+    private const int PublishedFreeMonthlyGeneratedLimit = 300;
+
     private const string AppUrl = "https://app.example.test";
 
     private static readonly CultureInfo Mx = CultureInfo.GetCultureInfo("es-MX");
@@ -99,9 +109,9 @@ public partial class LegalPagesTests
             $"primeros {Count(SystemSettings.DefaultFounderSlots)} vendedores",
             $"{Count(PublishedTrialDays)} días de prueba",
             $"{Count(SystemSettings.DefaultGraceDays)} días de gracia",
-            $"{Count(SystemSettings.DefaultFreeMonthlyPaidLimit)} cobros concretados por mes",
-            $"{Count(SystemSettings.DefaultFreeMonthlyGeneratedLimit)} cobros generados",
-            $"últimos {Count(SystemSettings.DefaultFreeHistoryDays)} días",
+            $"{Count(PublishedFreeMonthlyPaidLimit)} cobros concretados por mes",
+            $"{Count(PublishedFreeMonthlyGeneratedLimit)} cobros generados",
+            $"últimos {Count(PublishedFreeHistoryDays)} días",
             $"{Count(SystemSettings.DefaultFairUseMonthlyPaid)} cobros concretados al mes",
             $"{Count(SystemSettings.DefaultReferralRewardDays)} días de Pro cuando",
             $"{Count(SystemSettings.DefaultReferralRewardsPerYear)} premios en 12 meses",

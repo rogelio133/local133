@@ -15,7 +15,7 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 
 /// <summary>
 /// «Invita y gana» (/app/invita, 5.8): el código y la liga del vendedor para compartir, los premios ganados y sus
-/// referidos. Para todos los planes (también el gratuito y el onboarding); solo lectura. Los referidos salen del filtro
+/// referidos. Para todos los planes (también el vencido y el onboarding); solo lectura. Los referidos salen del filtro
 /// multi-tenant (los del vendedor de la sesión).
 /// </summary>
 [Area("Merchant")]

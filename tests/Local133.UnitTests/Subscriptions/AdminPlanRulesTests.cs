@@ -169,7 +169,6 @@ public class AdminPlanRulesTests
     [InlineData(nameof(SystemSettings.FounderSlots))]
     [InlineData(nameof(SystemSettings.TrialDays))]
     [InlineData(nameof(SystemSettings.GraceDays))]
-    [InlineData(nameof(SystemSettings.FreeMonthlyGeneratedLimit))]
     [InlineData(nameof(SystemSettings.SaleQrExpirationSeconds))]
     [InlineData(nameof(SystemSettings.ReferralWelcomeDiscountRate))]
     [InlineData(nameof(SystemSettings.VatRate))]
@@ -184,7 +183,6 @@ public class AdminPlanRulesTests
             case nameof(SystemSettings.FounderSlots): settings.FounderSlots = 10; assigned = 11; break;
             case nameof(SystemSettings.TrialDays): settings.TrialDays = 0; break;
             case nameof(SystemSettings.GraceDays): settings.GraceDays = 31; break;
-            case nameof(SystemSettings.FreeMonthlyGeneratedLimit): settings.FreeMonthlyGeneratedLimit = 99; break;
             case nameof(SystemSettings.SaleQrExpirationSeconds): settings.SaleQrExpirationSeconds = 359; break;
             case nameof(SystemSettings.ReferralWelcomeDiscountRate): settings.ReferralWelcomeDiscountRate = 0.95m; break;
             case nameof(SystemSettings.VatRate): settings.VatRate = 0.16005m; break;
@@ -207,8 +205,6 @@ public class AdminPlanRulesTests
             ProFounderAnnualPrice = 99_999.99m,
             FounderSlots = 3,
             GraceDays = 0,
-            FreeMonthlyPaidLimit = 300,
-            FreeMonthlyGeneratedLimit = 300,
             ReferralRewardsPerYear = 0,
             SaleQrExpirationSeconds = 360,
             VatRate = 0.5m,

@@ -158,7 +158,7 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
         await CreateMerchantAsync("veinte@prueba.mx");
         await SeedPlanAsync("veinte@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-10), now.AddDays(20)));
         await CreateMerchantAsync("vencido@prueba.mx");
-        await SeedFreePlanAsync("vencido@prueba.mx");
+        await SeedExpiredPlanAsync("vencido@prueba.mx");
         await CreateMerchantAsync("onboarding@prueba.mx");
         var admin = await AdminAsync();
         var three = await MerchantIdAsync("tres@prueba.mx");

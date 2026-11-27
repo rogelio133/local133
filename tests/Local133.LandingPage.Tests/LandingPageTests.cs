@@ -17,6 +17,14 @@ public class LandingPageTests
     /// </summary>
     private const int PublishedTrialDays = 30;
 
+    /// <summary>
+    /// Límites del gratuito que dicen los textos publicados. Sus parámetros se borraron en la 5.14; la portada y los
+    /// Términos los quitan en la 5.18, y entonces estas constantes se quitan.
+    /// </summary>
+    private const int PublishedFreeMonthlyPaidLimit = 100;
+
+    private const int PublishedFreeHistoryDays = 30;
+
     private const string AppUrl = "https://app.example.test";
 
     private static WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
@@ -189,8 +197,8 @@ public class LandingPageTests
         Assert.Contains($"3 meses ({Money(monthly * 3)}) y 6 meses ({Money(monthly * 6)})", text);
         Assert.Contains($"los primeros {SystemSettings.DefaultFounderSlots} vendedores que paguen Pro pagan " +
             $"{Money(SystemSettings.DefaultProFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultProFounderAnnualPrice)} al año", text);
-        Assert.Contains($"{SystemSettings.DefaultFreeMonthlyPaidLimit} cobros al mes", text);
-        Assert.Contains($"Historial de los últimos {SystemSettings.DefaultFreeHistoryDays} días", text);
+        Assert.Contains($"{PublishedFreeMonthlyPaidLimit} cobros al mes", text);
+        Assert.Contains($"Historial de los últimos {PublishedFreeHistoryDays} días", text);
         Assert.Contains($"Prueba todo gratis {PublishedTrialDays} días", text);
         Assert.Contains($"+{SystemSettings.DefaultReferralRewardDays} días de Pro para ti", text);
         Assert.Contains($"-{SystemSettings.DefaultReferralWelcomeDiscountRate * 100:0}% de descuento", text);

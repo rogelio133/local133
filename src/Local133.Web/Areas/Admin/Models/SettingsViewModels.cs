@@ -53,21 +53,6 @@ public sealed class SettingsInput
     [Range(0, SystemSettingsRules.MaxGraceDays, ErrorMessage = "Escribe un número entre 0 y 30.")]
     public int? GraceDays { get; set; }
 
-    [Display(Name = "Cobros concretados al mes")]
-    [Required(ErrorMessage = RequiredMessage)]
-    [Range(1, SystemSettingsRules.MaxCount, ErrorMessage = "Escribe un número entre 1 y 1,000,000.")]
-    public int? FreeMonthlyPaidLimit { get; set; }
-
-    [Display(Name = "Tope de cobros generados al mes")]
-    [Required(ErrorMessage = RequiredMessage)]
-    [Range(1, SystemSettingsRules.MaxCount, ErrorMessage = "Escribe un número entre 1 y 1,000,000.")]
-    public int? FreeMonthlyGeneratedLimit { get; set; }
-
-    [Display(Name = "Días de historial")]
-    [Required(ErrorMessage = RequiredMessage)]
-    [Range(1, SystemSettingsRules.MaxHistoryDays, ErrorMessage = "Escribe un número entre 1 y 3,650.")]
-    public int? FreeHistoryDays { get; set; }
-
     [Display(Name = "Uso justo: cobros concretados al mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [Range(1, SystemSettingsRules.MaxCount, ErrorMessage = "Escribe un número entre 1 y 1,000,000.")]
@@ -113,9 +98,6 @@ public sealed class SettingsInput
         FounderSlots = settings.FounderSlots,
         TrialDays = settings.TrialDays,
         GraceDays = settings.GraceDays,
-        FreeMonthlyPaidLimit = settings.FreeMonthlyPaidLimit,
-        FreeMonthlyGeneratedLimit = settings.FreeMonthlyGeneratedLimit,
-        FreeHistoryDays = settings.FreeHistoryDays,
         FairUseMonthlyPaid = settings.FairUseMonthlyPaid,
         ReferralRewardDays = settings.ReferralRewardDays,
         ReferralRewardsPerYear = settings.ReferralRewardsPerYear,
@@ -135,9 +117,6 @@ public sealed class SettingsInput
         FounderSlots = FounderSlots ?? 0,
         TrialDays = TrialDays ?? 0,
         GraceDays = GraceDays ?? 0,
-        FreeMonthlyPaidLimit = FreeMonthlyPaidLimit ?? 0,
-        FreeMonthlyGeneratedLimit = FreeMonthlyGeneratedLimit ?? 0,
-        FreeHistoryDays = FreeHistoryDays ?? 0,
         FairUseMonthlyPaid = FairUseMonthlyPaid ?? 0,
         ReferralRewardDays = ReferralRewardDays ?? 0,
         ReferralRewardsPerYear = ReferralRewardsPerYear ?? 0,
@@ -185,10 +164,7 @@ public static class SettingsLabels
         nameof(SystemSettings.ProFounderAnnualPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
         nameof(SystemSettings.FounderSlots) => "Los primeros que paguen Pro. No puede bajar de los lugares ya asignados.",
         nameof(SystemSettings.TrialDays) => "Solo afecta a las pruebas que empiecen después del cambio.",
-        nameof(SystemSettings.GraceDays) => "Cambia de inmediato el estado de quien tenga un pago vencido (gracia o gratuito).",
-        nameof(SystemSettings.FreeMonthlyPaidLimit) => "En el gratuito, por mes calendario. Cambia de inmediato.",
-        nameof(SystemSettings.FreeMonthlyGeneratedLimit) => "Tope técnico contra abusos. No puede ser menor que el límite de concretados.",
-        nameof(SystemSettings.FreeHistoryDays) => "Ventas visibles en el gratuito. Cambia de inmediato.",
+        nameof(SystemSettings.GraceDays) => "Cambia de inmediato el estado de quien tenga un pago vencido (gracia o vencido).",
         nameof(SystemSettings.FairUseMonthlyPaid) => "Al pasarlo se alerta al admin, sin bloquear.",
         nameof(SystemSettings.ReferralRewardDays) => "Para los premios que se den después del cambio.",
         nameof(SystemSettings.ReferralRewardsPerYear) => "En 12 meses móviles. 0 = sin premios.",

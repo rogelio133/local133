@@ -104,7 +104,7 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
     [InlineData(nameof(SystemSettings.ProFounderMonthlyPrice), "250", "no puede ser mayor que el normal")]
     [InlineData(nameof(SystemSettings.SaleQrExpirationSeconds), "300", "Pey exige al menos 360")]
     [InlineData(nameof(SystemSettings.ProMonthlyPrice), "199.999", "Escribe un precio")]
-    [InlineData(nameof(SystemSettings.FreeMonthlyGeneratedLimit), "50", "no puede ser menor")]
+    [InlineData(nameof(SystemSettings.FairUseMonthlyPaid), "0", "Escribe un número entre 1")]
     public async Task Valores_invalidos_no_se_guardan(string field, string value, string message)
     {
         var admin = await AdminAsync();

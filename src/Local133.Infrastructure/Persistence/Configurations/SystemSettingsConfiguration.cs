@@ -18,8 +18,7 @@ public class SystemSettingsConfiguration : IEntityTypeConfiguration<SystemSettin
                 "AND [ProMonthlyPrice] > 0 AND [ProAnnualPrice] > 0 AND [ProFounderMonthlyPrice] > 0 AND [ProFounderAnnualPrice] > 0");
             t.HasCheckConstraint("CK_SystemSettings_TrialDays", "[TrialDays] > 0");
             t.HasCheckConstraint("CK_SystemSettings_Limits",
-                "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 " +
-                "AND [FreeHistoryDays] >= 0 AND [FairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
+                "[FounderSlots] >= 0 AND [FairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
             t.HasCheckConstraint("CK_SystemSettings_Rates",
                 "[ReferralWelcomeDiscountRate] >= 0 AND [ReferralWelcomeDiscountRate] < 1 " +
                 "AND [ReferenceTerminalFeeRate] >= 0 AND [ReferenceTerminalFeeRate] < 1");
@@ -54,9 +53,6 @@ public class SystemSettingsConfiguration : IEntityTypeConfiguration<SystemSettin
             ProFounderAnnualPrice = SystemSettings.DefaultProFounderAnnualPrice,
             FounderSlots = SystemSettings.DefaultFounderSlots,
             TrialDays = SystemSettings.DefaultTrialDays,
-            FreeMonthlyPaidLimit = SystemSettings.DefaultFreeMonthlyPaidLimit,
-            FreeMonthlyGeneratedLimit = SystemSettings.DefaultFreeMonthlyGeneratedLimit,
-            FreeHistoryDays = SystemSettings.DefaultFreeHistoryDays,
             FairUseMonthlyPaid = SystemSettings.DefaultFairUseMonthlyPaid,
             ReferralRewardDays = SystemSettings.DefaultReferralRewardDays,
             ReferralRewardsPerYear = SystemSettings.DefaultReferralRewardsPerYear,

@@ -15,7 +15,7 @@ public sealed class PublicSiteOptions
 
     /// <summary>
     /// Portada pública (<c>Local133.LandingPage</c>), sin diagonal final. A ella apuntan «Cobrado con Local133» del
-    /// recibo gratuito y el pie del catálogo público (5.10), con el código de invitación del vendedor.
+    /// recibo sin logo y el pie del catálogo público (5.10), con el código de invitación del vendedor.
     /// </summary>
     public string LandingUrl { get; set; } = DefaultLandingUrl;
 

@@ -151,7 +151,9 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         var now = DateTimeOffset.UtcNow;
         var html = await HomeWithPlanAsync(MerchantStatus.Active, (SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)));
 
-        Assert.Contains("data-plan-tier=\"Expired\"", html);
+        // 5.14: la tarjeta «Tu plan venció» va en lugar de «Ya puedes cobrar» y no se repite la del plan.
+        Assert.Contains("data-home-plan-expired", html);
+        Assert.DoesNotContain("data-plan-tier", html);
         Assert.Contains("Tu plan venció el", html);
         Assert.Contains("Elige un plan para seguir cobrando.", html);
         Assert.Contains("border-danger", html);

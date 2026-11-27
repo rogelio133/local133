@@ -133,14 +133,14 @@ internal sealed class PaymentRecorder(
 
         if (previousStatus != SaleStatus.Paid)
         {
-            // Un cobro concretado más en el mes: umbrales del gratuito y uso justo de Pro. Nunca tumba el pago.
+            // Un cobro concretado más en el mes: uso justo (Básico y Pro). Nunca tumba el pago.
             try
             {
                 await limitAlerts.PaidChargeRecordedAsync(sale.MerchantId, sale.Id, CancellationToken.None);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "No se pudieron revisar los límites del mes tras el pago de la venta {SaleId}", sale.Id);
+                logger.LogWarning(ex, "No se pudo revisar el uso justo del mes tras el pago de la venta {SaleId}", sale.Id);
             }
         }
 

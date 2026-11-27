@@ -182,7 +182,7 @@ public sealed class SalesHistoryViewModel
 
     public DateOnly? To { get; init; }
 
-    /// <summary>Búsqueda por folio o concepto (5.9, Pro); <c>null</c> = sin búsqueda.</summary>
+    /// <summary>Búsqueda por folio o concepto (5.9); <c>null</c> = sin búsqueda.</summary>
     public string? Query { get; init; }
 
     public DateOnly Today { get; init; }
@@ -190,29 +190,11 @@ public sealed class SalesHistoryViewModel
     /// <summary>El plan permite exportar a Excel (Pro).</summary>
     public bool CanExport { get; init; }
 
-    /// <summary>El plan trae el corte de caja diario (Pro).</summary>
+    /// <summary>El plan trae el corte de caja diario (Básico y Pro; no el vencido).</summary>
     public bool HasCashCut { get; init; }
 
     /// <summary>El vendedor tiene al menos una venta (sin filtros).</summary>
     public bool HasAnySales { get; init; }
-
-    /// <summary>
-    /// Días de historial del plan gratuito (5.5); <c>null</c> = historial completo con filtro de fechas (Pro).
-    /// </summary>
-    public int? HistoryDays { get; init; }
-
-    /// <summary>Ventas de antes de <see cref="HistoryDays"/> que el gratuito no muestra (se ocultan, no se borran).</summary>
-    public int HiddenOlderCount { get; init; }
-
-    public bool IsHistoryLimited => HistoryDays is not null;
-
-    /// <summary>«Tienes 47 ventas de hace más de 30 días ocultas.» (lo que te pierdes, 5.10)</summary>
-    public string? HiddenOlderText => HiddenOlderCount switch
-    {
-        <= 0 => null,
-        1 => $"Tienes 1 venta de hace más de {HistoryDays} días oculta.",
-        _ => $"Tienes {HiddenOlderCount:N0} ventas de hace más de {HistoryDays} días ocultas.",
-    };
 
     public bool HasDateFilter => From is not null || To is not null;
 
@@ -279,9 +261,6 @@ public sealed class SalesHistoryViewModel
         _ => null,
     };
 }
-
-/// <summary>Detalle de una venta que el gratuito ya no muestra (más vieja que sus días de historial).</summary>
-public sealed record SaleLockedViewModel(int Folio, string CreatedAtText, int HistoryDays);
 
 /// <summary>Pago de una venta tal como lo ve el vendedor.</summary>
 public sealed record SalePaymentView(string PaidAtText, string AmountText, string? TrackingKey);

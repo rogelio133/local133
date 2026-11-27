@@ -100,10 +100,10 @@ public sealed class CartChargeViewModel
 
     public ChargeBlockedNotice? Blocked { get; init; }
 
-    /// <summary>Contador del mes del gratuito (5.5); <c>null</c> sin límite o si aún no puede cobrar.</summary>
-    public ChargeUsageViewModel? Usage { get; init; }
+    /// <summary>Plan vencido (5.14): el panel muestra el aviso en lugar del catálogo.</summary>
+    public PlanExpiredViewModel? Expired { get; init; }
 
-    /// <summary>Gratuito: el carrito es de Pro y el panel muestra este aviso en lugar del catálogo.</summary>
+    /// <summary>Básico: el carrito es de Pro y el panel muestra este aviso en lugar del catálogo.</summary>
     public ProRequiredViewModel? ProRequired { get; init; }
 
     /// <summary>Primera página del catálogo (con la búsqueda de la URL); <c>null</c> si no puede cobrar.</summary>
@@ -136,12 +136,15 @@ public sealed class ChargeFormViewModel
     /// <summary>Aviso cuando no puede cobrar; <c>null</c> = puede cobrar.</summary>
     public ChargeBlockedNotice? Blocked { get; init; }
 
-    /// <summary>Contador del mes del gratuito (5.5); <c>null</c> sin límite o si aún no puede cobrar.</summary>
-    public ChargeUsageViewModel? Usage { get; init; }
+    /// <summary>Plan vencido (5.14): en lugar del formulario va el aviso con «Elegir plan».</summary>
+    public PlanExpiredViewModel? Expired { get; init; }
+
+    /// <summary>El formulario se muestra: puede cobrar por estatus y por plan.</summary>
+    public bool ShowsForm => Blocked is null && Expired is null;
 
     /// <summary>
-    /// Lo que te pierdes (5.10): «Tu catálogo de 63 productos te espera.» en el gratuito con productos; <c>null</c> si
-    /// puede cobrar con carrito o no tiene productos.
+    /// Lo que te pierdes (5.10): «Tu catálogo de 63 productos te espera en Pro.» en Básico con productos; <c>null</c>
+    /// si puede cobrar con carrito, si venció o si no tiene productos.
     /// </summary>
     public string? MissingCatalogText { get; init; }
 

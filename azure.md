@@ -284,7 +284,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
   - **crea la transición de los vendedores existentes con la hora del servidor** (`SYSUTCDATETIME()`): 15 días de Básico al gratuito desde ese momento, al que está en prueba al terminarla y al que está en gracia hasta 15 días después. Cada una deja un renglón en `AuditLogs` (`PlanTransition`, actor `sistema`). Por eso **la publicación va en un horario acordado** y se anuncia (el correo del anuncio es de la 5.16).
   - Corre una sola vez: si se aplicó a mano antes (`dotnet ef database update` o un script), al arrancar no se repite.
   - Antes de publicar, respaldar la base (o tener a mano un punto de restauración de Azure SQL): el `Down` quita la transición, pero no deshace las conversiones de Básico a Pro que haya después.
-- Las columnas `Free*` de `SystemSettings` se quedan hasta la 5.14, que las borra con su propia migración.
+- Las columnas `Free*` de `SystemSettings` se quedan hasta la 5.14, que las borra con su propia migración (`RemoveFreePlanSettings`).
 - Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
 
 ### Fase 5.13 — Prueba al primer cobro
@@ -292,3 +292,8 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - La prueba de Pro ya no empieza al activarse la cuenta: la empieza el webhook `codi.qr.payment_received` / `codi.pn.payment_received` (o la conciliación `conciliar-pagos`) con el primer cobro pagado. Nada que configurar: es el mismo webhook.
 - `suscripciones-diario` (mismo job, misma hora) suma el respaldo: empieza la prueba de los vendedores activos que ya cobraron y no la tienen. No llama a Pey.
 - Al publicar, los vendedores activos que todavía no tienen suscripción (sin prueba) quedan en «sin prueba» hasta su siguiente cobro; si ya tenían pagos de antes, la primera corrida del job les empieza la prueba con la fecha de su **primer** pago (podría ya haber terminado). En la base de producción no debería haber ninguno: hasta la 5.12 la prueba empezaba al activarse.
+
+### Fase 5.14 — Acceso por plan y vencido
+- **Se publica junto con la 5.12, la 5.13 y la 5.15 a la 5.18.** Desde aquí el vencido ya no genera cobros: publicarla sin el checkout dejaría a los vendedores sin forma de volver a cobrar.
+- **Migración `RemoveFreePlanSettings`** (corre al arrancar, después de `BasicAndProPlans`): borra `FreeMonthlyPaidLimit`, `FreeMonthlyGeneratedLimit` y `FreeHistoryDays` de `SystemSettings` y rehace el check `CK_SystemSettings_Limits`. No toca datos de vendedores. El `Down` las vuelve a crear con 100, 300 y 30.
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos. El webhook de pagos sigue abonando las ventas generadas antes de vencer.

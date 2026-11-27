@@ -24,9 +24,6 @@ public class SystemSettings : Entity
     public const decimal DefaultProFounderAnnualPrice = 1490m;
     public const int DefaultFounderSlots = 100;
     public const int DefaultTrialDays = 15;
-    public const int DefaultFreeMonthlyPaidLimit = 100;
-    public const int DefaultFreeMonthlyGeneratedLimit = 300;
-    public const int DefaultFreeHistoryDays = 30;
     public const int DefaultFairUseMonthlyPaid = 5000;
     public const int DefaultReferralRewardDays = 10;
     public const int DefaultReferralRewardsPerYear = 12;
@@ -71,18 +68,6 @@ public class SystemSettings : Entity
 
     /// <summary>Días de la prueba de Pro (una sola vez por vendedor).</summary>
     public int TrialDays { get; set; } = DefaultTrialDays;
-
-    /// <summary>
-    /// Cobros concretados al mes en el gratuito (mes calendario en hora de México). Al llegar a este número ya no se
-    /// generan cobros nuevos: no hay cobros de cortesía (se quitaron el 2026-11-20).
-    /// </summary>
-    public int FreeMonthlyPaidLimit { get; set; } = DefaultFreeMonthlyPaidLimit;
-
-    /// <summary>Tope técnico de cobros generados (pagados o no) al mes en el gratuito.</summary>
-    public int FreeMonthlyGeneratedLimit { get; set; } = DefaultFreeMonthlyGeneratedLimit;
-
-    /// <summary>Días del historial de ventas visibles en el gratuito.</summary>
-    public int FreeHistoryDays { get; set; } = DefaultFreeHistoryDays;
 
     /// <summary>Uso justo (Básico y Pro): cobros concretados al mes a partir de los que se alerta al admin (sin bloquear).</summary>
     public int FairUseMonthlyPaid { get; set; } = DefaultFairUseMonthlyPaid;

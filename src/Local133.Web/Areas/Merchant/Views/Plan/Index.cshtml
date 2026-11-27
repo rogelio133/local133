@@ -34,11 +34,6 @@
             </div>
         }
 
-        @if (Model.Usage is { } usage)
-        {
-            <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
-        }
-
         @if (Model.RenewalNotice is { } renewal)
         {
             <div class="alert @(renewal.IsUrgent ? "alert-warning" : "alert-info") d-flex flex-column flex-sm-row align-items-sm-center gap-2" role="status" data-renewal-notice>
@@ -184,7 +179,7 @@
                     <thead>
                         <tr>
                             <th scope="col" class="fw-normal text-body-secondary small ps-3">Función</th>
-                            <th scope="col" class="small">Gratuito</th>
+                            <th scope="col" class="small">Básico</th>
                             <th scope="col" class="small pe-3">Pro</th>
                         </tr>
                     </thead>
@@ -199,7 +194,7 @@
                                         <partial name="_ComingSoonBadge" />
                                     }
                                 </td>
-                                <td>@row.Free</td>
+                                <td>@row.Basic</td>
                                 <td class="fw-semibold pe-3">@row.Pro</td>
                             </tr>
                         }

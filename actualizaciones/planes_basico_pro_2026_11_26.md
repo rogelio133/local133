@@ -407,6 +407,13 @@ Cambios frente a lo de aquí:
   - el respaldo del job.
 
 ### 5.14 Acceso por plan y vencido
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12, la 5.13 y la 5.15 a la 5.18.* — [bitácora](../log_plan/fase-5.14-acceso-por-plan-y-vencido.md)
+
+Cambios frente a lo de aquí:
+- «Elegir plan» va a «Mi plan» (`PlanUrls.ChoosePlan`) hasta que la 5.15 lo apunte al checkout.
+- Los recordatorios ya no prometen el gratuito (solo el texto); las etapas nuevas siguen en la 5.16.
+- El banner del vencido no sale en Inicio ni en Cobrar, que ya muestran el aviso completo.
+
 - **En el servidor**:
   - `PlanExpired` en `SaleCharging.PlanBlockAsync`;
   - el carrito con `PlanRequired` en Básico;

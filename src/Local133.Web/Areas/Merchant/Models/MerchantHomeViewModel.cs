@@ -6,7 +6,7 @@ namespace Local133.Web.Areas.Merchant.Models;
 public sealed record MerchantHomeViewModel(
     string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null,
     DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0,
-    ChargeUsageViewModel? Usage = null, bool ProfileIncomplete = false, bool TrialStartsOnFirstCharge = false)
+    PlanExpiredViewModel? PlanExpired = null, bool ProfileIncomplete = false, bool TrialStartsOnFirstCharge = false)
 {
     /// <summary>Paso opcional de Inicio (4.1): falta el nombre del negocio o el teléfono en «Mi información».</summary>
     public const string ProfileStepTitle = "Completa tu información";
@@ -30,6 +30,11 @@ public sealed record MerchantHomeViewModel(
         today,
         merchant.Status == MerchantStatus.Disabled ? null : plan,
         trialDays);
+
+    /// <summary>
+    /// Tarjeta del plan abajo: no se repite cuando ya está la de «Tu plan venció» (<see cref="PlanExpired"/>).
+    /// </summary>
+    public PlanSummaryViewModel? PlanCard => PlanExpired is null ? Plan : null;
 
     public bool IsOnboarding => Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview;
 

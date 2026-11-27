@@ -184,7 +184,7 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
     public async Task En_el_gratuito_empieza_al_pagar()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         var charge = await CreateChargeAsync(client);
         var before = DateTimeOffset.UtcNow.AddSeconds(-5);
 

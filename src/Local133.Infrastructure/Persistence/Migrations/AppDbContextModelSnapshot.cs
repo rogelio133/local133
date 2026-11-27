@@ -575,15 +575,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("FounderSlots")
                         .HasColumnType("int");
 
-                    b.Property<int>("FreeHistoryDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreeMonthlyGeneratedLimit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreeMonthlyPaidLimit")
-                        .HasColumnType("int");
-
                     b.Property<int>("GraceDays")
                         .HasColumnType("int");
 
@@ -633,7 +624,7 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_SystemSettings_GraceDays", "[GraceDays] >= 0");
 
-                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 AND [FreeHistoryDays] >= 0 AND [FairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
+                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
 
                             t.HasCheckConstraint("CK_SystemSettings_Prices", "[BasicMonthlyPrice] > 0 AND [BasicAnnualPrice] > 0 AND [BasicFounderMonthlyPrice] > 0 AND [BasicFounderAnnualPrice] > 0 AND [ProMonthlyPrice] > 0 AND [ProAnnualPrice] > 0 AND [ProFounderMonthlyPrice] > 0 AND [ProFounderAnnualPrice] > 0");
 
@@ -656,9 +647,6 @@ namespace Local133.Infrastructure.Persistence.Migrations
                             BasicMonthlyPrice = 99m,
                             FairUseMonthlyPaid = 5000,
                             FounderSlots = 100,
-                            FreeHistoryDays = 30,
-                            FreeMonthlyGeneratedLimit = 300,
-                            FreeMonthlyPaidLimit = 100,
                             GraceDays = 5,
                             ProAnnualPrice = 1990m,
                             ProFounderAnnualPrice = 1490m,

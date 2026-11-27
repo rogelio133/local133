@@ -52,7 +52,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Avisos de pago en tiempo real enviados (además de enviarse por SignalR).</summary>
     public RecordingSaleNotifier Notifier { get; } = new();
 
-    /// <summary>Umbrales del límite del gratuito y del uso justo de Pro detectados tras cada pago (5.5).</summary>
+    /// <summary>Uso justo (Básico y Pro) detectado tras cada pago (5.14).</summary>
     public RecordingChargeLimitNotifier LimitNotifier { get; } = new();
 
     /// <summary>Reloj del sitio: la hora real salvo que la prueba lo congele (jobs, 5.7).</summary>

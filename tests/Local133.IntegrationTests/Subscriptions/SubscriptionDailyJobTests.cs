@@ -105,7 +105,7 @@ public class SubscriptionDailyJobTests(Local133WebFactory factory) : Subscriptio
         Assert.Empty(await ChargesAsync());
         var emails = EmailsTo(Email);
         Assert.Contains("prueba", emails[0].Subject, StringComparison.Ordinal);
-        Assert.Equal("Pasaste al plan gratuito · Local133", emails[1].Subject);
+        Assert.Equal("Tu plan venció · Local133", emails[1].Subject);
     }
 
     [Fact]

@@ -245,7 +245,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - Básico no tiene carrito, catálogo editable, Excel ni catálogo en línea;
     - se retira todo lo del gratuito (límite mensual, historial de 30 días y recibo limitado).
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#514-acceso-por-plan-y-vencido)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12, la 5.13 y la 5.15 a la 5.18)* — [bitácora](log_plan/fase-5.14-acceso-por-plan-y-vencido.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#514-acceso-por-plan-y-vencido)
 15. **Checkout por pasos**:
     - plan, duración y resumen del pedido (total, IVA y casilla de términos), sin llamar a Pey hasta «Pagar»;
     - confirmación con número de pedido, comprobante imprimible y «Tus pedidos» en «Mi plan»;

@@ -1,0 +1,16 @@
+@using Local133.Web.Areas.Merchant.Models
+@model PlanBannerViewModel
+@* Mismo ancho que el contenido de la mayoría de las pantallas (Ventas, Productos, Mi plan). *@
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="alert @(Model.IsExpired ? "alert-danger" : "alert-warning") d-flex flex-column flex-sm-row align-items-sm-center gap-2 mb-3"
+             role="alert" data-plan-banner="@(Model.IsExpired ? "expired" : "grace")">
+            <i class="bi @(Model.IsExpired ? "bi-x-circle" : "bi-hourglass-split") fs-4 d-none d-sm-inline" aria-hidden="true"></i>
+            <span class="flex-grow-1">
+                <span class="d-block fw-bold">@Model.Title</span>
+                <span class="d-block small">@Model.Detail</span>
+            </span>
+            <a class="btn btn-primary text-nowrap" href="@Url.Content("~" + Model.ActionPath)" data-plan-banner-action>@Model.ActionText</a>
+        </div>
+    </div>
+</div>

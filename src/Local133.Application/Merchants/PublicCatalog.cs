@@ -27,7 +27,7 @@ public abstract record PublishCatalogResult
     /// <summary>Otro vendedor ya tiene ese slug.</summary>
     public sealed record SlugTaken(string Slug) : PublishCatalogResult;
 
-    /// <summary>El plan no permite publicar (gratuito).</summary>
+    /// <summary>El plan no permite publicar (onboarding, Básico o vencido).</summary>
     public sealed record PlanRequired : PublishCatalogResult;
 
     /// <summary>Falta el nombre del negocio, que es el título del catálogo.</summary>

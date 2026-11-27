@@ -169,7 +169,8 @@ public class TrialTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
             db.Subscriptions.Add(Subscription.StartTrial(merchantId, oldTrial, 30));
             await db.SaveChangesAsync();
         });
-        var sale = await ChargeAsync(client);
+        // Su plan ya venció (5.14: no genera cobros), pero le pagan un cobro que generó antes.
+        var sale = await InsertSaleAsync(Email, 150m, DateTimeOffset.UtcNow.AddMinutes(-2));
 
         Assert.Equal("Processed", await WebhookStatusAsync(await PostWebhookAsync(QrPaymentBodyFor(sale))));
 

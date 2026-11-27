@@ -68,12 +68,11 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         return await ProductListQuery.BuildAsync(
-            db, merchant, q, page, Url, ProductUrls.List, merchant.CanManageProducts && plan.Entitlements.CanEditCatalog,
-            cancellationToken);
+            db, merchant, q, page, Url, ProductUrls.List, ProductListQuery.ReadOnlyReasonFor(merchant, plan), cancellationToken);
     }
 
     /// <summary>
-    /// Formularios de alta y edición: un vendedor dado de baja o en el plan gratuito (catálogo de solo lectura) vuelve a
+    /// Formularios de alta y edición: un vendedor dado de baja, en Básico o vencido (catálogo de solo lectura) vuelve a
     /// la lista con el aviso. El caso de uso lo valida de nuevo al guardar.
     /// </summary>
     private async Task<IActionResult?> ReadOnlyRedirectAsync(CancellationToken cancellationToken)
@@ -264,7 +263,7 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
         return RedirectToAction(nameof(Index));
     }
 
-    /// <summary>Plan gratuito (catálogo de solo lectura): vuelve a la lista con el aviso.</summary>
+    /// <summary>Básico o vencido (catálogo de solo lectura): vuelve a la lista con el aviso.</summary>
     private RedirectToActionResult PlanRequired()
     {
         TempData[WarningKey] = ProductMessages.PlanRequired;

@@ -1,0 +1,9 @@
+@model Local133.Web.Areas.Merchant.Models.PlanExpiredViewModel
+@* Plan vencido (5.14): no genera cobros. Va en lugar del formulario de Cobrar, en Inicio, en el corte y en Productos. *@
+<div class="card border-danger" data-plan-expired>
+    <div class="card-body">
+        <h2 class="h5 card-title"><i class="bi bi-x-circle text-danger me-1" aria-hidden="true"></i> @Model.Title</h2>
+        <p class="card-text text-body-secondary">@Model.Message</p>
+        <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + Local133.Web.Areas.Merchant.Models.PlanUrls.ChoosePlan)" data-plan-expired-choose>Elegir plan</a>
+    </div>
+</div>

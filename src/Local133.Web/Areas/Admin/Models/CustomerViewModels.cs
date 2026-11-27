@@ -170,7 +170,7 @@ public enum ExpiryFilter
     /// <summary>Vence en los próximos 30 días.</summary>
     Within30Days,
 
-    /// <summary>Ya venció (gracia o gratuito).</summary>
+    /// <summary>Ya venció (gracia o vencido).</summary>
     Expired,
 }
 
@@ -326,14 +326,11 @@ public sealed class CustomerSalesViewModel
 
     public int PaidSalesCount { get; init; }
 
-    /// <summary>Cobros concretados en el mes (los que cuentan para el límite del gratuito).</summary>
+    /// <summary>Cobros concretados en el mes (los que cuentan para el uso justo).</summary>
     public int MonthPaidCount { get; init; }
 
     /// <summary>Cobros generados en el mes.</summary>
     public int MonthGeneratedCount { get; init; }
-
-    /// <summary>Límite de cobros concretados si el plan lo tiene (gratuito); <c>null</c> sin límite.</summary>
-    public int? MonthlyLimit { get; init; }
 
     public required IReadOnlyList<CustomerSaleRow> Rows { get; init; }
 

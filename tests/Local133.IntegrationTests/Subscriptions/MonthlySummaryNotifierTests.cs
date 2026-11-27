@@ -60,7 +60,7 @@ public class MonthlySummaryNotifierTests(Local133WebFactory factory) : SaleFlowT
     public async Task En_el_gratuito_invita_a_Pro()
     {
         await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         await PaidSaleAsync(Email, 150.50m, FirstMinuteOfOctober.AddDays(3));
 
         await SendAsync(October);

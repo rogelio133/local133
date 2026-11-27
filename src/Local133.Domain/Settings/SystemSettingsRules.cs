@@ -19,7 +19,6 @@ public static class SystemSettingsRules
     public const int MaxTrialDays = 365;
     public const int MaxGraceDays = 30;
     public const int MaxCount = 1_000_000;
-    public const int MaxHistoryDays = 3650;
     public const int MaxRewardDays = 365;
     public const int MaxRewardsPerYear = 365;
     public const decimal MaxWelcomeDiscountRate = 0.90m;
@@ -44,9 +43,6 @@ public static class SystemSettingsRules
         nameof(SystemSettings.FounderSlots),
         nameof(SystemSettings.TrialDays),
         nameof(SystemSettings.GraceDays),
-        nameof(SystemSettings.FreeMonthlyPaidLimit),
-        nameof(SystemSettings.FreeMonthlyGeneratedLimit),
-        nameof(SystemSettings.FreeHistoryDays),
         nameof(SystemSettings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear),
@@ -63,9 +59,6 @@ public static class SystemSettingsRules
         nameof(SystemSettings.FounderSlots),
         nameof(SystemSettings.TrialDays),
         nameof(SystemSettings.GraceDays),
-        nameof(SystemSettings.FreeMonthlyPaidLimit),
-        nameof(SystemSettings.FreeMonthlyGeneratedLimit),
-        nameof(SystemSettings.FreeHistoryDays),
         nameof(SystemSettings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear),
@@ -104,15 +97,6 @@ public static class SystemSettingsRules
 
         Range(errors, nameof(SystemSettings.TrialDays), settings.TrialDays, 1, MaxTrialDays);
         Range(errors, nameof(SystemSettings.GraceDays), settings.GraceDays, 0, MaxGraceDays);
-        Range(errors, nameof(SystemSettings.FreeMonthlyPaidLimit), settings.FreeMonthlyPaidLimit, 1, MaxCount);
-        Range(errors, nameof(SystemSettings.FreeMonthlyGeneratedLimit), settings.FreeMonthlyGeneratedLimit, 1, MaxCount);
-        if (settings.FreeMonthlyGeneratedLimit < settings.FreeMonthlyPaidLimit)
-        {
-            errors.Add(new(nameof(SystemSettings.FreeMonthlyGeneratedLimit),
-                "El tope de cobros generados no puede ser menor que el límite de cobros concretados."));
-        }
-
-        Range(errors, nameof(SystemSettings.FreeHistoryDays), settings.FreeHistoryDays, 1, MaxHistoryDays);
         Range(errors, nameof(SystemSettings.FairUseMonthlyPaid), settings.FairUseMonthlyPaid, 1, MaxCount);
         Range(errors, nameof(SystemSettings.ReferralRewardDays), settings.ReferralRewardDays, 1, MaxRewardDays);
         Range(errors, nameof(SystemSettings.ReferralRewardsPerYear), settings.ReferralRewardsPerYear, 0, MaxRewardsPerYear);
@@ -158,9 +142,6 @@ public static class SystemSettingsRules
         to.FounderSlots = from.FounderSlots;
         to.TrialDays = from.TrialDays;
         to.GraceDays = from.GraceDays;
-        to.FreeMonthlyPaidLimit = from.FreeMonthlyPaidLimit;
-        to.FreeMonthlyGeneratedLimit = from.FreeMonthlyGeneratedLimit;
-        to.FreeHistoryDays = from.FreeHistoryDays;
         to.FairUseMonthlyPaid = from.FairUseMonthlyPaid;
         to.ReferralRewardDays = from.ReferralRewardDays;
         to.ReferralRewardsPerYear = from.ReferralRewardsPerYear;
@@ -180,9 +161,6 @@ public static class SystemSettingsRules
         nameof(SystemSettings.FounderSlots) => Text(settings.FounderSlots),
         nameof(SystemSettings.TrialDays) => Text(settings.TrialDays),
         nameof(SystemSettings.GraceDays) => Text(settings.GraceDays),
-        nameof(SystemSettings.FreeMonthlyPaidLimit) => Text(settings.FreeMonthlyPaidLimit),
-        nameof(SystemSettings.FreeMonthlyGeneratedLimit) => Text(settings.FreeMonthlyGeneratedLimit),
-        nameof(SystemSettings.FreeHistoryDays) => Text(settings.FreeHistoryDays),
         nameof(SystemSettings.FairUseMonthlyPaid) => Text(settings.FairUseMonthlyPaid),
         nameof(SystemSettings.ReferralRewardDays) => Text(settings.ReferralRewardDays),
         nameof(SystemSettings.ReferralRewardsPerYear) => Text(settings.ReferralRewardsPerYear),

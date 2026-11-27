@@ -121,7 +121,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
     public async Task Quien_invita_desde_el_gratuito_gana_Pro_desde_ese_momento()
     {
         await CreateMerchantAsync(OtherEmail);
-        await SeedFreePlanAsync(OtherEmail);
+        await SeedExpiredPlanAsync(OtherEmail);
         var client = await TrialMerchantAsync(Email);
         await LinkReferralAsync(OtherEmail, Email);
         var charge = await CreateChargeAsync(client);

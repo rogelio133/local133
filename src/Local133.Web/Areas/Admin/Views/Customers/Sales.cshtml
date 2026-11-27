@@ -31,7 +31,7 @@
                 <div class="card h-100"><div class="card-body py-2">
                     <div class="small text-body-secondary">Cobros del mes</div>
                     <div class="fs-5 fw-bold" data-month-paid>
-                        @Model.MonthPaidCount.ToString("N0")@(Model.MonthlyLimit is { } limit ? $" de {limit:N0}" : null)
+                        @Model.MonthPaidCount.ToString("N0")
                     </div>
                     <div class="small text-body-secondary">@(Model.MonthGeneratedCount == 1 ? "1 generado" : $"{Model.MonthGeneratedCount:N0} generados")</div>
                 </div></div>

@@ -113,7 +113,7 @@ public partial class DashboardTests(Local133WebFactory factory) : AdminTestBase(
         await CreateMerchantAsync("prueba@prueba.mx");
         await SeedTrialAsync("prueba@prueba.mx");
         await CreateMerchantAsync("gratis@prueba.mx");
-        await SeedFreePlanAsync("gratis@prueba.mx");
+        await SeedExpiredPlanAsync("gratis@prueba.mx");
         await CreateMerchantAsync("gracia@prueba.mx");
         await SeedPlanAsync("gracia@prueba.mx", (SubscriptionPeriodKind.Trial, now.AddDays(-70), now.AddDays(-40)),
             (SubscriptionPeriodKind.Paid, now.AddDays(-40), now.AddDays(-2)));

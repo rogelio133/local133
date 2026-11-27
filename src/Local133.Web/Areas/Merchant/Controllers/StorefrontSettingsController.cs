@@ -18,7 +18,7 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 
 /// <summary>
 /// «Catálogo en línea» (/app/tienda, 5.10): el vendedor elige la liga de su catálogo público (<c>/tienda/{slug}</c>),
-/// lo publica o deja de publicarlo, lo comparte y ve la vista previa. Publicar es de Pro; en el gratuito se muestra el
+/// lo publica o deja de publicarlo, lo comparte y ve la vista previa. Publicar es de Pro; en Básico o vencido se muestra el
 /// aviso de Pro. Un vendedor dado de baja solo puede leer.
 /// </summary>
 [Area("Merchant")]
@@ -147,9 +147,13 @@ public class StorefrontSettingsController(
             ProRequired = canPublish ? null : new ProRequiredViewModel(
                 "Comparte tu catálogo con una liga",
                 // En el onboarding (5.13) se publica en cuanto empiece su prueba, con su primer cobro.
-                plan.Tier == PlanTier.Onboarding
-                    ? $"Se activa con tu prueba: tus {plan.TrialDays} días de Pro empiezan con tu primer cobro. Tus clientes verán tus productos, precios y fotos en una página, y te pedirán por WhatsApp."
-                    : "Con Pro tus clientes ven tus productos, precios y fotos en una página, y te piden por WhatsApp.",
+                plan.Tier switch
+                {
+                    PlanTier.Onboarding => $"Se activa con tu prueba: tus {plan.TrialDays} días de Pro empiezan con tu primer cobro. Tus clientes verán tus productos, precios y fotos en una página, y te pedirán por WhatsApp.",
+                    // 5.14: la liga sigue siendo suya, pero no se muestra hasta que pague Pro.
+                    PlanTier.Expired => "Tu plan venció: tu catálogo en línea no se muestra. Con Pro tus clientes vuelven a ver tus productos, precios y fotos, y te piden por WhatsApp.",
+                    _ => "Con Pro tus clientes ven tus productos, precios y fotos en una página, y te piden por WhatsApp.",
+                },
                 ProductListViewModel.WaitingCatalogText(productCount),
                 "bi-shop"),
             ShareMessage = url is not null && businessName is not null

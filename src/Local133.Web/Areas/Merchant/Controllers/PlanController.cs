@@ -15,7 +15,7 @@ using Microsoft.Extensions.Options;
 namespace Local133.Web.Areas.Merchant.Controllers;
 
 /// <summary>
-/// «Mi plan» (/app/plan, 5.6): estado del plan, contador del mes del gratuito, paquetes para pagar o adelantar Pro
+/// «Mi plan» (/app/plan, 5.6): estado del plan, paquetes para pagar o adelantar Pro
 /// con el link de pago de Pey, pagos anteriores y lo que incluye cada plan. El regreso de Pey
 /// (<c>/app/plan/pago/{id}</c>) solo consulta: abonan el webhook o la consulta del servidor a Pey.
 /// </summary>
@@ -26,7 +26,6 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 public class PlanController(
     AppDbContext db,
     IPlanAccess plans,
-    IChargeUsage usage,
     ISubscriptionCheckout checkout,
     ISubscriptionPaymentReconciliation reconciliation,
     IOptions<PublicSiteOptions> site,
@@ -51,9 +50,6 @@ public class PlanController(
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         var now = clock.GetUtcNow();
         var today = MexicoTime.Today(now);
-        var usageModel = merchant.Status == MerchantStatus.Active && plan.Entitlements.HasMonthlyChargeLimit
-            ? ChargeUsageViewModel.From(await usage.GetMonthAsync(merchant.Id, cancellationToken), today)
-            : null;
 
         var settings = await db.SystemSettings.AsNoTracking().SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
         var offers = await checkout.GetOffersAsync(merchant.Id, cancellationToken);
@@ -79,9 +75,8 @@ public class PlanController(
 
         return View(new MyPlanViewModel(
             PlanSummaryViewModel.From(plan.Status, now),
-            usageModel,
             plan.TrialDays,
-            MyPlanViewModel.FeaturesFor(settings),
+            MyPlanViewModel.FeaturesFor(),
             offers.CanPay,
             merchant.Status == MerchantStatus.Disabled,
             offers.Offers.Select(o => PlanOfferViewModel.From(o, today, last?.LastPackage)).ToList(),

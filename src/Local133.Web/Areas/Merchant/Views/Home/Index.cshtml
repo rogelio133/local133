@@ -9,6 +9,10 @@
 
     @switch (Model.Status)
     {
+        case MerchantStatus.Active when Model.PlanExpired is { } expired:
+            <div data-home-plan-expired><partial name="_PlanExpired" model="expired" /></div>
+            break;
+
         case MerchantStatus.Active:
             <div class="card">
                 <div class="card-body">
@@ -124,7 +128,7 @@
         </div>
     }
 
-    @if (Model.Plan is { } plan)
+    @if (Model.PlanCard is { } plan)
     {
         <a class="card card-body mt-3 text-decoration-none text-body d-flex flex-row align-items-center gap-3 @plan.BorderClass"
            href="@Url.Content("~" + PlanUrls.Plan)" data-plan-tier="@plan.Tier">
@@ -135,11 +139,6 @@
             </span>
             <i class="bi bi-chevron-right text-body-secondary" aria-hidden="true"></i>
         </a>
-    }
-
-    @if (Model.Usage is { } usage)
-    {
-        <div class="mt-3"><partial name="_ChargeUsage" model="usage" /></div>
     }
 
     @if (Model.Today is { } today)

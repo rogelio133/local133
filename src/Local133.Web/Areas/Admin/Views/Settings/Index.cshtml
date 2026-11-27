@@ -90,11 +90,8 @@
 
             <div class="card mb-3">
                 <div class="card-body">
-                    <h2 class="h6 card-title">Plan gratuito y uso justo de Pro</h2>
+                    <h2 class="h6 card-title">Uso justo (Básico y Pro)</h2>
                     <div class="row g-3">
-                        @{ Field(nameof(SystemSettings.FreeMonthlyPaidLimit)); }
-                        @{ Field(nameof(SystemSettings.FreeMonthlyGeneratedLimit)); }
-                        @{ Field(nameof(SystemSettings.FreeHistoryDays), suffix: "días"); }
                         @{ Field(nameof(SystemSettings.FairUseMonthlyPaid)); }
                     </div>
                 </div>
