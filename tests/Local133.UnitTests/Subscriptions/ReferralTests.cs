@@ -132,7 +132,7 @@ public class ReferralTests
 
         var annual = offers.Single(o => o.Package == SubscriptionPackage.Annual);
         Assert.Equal(2, annual.GiftMonths);
+        Assert.Equal(10, annual.PaidMonths); // «12 meses por el precio de 10», con los precios de lista
         Assert.Equal(59.70m, annual.Quote.DiscountAmount);
-        Assert.Equal(796m, offers.Single(o => o.Package == SubscriptionPackage.SixMonths).AnnualUpgradeDifference);
     }
 }

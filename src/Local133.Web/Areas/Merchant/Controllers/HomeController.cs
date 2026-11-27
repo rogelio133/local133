@@ -46,7 +46,7 @@ public class HomeController(AppDbContext db, IPlanAccess plans, TimeProvider clo
         {
             // Activo con el plan vencido (5.14): la tarjeta «Tu plan venció» va en lugar de «Ya puedes cobrar».
             PlanExpired = merchant.Status == MerchantStatus.Active && plan.Tier == PlanTier.Expired
-                ? PlanExpiredViewModel.For(plan.Status, now)
+                ? PlanExpiredViewModel.For(plan, now)
                 : null,
             ProfileIncomplete = merchant.CanEditProfile && !merchant.HasCompleteProfile(phone),
             // Activo sin suscripción: su prueba empieza con su primer cobro pagado (5.13).

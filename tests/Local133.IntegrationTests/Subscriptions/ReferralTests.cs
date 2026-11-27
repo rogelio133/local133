@@ -27,7 +27,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var client = await TrialMerchantAsync(Email);
         await LinkReferralAsync(OtherEmail, Email);
 
-        var plan = WebUtility.HtmlDecode(await GetHtmlAsync(client, PlanUrl));
+        var plan = WebUtility.HtmlDecode(await GetHtmlAsync(client, CheckoutUrl));
         Assert.Contains("data-welcome-discount", plan);
         Assert.Contains("$44.70 de descuento", plan); // 30 % de $149 (precio de fundador)
         Assert.Contains("data-plan-offer-list-price", plan);
@@ -46,7 +46,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         Assert.Equal(0m, second.DiscountAmount);
         Assert.Null(second.DiscountReason);
         Assert.Equal(149m, second.Amount);
-        Assert.DoesNotContain("data-welcome-discount", await GetHtmlAsync(client, PlanUrl));
+        Assert.DoesNotContain("data-welcome-discount", await GetHtmlAsync(client, CheckoutUrl));
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var charge = await CreateChargeAsync(client);
 
         Assert.Equal(0m, charge.DiscountAmount);
-        Assert.DoesNotContain("data-welcome-discount", await GetHtmlAsync(client, PlanUrl));
+        Assert.DoesNotContain("data-welcome-discount", await GetHtmlAsync(client, CheckoutUrl));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         Assert.Null(referral.QualifiedAt);
         Assert.DoesNotContain((await LoadSubscriptionAsync(OtherEmail)).Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
         Assert.Equal(referrer, (await LoadSubscriptionAsync(OtherEmail)).ProUntil);
-        Assert.Contains("data-welcome-discount", await GetHtmlAsync(client, PlanUrl));
+        Assert.Contains("data-welcome-discount", await GetHtmlAsync(client, CheckoutUrl));
     }
 
     // --- Premio ---------------------------------------------------------------------------------------------------------

@@ -297,3 +297,11 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Se publica junto con la 5.12, la 5.13 y la 5.15 a la 5.18.** Desde aquí el vencido ya no genera cobros: publicarla sin el checkout dejaría a los vendedores sin forma de volver a cobrar.
 - **Migración `RemoveFreePlanSettings`** (corre al arrancar, después de `BasicAndProPlans`): borra `FreeMonthlyPaidLimit`, `FreeMonthlyGeneratedLimit` y `FreeHistoryDays` de `SystemSettings` y rehace el check `CK_SystemSettings_Limits`. No toca datos de vendedores. El `Down` las vuelve a crear con 100, 300 y 30.
 - Sin recursos, App Settings, secretos, jobs ni webhooks nuevos. El webhook de pagos sigue abonando las ventas generadas antes de vencer.
+
+### Fase 5.15 — Checkout por pasos
+- **Se publica junto con la 5.12 a la 5.14 y la 5.16 a la 5.18.** Sin migración: las columnas `Plan`, `TermsVersion` y `TermsAcceptedAt` de `SubscriptionCharges` ya las creó `BasicAndProPlans`.
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
+- **URLs de regreso de Pey**: siguen saliendo de `App__PublicBaseUrl` (HTTPS obligatorio). `successUrl` no cambia (`/app/plan/pago/{id}`); `backUrl` ahora es el resumen del pedido (`/app/plan/checkout/{plan}/{paquete}`). Los links que ya existían conservan su `backUrl` viejo (`/app/plan`), que sigue funcionando.
+- La casilla del resumen enlaza a `{App__LandingUrl}/terminos` y el cargo guarda `LegalDocuments.CurrentTermsVersion`. Cuando la 5.18 cambie la versión, la portada con los Términos nuevos se publica **antes o junto** con Web.
+- Ya no existe `POST /app/plan/pagar`; ninguna liga externa lo usaba (solo el formulario de «Mi plan»).
+- **Ajuste del 2026-11-27 (checkout simplificado: solo 1 mes y Anual, plan y duración en una página)**: sin cambios para Azure. Sin migración (`ThreeMonths`/`SixMonths` se quedan en el enum por los cargos que ya existen), recursos, App Settings, secretos, jobs ni webhooks nuevos. Un link pendiente de 3 o 6 meses que ya exista se puede seguir pagando y se abona; su «Regresar» (`/app/plan/checkout/{plan}/3-meses|6-meses`) redirige a la sección del plan.

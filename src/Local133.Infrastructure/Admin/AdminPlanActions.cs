@@ -133,7 +133,7 @@ internal sealed class AdminPlanActions(
 
             db.AuditLogs.Add(AuditLog.Create(
                 actor.UserId, actor.Email, AuditAction.ChargeCreditedManually, merchantId,
-                $"Abonó a mano el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)} ({charge.Package.Label()}, {Money(charge.Amount)}; estaba {statusBefore}): Pro hasta el {LastDay(credit.Result.ProUntil)}.",
+                $"Abonó a mano el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)} ({charge.Plan.Label()} · {charge.Package.Label()}, {Money(charge.Amount)}; estaba {statusBefore}): vigente hasta el {LastDay(credit.Result.ProUntil)}.",
                 note,
                 Json(new
                 {
@@ -157,7 +157,7 @@ internal sealed class AdminPlanActions(
         await crediting.NotifyAsync(credit);
 
         return new AdminPlanResult.Done(
-            $"Listo: se abonó el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)}. Tiene Pro hasta el {LastDay(credit.Result.ProUntil)}.");
+            $"Listo: se abonó el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)}. Vigente hasta el {LastDay(credit.Result.ProUntil)}.");
     }
 
     public async Task<AdminPlanResult> RevokeReferralRewardAsync(

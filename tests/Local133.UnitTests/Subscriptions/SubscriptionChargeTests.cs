@@ -138,6 +138,31 @@ public class SubscriptionChargeTests
     }
 
     [Fact]
+    public void El_cargo_guarda_los_Terminos_aceptados_y_solo_se_reutiliza_con_la_misma_version()
+    {
+        var quote = SubscriptionPricing.Quote(SubscriptionPlan.Pro, SubscriptionPackage.Annual, Settings);
+        var now = Mx(2026, 11, 27, 10);
+        var charge = SubscriptionCharge.Create(7, quote, false, SubscriptionChargeOrigin.Merchant, now, termsVersion: "2026-12-01");
+        charge.AttachLink("01PL", "https://pay.pey.mx/01PL");
+
+        Assert.Equal("2026-12-01", charge.TermsVersion);
+        Assert.Equal(now, charge.TermsAcceptedAt);
+        Assert.True(charge.CanBeReusedFor(quote, now, 5, "2026-12-01"));
+        Assert.False(charge.CanBeReusedFor(quote, now, 5, "2027-01-01")); // Términos nuevos: otro link
+        Assert.False(charge.CanBeReusedFor(quote, now, 5)); // un pedido de antes, sin versión, tampoco
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("123456789012345678901")]
+    public void Una_version_de_Terminos_invalida_no_crea_el_cargo(string version)
+    {
+        var quote = SubscriptionPricing.Quote(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Settings);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            SubscriptionCharge.Create(7, quote, false, SubscriptionChargeOrigin.Merchant, Mx(2026, 11, 27, 10), version));
+    }
+
+    [Fact]
     public void Se_reutiliza_solo_si_tiene_a_lo_mas_los_dias_de_gracia()
     {
         var quote = SubscriptionPricing.Quote(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Settings);
@@ -258,14 +283,14 @@ public class SubscriptionChargeTests
 
         var offers = SubscriptionOffers.For(subscription, SubscriptionPlan.Pro, Settings, Mx(2026, 11, 20, 10), founderSlotAvailable: false);
 
-        Assert.Equal(Enum.GetValues<SubscriptionPackage>(), offers.Select(o => o.Package));
-        var six = offers.Single(o => o.Package == SubscriptionPackage.SixMonths);
+        // Solo 1 mes y Anual (2026-11-27: se retiraron los de 3 y 6 meses).
+        Assert.Equal([SubscriptionPackage.OneMonth, SubscriptionPackage.Annual], offers.Select(o => o.Package));
         var annual = offers.Single(o => o.Package == SubscriptionPackage.Annual);
         var month = offers.Single(o => o.Package == SubscriptionPackage.OneMonth);
-        Assert.Equal(796m, six.AnnualUpgradeDifference);
         Assert.Equal(2, annual.GiftMonths);
+        Assert.Equal(10, annual.PaidMonths);
         Assert.Equal(165.83m, annual.MonthlyEquivalent);
-        Assert.Null(month.AnnualUpgradeDifference);
+        Assert.Equal(0, month.GiftMonths);
         Assert.Equal(new DateOnly(2027, 1, 1), month.LastDay); // la prueba acaba el 1/12 a las 10:00; + 1 mes
     }
 
@@ -277,8 +302,9 @@ public class SubscriptionChargeTests
         var offers = SubscriptionOffers.For(subscription, SubscriptionPlan.Pro, Settings, Mx(2026, 11, 20, 10), founderSlotAvailable: true);
 
         Assert.All(offers, o => Assert.True(o.IsFounderPrice));
-        Assert.Equal(596m, offers.Single(o => o.Package == SubscriptionPackage.SixMonths).AnnualUpgradeDifference);
-        Assert.Equal(124.17m, offers.Single(o => o.Package == SubscriptionPackage.Annual).MonthlyEquivalent);
+        var annual = offers.Single(o => o.Package == SubscriptionPackage.Annual);
+        Assert.Equal(10, annual.PaidMonths); // 1490 = 10 × 149
+        Assert.Equal(124.17m, annual.MonthlyEquivalent);
     }
 
     // --- Calendario de conciliación ------------------------------------------------------------------------------------

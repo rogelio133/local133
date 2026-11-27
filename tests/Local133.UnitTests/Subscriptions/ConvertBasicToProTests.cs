@@ -196,8 +196,9 @@ public class ConvertBasicToProTests
         var basicMonth = basicOffers.Single(o => o.Package == SubscriptionPackage.OneMonth);
         Assert.Equal(Mx(2027, 1, 20, 10), basicMonth.Until);
         Assert.Equal(99m, basicMonth.Quote.Amount);
-        Assert.Equal(396m, basicOffers.Single(o => o.Package == SubscriptionPackage.SixMonths).AnnualUpgradeDifference);
-        Assert.Equal(2, basicOffers.Single(o => o.Package == SubscriptionPackage.Annual).GiftMonths);
+        var basicAnnual = basicOffers.Single(o => o.Package == SubscriptionPackage.Annual);
+        Assert.Equal(2, basicAnnual.GiftMonths);
+        Assert.Equal(10, basicAnnual.PaidMonths);
     }
 
     [Fact]

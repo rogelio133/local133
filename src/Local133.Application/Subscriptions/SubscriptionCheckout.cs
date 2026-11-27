@@ -1,3 +1,4 @@
+using System.Globalization;
 using Local133.Domain.Pey;
 using Local133.Domain.Subscriptions;
 
@@ -14,20 +15,70 @@ public static class SubscriptionChargeMetadata
     public const string SubscriptionKind = "subscription";
 }
 
+/// <summary>Rutas del checkout que comparten el sitio, el link de Pey y los correos (5.15).</summary>
+public static class SubscriptionPaths
+{
+    public const string Plan = "/app/plan";
+
+    /// <summary>Paso 1: elegir plan y duración (Básico y Pro, 1 mes y Anual), en una sola página.</summary>
+    public const string Checkout = "/app/plan/checkout";
+
+    /// <summary>Paso 1 con el scroll en la sección de un plan (<c>/app/plan/checkout#pro</c>).</summary>
+    public static string ChoosePlan(SubscriptionPlan plan) => $"{Checkout}#{plan.Slug()}";
+
+    /// <summary>Paso 2: resumen del pedido (también el regreso de Pey si cancela).</summary>
+    public static string Summary(SubscriptionPlan plan, SubscriptionPackage package) =>
+        $"{Checkout}/{plan.Slug()}/{package.Slug()}";
+
+    /// <summary>Paso 4: confirmación (regreso de Pey tras pagar).</summary>
+    public static string Payment(int chargeId) => $"/app/plan/pago/{chargeId.ToString(CultureInfo.InvariantCulture)}";
+
+    /// <summary>Comprobante de un pedido pagado.</summary>
+    public static string Receipt(int chargeId) =>
+        $"/app/plan/pedidos/{chargeId.ToString(CultureInfo.InvariantCulture)}/comprobante";
+
+    /// <summary>Número de pedido en pantalla y en correos: «#123».</summary>
+    public static string OrderNumber(int chargeId) => "#" + chargeId.ToString(CultureInfo.InvariantCulture);
+}
+
 /// <summary>
-/// Pago de la suscripción con link de Pey («Mi plan», 5.6): ofrece los paquetes, crea (o reutiliza) el cargo y su link.
-/// El dinero cae en la cuenta de la plataforma.
+/// Pago de la suscripción con link de Pey (checkout por pasos, 5.15): ofrece los paquetes de cada plan, arma el
+/// resumen del pedido y crea (o reutiliza) el cargo y su link solo al pagar. El dinero cae en la cuenta de la plataforma.
 /// </summary>
 public interface ISubscriptionCheckout
 {
-    /// <summary>Paquetes con el precio que le toca al vendedor; vacío si todavía no puede pagar.</summary>
-    Task<SubscriptionOffersResult> GetOffersAsync(int merchantId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Paquetes con el precio que le toca al vendedor, de <paramref name="plan"/> o de los dos planes; vacío si todavía
+    /// no puede pagar.
+    /// </summary>
+    Task<SubscriptionOffersResult> GetOffersAsync(
+        int merchantId, SubscriptionPlan? plan = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Resumen del pedido (paso 2). No crea nada ni llama a Pey.</summary>
+    Task<CheckoutOrderResult> GetOrderAsync(
+        int merchantId, SubscriptionPlan plan, SubscriptionPackage package, CancellationToken cancellationToken = default);
 
     Task<CheckoutResult> StartAsync(StartCheckoutCommand command, CancellationToken cancellationToken = default);
 }
 
 /// <param name="BaseUrl">Base pública del sitio para las URLs de regreso; Pey exige HTTPS.</param>
-public sealed record StartCheckoutCommand(int MerchantId, SubscriptionPackage Package, Uri BaseUrl);
+/// <param name="TermsVersion">Versión de los Términos que aceptó en el resumen (<c>LegalDocuments</c>).</param>
+/// <param name="ExpectedTotal">Total que vio el vendedor en el resumen: si cambió, no se paga.</param>
+public sealed record StartCheckoutCommand(
+    int MerchantId,
+    SubscriptionPlan Plan,
+    SubscriptionPackage Package,
+    Uri BaseUrl,
+    string TermsVersion,
+    decimal ExpectedTotal);
+
+/// <param name="Order">El pedido; <c>null</c> si no puede pagar.</param>
+/// <param name="NotAllowedMessage">Por qué no puede pagar (onboarding o dado de baja).</param>
+public sealed record CheckoutOrderResult(
+    SubscriptionOrder? Order, string? NotAllowedMessage, bool IsFounder, int FounderSlotsLeft)
+{
+    public bool CanPay => Order is not null;
+}
 
 /// <param name="CanPay">Ya tiene suscripción (la prueba empezó) y no está dado de baja.</param>
 /// <param name="FounderSlotsLeft">Lugares de fundador que quedan (0 si ya no hay o si ya es fundador).</param>
@@ -54,6 +105,9 @@ public abstract record CheckoutResult
 
     /// <summary>Pey rechazó o no respondió: el cargo quedó <c>Failed</c>.</summary>
     public sealed record GatewayFailed(string Message, int ChargeId) : CheckoutResult;
+
+    /// <summary>El total ya no es el que vio en el resumen (cambió un precio, el fundador o el descuento). No se llamó a Pey.</summary>
+    public sealed record PriceChanged(decimal Total) : CheckoutResult;
 }
 
 /// <summary>
@@ -135,12 +189,20 @@ public interface ISubscriptionPaymentNotifier
     Task PaymentCreditedAsync(SubscriptionPaymentCredited payment, CancellationToken cancellationToken = default);
 }
 
-/// <param name="ExtendedExistingPro">Ya tenía Pro pagado vigente: este pago extiende su plan (p. ej. pagó dos links).</param>
+/// <param name="PeriodStartsAt">Inicio del periodo pagado.</param>
+/// <param name="PeriodEndsAt">Fin (excluido) del periodo pagado.</param>
+/// <param name="ProUntil">Fin (excluido) de toda su cadena, de cualquier plan.</param>
+/// <param name="StartsLater">El periodo empieza después del pago: se encadenó a lo que ya tenía.</param>
+/// <param name="Conversion">Los días de Básico que se volvieron Pro al subir de plan; <c>null</c> si no hubo.</param>
 public sealed record SubscriptionPaymentCredited(
     int MerchantId,
     int ChargeId,
+    SubscriptionPlan Plan,
     SubscriptionPackage Package,
     decimal Amount,
+    DateTimeOffset PeriodStartsAt,
+    DateTimeOffset PeriodEndsAt,
     DateTimeOffset ProUntil,
-    bool ExtendedExistingPro,
+    bool StartsLater,
+    BasicToProConversion? Conversion,
     int? FounderNumber);

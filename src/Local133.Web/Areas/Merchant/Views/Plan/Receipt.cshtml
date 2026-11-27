@@ -1,0 +1,101 @@
+@using Local133.Web.Areas.Merchant.Models
+@model SubscriptionReceiptViewModel
+@{
+    ViewData["Title"] = $"Comprobante del pedido {Model.OrderNumber}";
+    ViewData["NoIndex"] = true;
+}
+@* Comprobante de un pedido pagado (5.15). Solo lo guardado en el cargo; no es una factura. «Compartir» y «Copiar»
+   (receipt-share.js) mandan el texto, no una liga: el comprobante solo lo abre el vendedor con su sesión. *@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <a class="d-inline-block mb-3 d-print-none" href="@Url.Content("~" + PlanUrls.Plan)"><i class="bi bi-chevron-left" aria-hidden="true"></i> Mi plan</a>
+
+        <div class="receipt-ticket-wrap">
+            <article class="receipt-ticket" data-order-receipt="@Model.Id">
+                <div class="receipt-ticket-section text-center">
+                    <p class="text-body-secondary small mb-1">Comprobante de pago · Local133</p>
+                    <h1 class="h4 mb-1" data-receipt-order>Pedido @Model.OrderNumber</h1>
+                    <i class="bi bi-check-circle-fill text-success receipt-check d-block my-2" aria-hidden="true"></i>
+                    <p class="fw-semibold text-success mb-1">Pagado</p>
+                    <p class="display-6 fw-semibold mb-0" data-receipt-total>@Model.TotalText</p>
+                </div>
+
+                <div class="receipt-ticket-section">
+                    <dl class="row small mb-0">
+                        @if (Model.BusinessName is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Negocio</dt>
+                            <dd class="col-7 mb-1 text-break" data-receipt-business>@Model.BusinessName</dd>
+                        }
+                        @if (Model.Email is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Correo</dt>
+                            <dd class="col-7 mb-1 text-break" data-receipt-email>@Model.Email</dd>
+                        }
+                        <dt class="col-5 fw-normal text-body-secondary">Plan</dt>
+                        <dd class="col-7 mb-1" data-receipt-plan>@Model.Title</dd>
+                        @if (Model.PeriodText is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Periodo</dt>
+                            <dd class="col-7 mb-1" data-receipt-period>@Model.PeriodText</dd>
+                        }
+                        @if (Model.PaidAtText is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Fecha del pago</dt>
+                            <dd class="col-7 mb-1" data-receipt-paid-at>@Model.PaidAtText</dd>
+                        }
+                        @if (Model.MethodText is not null)
+                        {
+                            <dt class="col-5 fw-normal text-body-secondary">Método</dt>
+                            <dd class="col-7 mb-1" data-receipt-method>@Model.MethodText</dd>
+                        }
+                    </dl>
+                </div>
+
+                <div class="receipt-ticket-section">
+                    <ul class="list-unstyled small mb-2">
+                        @foreach (var row in Model.Rows)
+                        {
+                            <li class="d-flex justify-content-between gap-3 mb-1" data-order-row="@row.Key">
+                                <span>@row.Label</span>
+                                <span class="text-nowrap">@(row.IsDiscount ? "−" : null)@row.AmountText</span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="receipt-ticket-total d-flex justify-content-between gap-3 fw-bold mb-2">
+                        <span>Total</span>
+                        <span class="text-nowrap">@Model.TotalText</span>
+                    </p>
+                    <ul class="list-unstyled small text-body-secondary mb-0" data-receipt-vat>
+                        <li class="d-flex justify-content-between gap-3"><span>Servicio</span><span class="text-nowrap">@Model.BaseText</span></li>
+                        <li class="d-flex justify-content-between gap-3"><span>IVA</span><span class="text-nowrap">@Model.VatText</span></li>
+                    </ul>
+                </div>
+
+                <div class="receipt-ticket-section text-center small text-body-secondary" data-receipt-not-invoice>
+                    Este comprobante no es una factura.
+                </div>
+            </article>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 justify-content-center mt-3 d-print-none" data-receipt-share
+             data-receipt-url="@Model.ShareMessage" data-receipt-message="@Model.ShareMessage"
+             data-share-title="Comprobante @Model.OrderNumber" data-copied-text="Comprobante copiado."
+             data-copy-failed="No pudimos copiar el comprobante.">
+            <button type="button" class="btn btn-outline-primary" data-receipt-print>
+                <i class="bi bi-printer me-1" aria-hidden="true"></i> Imprimir o guardar PDF
+            </button>
+            <button type="button" class="btn btn-outline-primary d-none" data-receipt-native-share>
+                <i class="bi bi-share me-1" aria-hidden="true"></i> Compartir
+            </button>
+            <button type="button" class="btn btn-outline-primary d-none" data-receipt-copy>
+                <i class="bi bi-clipboard me-1" aria-hidden="true"></i> Copiar
+            </button>
+            <p class="w-100 small text-success text-center mb-0 d-none" role="status" data-receipt-copied>Comprobante copiado.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/receipt-share.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,100 @@
+@using Local133.Web.Areas.Merchant.Controllers
+@using Local133.Web.Areas.Merchant.Models
+@model CheckoutSummaryViewModel
+@{
+    ViewData["Title"] = "Resumen de tu pedido";
+    var notice = TempData[PlanController.NoticeKey] as string;
+}
+@* Paso 2 del checkout (5.15): el pedido con su total, la casilla de los Términos y «Pagar». El GET no llama a Pey; el
+   link nace solo con el POST, que vuelve a cotizar y compara el total que se vio aquí (Input.ExpectedTotal). *@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6" data-checkout-summary="@Model.PlanSlug/@Model.PackageSlug">
+        <a class="d-inline-block mb-3" href="@Url.Content("~" + PlanUrls.CheckoutFor(Model.Plan))"><i class="bi bi-chevron-left" aria-hidden="true"></i> Planes</a>
+        <partial name="_CheckoutSteps" model="Model.Steps" />
+        <h1 class="h4 mb-3">Resumen de tu pedido</h1>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-plan-notice>@notice</div>
+        }
+        @if (Model.HttpsWarning is not null && notice != Model.HttpsWarning)
+        {
+            <div class="alert alert-warning small" role="alert" data-plan-https-warning>@Model.HttpsWarning</div>
+        }
+
+        <div class="card mb-3" data-order>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div>
+                        <p class="small text-body-secondary mb-0">Pedido</p>
+                        <p class="fw-bold fs-5 mb-0" data-order-title>@Model.Title</p>
+                    </div>
+                    <a class="small" href="@Url.Content("~" + PlanUrls.CheckoutFor(Model.Plan))" data-order-change>Cambiar</a>
+                </div>
+                @if (Model.AnnualDealText is not null)
+                {
+                    <p class="fw-semibold text-success mb-0 mt-2 d-flex align-items-center gap-2" data-order-annual-deal>
+                        <i class="bi bi-gift-fill" aria-hidden="true"></i><span>@Model.AnnualDealText</span>
+                    </p>
+                }
+                @if (Model.PeriodText is not null)
+                {
+                    <p class="mb-1 mt-2" data-order-period>@Model.PeriodText</p>
+                }
+                @if (Model.TimelineText is not null)
+                {
+                    <p class="small text-body-secondary mb-0" data-order-timeline>@Model.TimelineText</p>
+                }
+            </div>
+
+            @if (Model.CanPay)
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var row in Model.Rows)
+                    {
+                        <li class="list-group-item d-flex justify-content-between gap-3" data-order-row="@row.Key">
+                            <span>@row.Label</span>
+                            <span class="text-nowrap @(row.IsDiscount ? "text-success" : null)">@(row.IsDiscount ? "−" : null)@row.AmountText</span>
+                        </li>
+                    }
+                    <li class="list-group-item d-flex justify-content-between gap-3 fw-bold fs-5">
+                        <span>Total</span>
+                        <span class="text-nowrap" data-order-total>@Model.TotalText</span>
+                    </li>
+                </ul>
+                <div class="card-body">
+                    <p class="small text-body-secondary mb-2" data-order-vat>@Model.VatText</p>
+                    <p class="small mb-3" data-plan-payment-note>
+                        <i class="bi bi-shield-lock me-1" aria-hidden="true"></i>
+                        Pagarás en la página segura de Pey con CoDi o tarjeta; con tarjeta, Pey puede sumar una comisión al precio.
+                    </p>
+
+                    <form asp-area="Merchant" asp-controller="Plan" asp-action="Checkout" method="post" data-disable-on-submit data-checkout-form>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-warning small" role="alert" data-checkout-errors></div>
+                        <input type="hidden" name="Input.Plan" value="@Model.PlanSlug" />
+                        <input type="hidden" name="Input.Package" value="@Model.PackageSlug" />
+                        <input type="hidden" name="Input.ExpectedTotal" value="@Model.ExpectedTotal" data-checkout-expected-total />
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.AcceptTerms" class="form-check-input" aria-required="true" data-checkout-terms />
+                            <label asp-for="Input.AcceptTerms" class="form-check-label">
+                                Acepto los <a href="@Model.TermsUrl" target="_blank" rel="noopener">Términos de la suscripción</a> (sin reembolsos).
+                            </label>
+                            <span asp-validation-for="Input.AcceptTerms" class="d-block text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100" data-checkout-pay>Pagar @Model.TotalText</button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <div class="card-body pt-0">
+                    <div class="alert alert-info mb-0" role="status" data-checkout-not-allowed>@Model.NotAllowedMessage</div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

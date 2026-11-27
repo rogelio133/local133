@@ -251,7 +251,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - confirmación con número de pedido, comprobante imprimible y «Tus pedidos» en «Mi plan»;
     - abono por plan, con conversión y encadenado.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#515-checkout-por-pasos)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.14 y la 5.16 a la 5.18; ajuste del 2026-11-27: checkout simplificado, solo 1 mes y Anual, plan y duración en una página y botones «Renovar mi plan …» / «Adquirir más días de …»)* — [bitácora](log_plan/fase-5.15-checkout-por-pasos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#515-checkout-por-pasos)
 16. **Recordatorios, referidos y avisos**:
     - etapas de vencido y seguimiento del día 7;
     - premio con el plan de quien invita y descuento por plan;
@@ -289,6 +289,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
 - [5.13](log_plan/fase-5.13-prueba-al-primer-cobro.md): el primer cobro real de $0.01 empieza la prueba de 15 días de Pro (punto 1 de la verificación de extremo a extremo de los planes Básico y Pro).
+- [5.15](log_plan/fase-5.15-checkout-por-pasos.md): pagar Básico durante la prueba y subir a Pro con links reales ⇒ webhook ⇒ conversión de los días; «Regresar» de Pey vuelve al resumen del pedido (puntos 2 y 3 de la verificación de extremo a extremo).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
 **Confirmar con soporte de Pey** (ver también §6):
@@ -325,6 +326,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
   - cambiar desde el admin un parámetro que aparece en los Términos exige publicar una versión nueva: la pantalla de la 6.2 lo advierte, pero no lo impide;
   - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
+- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release); la portada y los Términos todavía mencionan los paquetes de 3 y 6 meses (5.18), y los recordatorios por correo dicen «Pro» aunque el plan sea Básico (5.16).
 - [6.2](log_plan/fase-6.2-plan-y-parametros.md): anular un premio y «Dar premios pendientes» en el navegador (la base de desarrollo no tiene premios; los cubren las pruebas de integración).
 - [Portada nueva](log_plan/portada-nueva.md):
   - «Quedan N lugares» de fundador está oculto: falta de dónde saca el dato la portada, que no tiene base;

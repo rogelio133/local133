@@ -3,7 +3,14 @@ using Local133.Domain.Subscriptions;
 namespace Local133.Application.Subscriptions;
 
 /// <summary>Plan de un vendedor en este momento: estado y lo que permite.</summary>
-public sealed record MerchantPlan(PlanStatus Status, PlanEntitlements Entitlements, int TrialDays)
+/// <param name="LastPlan">Plan de su último pago (5.15: «Renovar igual que la última vez»); <c>null</c> si nunca pagó.</param>
+/// <param name="LastPackage">Paquete de su último pago.</param>
+public sealed record MerchantPlan(
+    PlanStatus Status,
+    PlanEntitlements Entitlements,
+    int TrialDays,
+    SubscriptionPlan? LastPlan = null,
+    SubscriptionPackage? LastPackage = null)
 {
     public PlanTier Tier => Status.Tier;
 

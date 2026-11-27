@@ -37,8 +37,13 @@ internal sealed class PlanAccess(AppDbContext db, ITenantContext tenant, TimePro
             .Where(p => p.MerchantId == merchantId)
             .ToListAsync(cancellationToken);
 
+        var last = await db.Subscriptions.IgnoreQueryFilters().AsNoTracking()
+            .Where(s => s.MerchantId == merchantId)
+            .Select(s => new { s.LastPlan, s.LastPackage })
+            .SingleOrDefaultAsync(cancellationToken);
+
         var status = PlanStatus.For(periods, clock.GetUtcNow(), _settings);
-        var plan = new MerchantPlan(status, PlanEntitlements.For(status), _settings.TrialDays);
+        var plan = new MerchantPlan(status, PlanEntitlements.For(status), _settings.TrialDays, last?.LastPlan, last?.LastPackage);
         _cache[merchantId] = plan;
         return plan;
     }

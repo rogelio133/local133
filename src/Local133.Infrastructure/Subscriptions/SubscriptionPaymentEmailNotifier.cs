@@ -1,5 +1,4 @@
 using Local133.Application.Subscriptions;
-using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
@@ -50,13 +49,7 @@ internal sealed class SubscriptionPaymentEmailNotifier(
                 recipient.Email,
                 MerchantEmails.SubscriptionPaidSubject,
                 MerchantEmails.SubscriptionPaidBody(
-                    Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName),
-                    payment.Package,
-                    payment.Amount,
-                    MexicoTime.DateOf(payment.ProUntil.AddTicks(-1)),
-                    payment.ExtendedExistingPro,
-                    payment.FounderNumber,
-                    baseUrl));
+                    Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName), payment, baseUrl));
             logger.LogInformation("Se avisó al vendedor {MerchantId} del pago del cargo {ChargeId}", payment.MerchantId, payment.ChargeId);
         }
         catch (Exception ex)

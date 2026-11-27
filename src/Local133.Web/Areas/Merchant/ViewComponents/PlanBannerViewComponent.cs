@@ -14,7 +14,7 @@ namespace Local133.Web.Areas.Merchant.ViewComponents;
 /// Banner del plan en el layout del vendedor (5.7, 5.14), salvo en «Mi plan» (lo decide el layout):
 /// <list type="bullet">
 /// <item>gracia: «Tu plan Pro venció el … Paga a más tardar el … para no perder Pro» (o Básico, el plan que pagó), con
-/// «Renovar ahora» a «Mi plan»;</item>
+/// «Renovar ahora» al resumen de su último pedido;</item>
 /// <item>vencido: «Tu plan venció. Elige un plan para seguir cobrando», con «Elegir plan». No sale en Inicio (sí en
 /// «Más») ni en Cobrar, que ya muestran el aviso completo, ni a un vendedor dado de baja.</item>
 /// </list>
@@ -39,7 +39,8 @@ public sealed class PlanBannerViewComponent(AppDbContext db, IPlanAccess plans, 
             return View(PlanBannerViewModel.Grace(
                 paidPlan.Label(),
                 SaleFormats.Date(lastDay, today),
-                graceDay == today ? "hoy" : SaleFormats.Date(graceDay, today)));
+                graceDay == today ? "hoy" : SaleFormats.Date(graceDay, today),
+                PlanUrls.ChoosePlanFor(plan)));
         }
 
         if (plan.Tier != PlanTier.Expired || ShowsExpiredNotice())
@@ -52,7 +53,7 @@ public sealed class PlanBannerViewComponent(AppDbContext db, IPlanAccess plans, 
             .Where(m => m.Id == merchantId)
             .Select(m => (MerchantStatus?)m.Status)
             .SingleOrDefaultAsync(HttpContext.RequestAborted);
-        return status is null or MerchantStatus.Disabled ? Content(string.Empty) : View(PlanBannerViewModel.Expired());
+        return status is null or MerchantStatus.Disabled ? Content(string.Empty) : View(PlanBannerViewModel.Expired(PlanUrls.ChoosePlanFor(plan)));
     }
 
     /// <summary>Inicio y Cobrar (monto y carrito) ya muestran el aviso completo del vencido.</summary>

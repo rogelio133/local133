@@ -4,6 +4,6 @@
     <div class="card-body">
         <h2 class="h5 card-title"><i class="bi bi-x-circle text-danger me-1" aria-hidden="true"></i> @Model.Title</h2>
         <p class="card-text text-body-secondary">@Model.Message</p>
-        <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + Local133.Web.Areas.Merchant.Models.PlanUrls.ChoosePlan)" data-plan-expired-choose>Elegir plan</a>
+        <a class="btn btn-primary btn-lg w-100" href="@Url.Content("~" + Model.ChooseUrl)" data-plan-expired-choose>Elegir plan</a>
     </div>
 </div>

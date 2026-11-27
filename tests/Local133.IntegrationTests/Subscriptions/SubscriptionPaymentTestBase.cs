@@ -23,14 +23,42 @@ public abstract class SubscriptionPaymentTestBase(Local133WebFactory factory) : 
         return client;
     }
 
-    /// <summary>POST de «Pagar» con el paquete (token de «Mi plan»).</summary>
-    protected static Task<HttpResponseMessage> PayAsync(HttpClient client, SubscriptionPackage package) =>
-        PostFormAsync(client, PlanUrl, new Dictionary<string, string> { ["package"] = package.ToString() }, postUrl: "/app/plan/pagar");
+    protected const string CheckoutUrl = "/app/plan/checkout";
+
+    /// <summary>Resumen del pedido (paso 3 del checkout).</summary>
+    protected static string SummaryUrl(SubscriptionPlan plan, SubscriptionPackage package) =>
+        SubscriptionPaths.Summary(plan, package);
+
+    /// <summary>
+    /// «Pagar» del resumen del pedido (5.15): abre el resumen, toma su token y el total que muestra, y hace el POST con la
+    /// casilla de los Términos. <paramref name="expectedTotal"/> reemplaza el total de la página (precio cambiado).
+    /// </summary>
+    protected static async Task<HttpResponseMessage> PayAsync(
+        HttpClient client, SubscriptionPackage package, SubscriptionPlan plan = SubscriptionPlan.Pro, bool acceptTerms = true,
+        string? expectedTotal = null)
+    {
+        var summary = SummaryUrl(plan, package);
+        var html = await GetHtmlAsync(client, summary);
+        var shown = System.Text.RegularExpressions.Regex.Match(html, "name=\"Input.ExpectedTotal\" value=\"([^\"]*)\"");
+        var fields = new Dictionary<string, string>
+        {
+            ["Input.Plan"] = plan.Slug(),
+            ["Input.Package"] = package.Slug(),
+            ["Input.ExpectedTotal"] = expectedTotal ?? (shown.Success ? shown.Groups[1].Value : "0.00"),
+        };
+        if (acceptTerms)
+        {
+            fields["Input.AcceptTerms"] = "true";
+        }
+
+        return await PostFormAsync(client, summary, fields, postUrl: CheckoutUrl);
+    }
 
     /// <summary>Paga (Pey simulado) y devuelve el cargo creado o reutilizado.</summary>
-    protected async Task<SubscriptionCharge> CreateChargeAsync(HttpClient client, SubscriptionPackage package = SubscriptionPackage.OneMonth)
+    protected async Task<SubscriptionCharge> CreateChargeAsync(
+        HttpClient client, SubscriptionPackage package = SubscriptionPackage.OneMonth, SubscriptionPlan plan = SubscriptionPlan.Pro)
     {
-        var response = await PayAsync(client, package);
+        var response = await PayAsync(client, package, plan);
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         var url = response.Headers.Location!.AbsoluteUri;
         return await WithDbAsync(db => db.SubscriptionCharges.IgnoreQueryFilters().AsNoTracking()

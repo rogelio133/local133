@@ -32,7 +32,10 @@ public enum SubscriptionPlan
     Pro,
 }
 
-/// <summary>Paquetes de pago adelantado (de Básico o de Pro).</summary>
+/// <summary>
+/// Paquetes de pago adelantado (de Básico o de Pro). Solo se ofrecen 1 mes y Anual (<see cref="SubscriptionPackages.Offered"/>,
+/// 2026-11-27); 3 y 6 meses se quedan por los cargos y periodos que ya existen.
+/// </summary>
 public enum SubscriptionPackage
 {
     OneMonth,
@@ -93,8 +96,19 @@ public static class SubscriptionPlanExtensions
     };
 }
 
+/// <summary>Paquetes que se pueden pagar hoy.</summary>
+public static class SubscriptionPackages
+{
+    /// <summary>1 mes y Anual, en ese orden (2026-11-27: se retiraron los de 3 y 6 meses).</summary>
+    public static readonly IReadOnlyList<SubscriptionPackage> Offered = [SubscriptionPackage.OneMonth, SubscriptionPackage.Annual];
+}
+
 public static class SubscriptionPackageExtensions
 {
+    /// <summary>Se puede pagar hoy (<see cref="SubscriptionPackages.Offered"/>).</summary>
+    public static bool IsOffered(this SubscriptionPackage package) =>
+        package is SubscriptionPackage.OneMonth or SubscriptionPackage.Annual;
+
     /// <summary>Meses que cubre el paquete.</summary>
     public static int Months(this SubscriptionPackage package) => package switch
     {

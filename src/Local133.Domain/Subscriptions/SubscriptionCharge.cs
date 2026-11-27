@@ -82,22 +82,33 @@ public class SubscriptionCharge : Entity
     public string ClientReferenceId => ClientReferenceFor(Id);
 
     /// <summary>
-    /// Se puede reutilizar el link: pendiente, con link, del mismo plan, paquete y monto, y creado hace a lo más
-    /// <paramref name="maxAgeDays"/> días (los días de gracia, 5.7). Uno más viejo se abandona y se crea otro.
+    /// Se puede reutilizar el link: pendiente, con link, del mismo plan, paquete y monto, con la misma versión de los
+    /// Términos aceptada (5.15) y creado hace a lo más <paramref name="maxAgeDays"/> días (los días de gracia, 5.7). Uno
+    /// más viejo, o de otra versión de los Términos, se abandona y se crea otro.
     /// </summary>
-    public bool CanBeReusedFor(SubscriptionQuote quote, DateTimeOffset now, int maxAgeDays) =>
+    public bool CanBeReusedFor(SubscriptionQuote quote, DateTimeOffset now, int maxAgeDays, string? termsVersion = null) =>
         Status == SubscriptionChargeStatus.Pending && PeyPaymentLinkId is not null && Url is not null
         && Plan == quote.Plan && Package == quote.Package && Amount == quote.Amount
+        && string.Equals(TermsVersion, termsVersion, StringComparison.Ordinal)
         && CreatedAt >= ReusableSince(now, maxAgeDays);
 
     /// <summary>Fecha de creación más vieja que todavía se reutiliza.</summary>
     public static DateTimeOffset ReusableSince(DateTimeOffset now, int maxAgeDays) => now.AddDays(-Math.Max(0, maxAgeDays));
 
+    /// <param name="termsVersion">
+    /// Versión de los Términos que aceptó al pagar este pedido (5.15); se sella con <paramref name="now"/>.
+    /// </param>
     public static SubscriptionCharge Create(
-        int merchantId, SubscriptionQuote quote, bool isFounderPrice, SubscriptionChargeOrigin origin, DateTimeOffset now)
+        int merchantId, SubscriptionQuote quote, bool isFounderPrice, SubscriptionChargeOrigin origin, DateTimeOffset now,
+        string? termsVersion = null)
     {
         ArgumentNullException.ThrowIfNull(quote);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(quote.Amount);
+        if (termsVersion is not null && (termsVersion.Length == 0 || termsVersion.Length > TermsVersionMaxLength))
+        {
+            throw new ArgumentOutOfRangeException(nameof(termsVersion), termsVersion, "Versión de los Términos inválida.");
+        }
+
         return new SubscriptionCharge
         {
             MerchantId = merchantId,
@@ -112,6 +123,8 @@ public class SubscriptionCharge : Entity
             Origin = origin,
             Status = SubscriptionChargeStatus.Pending,
             CreatedAt = now,
+            TermsVersion = termsVersion,
+            TermsAcceptedAt = termsVersion is null ? null : now,
         };
     }
 

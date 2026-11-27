@@ -1,5 +1,7 @@
 using System.Globalization;
 using Local133.Application.Notifications;
+using Local133.Application.Subscriptions;
+using Local133.Domain.Common;
 using Local133.Domain.Settings;
 using Local133.Domain.Subscriptions;
 
@@ -8,48 +10,67 @@ namespace Local133.Infrastructure.Email;
 /// <summary>Correos de avisos al vendedor que salen de webhooks y jobs (sin petición HTTP).</summary>
 public static class MerchantEmails
 {
-    public const string SubscriptionPaidSubject = "Recibimos tu pago de Pro · Local133";
+    public const string SubscriptionPaidSubject = "Recibimos tu pago · Local133";
 
-    /// <summary>Ruta del botón del correo de pago: «Mi plan».</summary>
-    public const string PlanPath = "/app/plan";
+    /// <summary>Ruta de «Mi plan» (botón de los recordatorios y avisos).</summary>
+    public const string PlanPath = SubscriptionPaths.Plan;
 
     private static readonly CultureInfo Mexico = CultureInfo.GetCultureInfo("es-MX");
 
+    /// <summary>
+    /// Confirmación del pedido pagado (5.15): número, plan, periodo y total, con «Ver comprobante» como primera liga.
+    /// </summary>
     /// <param name="greetingName">Con quién saludar (<c>Merchant.GreetingNameFor</c>); <c>null</c> ⇒ «¡Hola!».</param>
-    /// <param name="lastProDay">Último día con Pro (en México).</param>
-    /// <param name="extendedExistingPro">Ya tenía Pro pagado vigente: el pago extiende su plan.</param>
-    public static string SubscriptionPaidBody(
-        string? greetingName, SubscriptionPackage package, decimal amount, DateOnly lastProDay, bool extendedExistingPro,
-        int? founderNumber, string siteBaseUrl)
+    public static string SubscriptionPaidBody(string? greetingName, SubscriptionPaymentCredited payment, string siteBaseUrl)
     {
+        ArgumentNullException.ThrowIfNull(payment);
         var site = siteBaseUrl.Trim().TrimEnd('/');
-        var greeting = Greeting(greetingName);
-        var until = lastProDay.ToString("d 'de' MMMM 'de' yyyy", Mexico);
+        var order = SubscriptionPaths.OrderNumber(payment.ChargeId);
+        var plan = payment.Plan.Label();
+        var first = LongDate(MexicoTime.DateOf(payment.PeriodStartsAt));
+        var last = LongDate(MexicoTime.DateOf(payment.PeriodEndsAt.AddTicks(-1)));
         var paragraphs = new List<string>
         {
-            greeting,
-            $"Recibimos tu pago de {amount.ToString("$#,0.00", Mexico)} por Pro ({package.Label().ToLower(Mexico)}).",
-            $"Tienes Pro hasta el {until}.",
+            Greeting(greetingName),
+            $"Recibimos tu pago de {payment.Amount.ToString("$#,0.00", Mexico)} del pedido {order}: {plan} · {payment.Package.Label().ToLower(Mexico)}.",
+            $"Tu plan {plan} va del {first} al {last}.",
         };
-        if (extendedExistingPro)
+        if (payment.Conversion is { BasicTime.Ticks: > 0 } conversion)
         {
-            paragraphs.Add("Ya tenías Pro pagado: este pago extiende tu plan, no se pierde ningún día.");
+            paragraphs.Add(
+                $"Subiste a Pro: tus {DaysText(conversion.BasicTime)} de Básico que quedaban se volvieron {DaysText(conversion.ProTime)} de Pro desde ese momento, y lo que pagaste empieza después.");
+        }
+        else if (payment.StartsLater)
+        {
+            paragraphs.Add("Empieza cuando termina lo que ya tenías: no se pierde ningún día.");
         }
 
-        if (founderNumber is { } number)
+        if (payment.FounderNumber is { } number)
         {
             paragraphs.Add($"Eres el fundador número {number.ToString(Mexico)}: conservas el precio de fundador de por vida.");
         }
 
         return EmailLayout.Render(new EmailContent(
             SubscriptionPaidSubject,
-            Preheader: $"Tu plan Pro quedó activo hasta el {until}.",
+            Preheader: $"Tu pedido {order} está pagado: {plan} del {first} al {last}.",
             Title: "¡Gracias por tu pago!",
             Paragraphs: paragraphs,
-            ActionText: "Ver mi plan",
-            ActionUrl: site + PlanPath,
-            Footer: "Recibiste este correo porque pagaste Pro en Local133. El precio incluye IVA."),
+            ActionText: "Ver comprobante",
+            ActionUrl: site + SubscriptionPaths.Receipt(payment.ChargeId),
+            Footer: "Recibiste este correo porque pagaste un plan en Local133. El precio incluye IVA. Este correo no es una factura."),
             site);
+    }
+
+    /// <summary>«9 días», «1 día» o «menos de un día» (días completos, hacia abajo).</summary>
+    private static string DaysText(TimeSpan time)
+    {
+        var days = (int)Math.Floor(time.TotalDays);
+        return days switch
+        {
+            0 => "menos de un día",
+            1 => "1 día",
+            _ => $"{days.ToString(Mexico)} días",
+        };
     }
 
     private const string ReminderFooter =

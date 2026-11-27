@@ -1,0 +1,156 @@
+@using Local133.Web.Areas.Merchant.Models
+@model ChoosePlanViewModel
+@{
+    ViewData["Title"] = "Elige tu plan";
+}
+@* Paso 1 del checkout (2026-11-27): Básico y Pro, cada uno con 1 mes y Anual, en una sola página. Los botones de «Mi
+   plan» llegan a la sección de su plan (#basico, #pro). Cada tarjeta es una liga al resumen: ningún GET llama a Pey ni
+   crea cargos. *@
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-checkout-plans>
+        <a class="d-inline-block mb-3" href="@Url.Content("~" + PlanUrls.Plan)"><i class="bi bi-chevron-left" aria-hidden="true"></i> Mi plan</a>
+        <partial name="_CheckoutSteps" model="Model.Steps" />
+        <h1 class="h4 mb-3">Elige tu plan</h1>
+
+        @if (Model.NotAllowedMessage is not null)
+        {
+            <div class="alert alert-info" role="status" data-checkout-not-allowed>@Model.NotAllowedMessage</div>
+        }
+        @if (Model.WelcomeDiscountNotice is not null)
+        {
+            <div class="alert alert-success py-2 small d-flex align-items-center gap-2" role="status" data-welcome-discount>
+                <i class="bi bi-gift-fill" aria-hidden="true"></i>
+                <span>@Model.WelcomeDiscountNotice</span>
+            </div>
+        }
+        @if (Model.FounderNotice is not null)
+        {
+            <div class="alert alert-info py-2 small d-flex align-items-center gap-2" role="status" data-plan-founder>
+                <i class="bi bi-award-fill text-primary" aria-hidden="true"></i>
+                <span>@Model.FounderNotice</span>
+            </div>
+        }
+
+        @foreach (var planSection in Model.Sections)
+        {
+            <section class="checkout-plan-section mb-4" id="@planSection.Slug" aria-labelledby="plan-@planSection.Slug-title"
+                     data-checkout-plan="@planSection.Slug">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <h2 class="h5 fw-bold mb-0" id="plan-@planSection.Slug-title">@planSection.Name</h2>
+                    <span class="d-flex flex-wrap justify-content-end gap-1">
+                        @if (planSection.IsCurrent)
+                        {
+                            <span class="badge text-bg-secondary" data-checkout-plan-current>Tu plan</span>
+                        }
+                        @if (planSection.IsRecommended)
+                        {
+                            <span class="badge text-bg-primary" data-checkout-plan-recommended>Recomendado</span>
+                        }
+                    </span>
+                </div>
+                <p class="small text-body-secondary mb-2">@planSection.Tagline</p>
+                <ul class="small list-unstyled mb-2">
+                    @foreach (var highlight in planSection.Highlights)
+                    {
+                        <li class="d-flex gap-2 mb-1"><i class="bi bi-check-lg text-success" aria-hidden="true"></i><span>@highlight</span></li>
+                    }
+                </ul>
+                @if (planSection.Note is not null)
+                {
+                    <p class="small text-body-secondary mb-2" data-plan-offers-note>@planSection.Note</p>
+                }
+
+                @if (planSection.Offers.Count > 0)
+                {
+                    <div class="row row-cols-1 row-cols-sm-2 g-3" data-plan-offers>
+                        @foreach (var offer in planSection.Offers)
+                        {
+                            <div class="col">
+                                <a class="card h-100 text-decoration-none text-body plan-offer @(offer.IsRecommended ? "border-primary plan-offer-recommended" : "")"
+                                   href="@Url.Content("~" + offer.Url)" data-plan-offer="@offer.Value">
+                                    <div class="card-body d-flex flex-column">
+                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                                            <h3 class="h6 fw-bold mb-0" data-plan-offer-title>@offer.Title</h3>
+                                            <span class="d-flex flex-wrap justify-content-end gap-1">
+                                                @if (offer.IsCurrentPackage)
+                                                {
+                                                    <span class="badge text-bg-secondary" data-plan-offer-current>Tu paquete</span>
+                                                }
+                                                @if (offer.IsRecommended)
+                                                {
+                                                    <span class="badge text-bg-primary">Mejor precio</span>
+                                                }
+                                            </span>
+                                        </div>
+                                        <p class="mb-0">
+                                            @if (offer.ListPriceText is not null)
+                                            {
+                                                <del class="text-body-secondary me-1" data-plan-offer-list-price><span class="visually-hidden">Antes </span>@offer.ListPriceText</del>
+                                            }
+                                            <span class="fs-3 fw-bold" data-plan-offer-price>@offer.PriceText</span>
+                                            @if (offer.IsPerMonthInline)
+                                            {
+                                                <span class="small text-body-secondary">@offer.PerMonthText</span>
+                                            }
+                                        </p>
+                                        @if (offer.Highlight is not null)
+                                        {
+                                            <p class="fw-semibold text-success mb-0 d-flex align-items-center gap-1" data-plan-offer-highlight>
+                                                <i class="bi bi-gift-fill" aria-hidden="true"></i><span>@offer.Highlight</span>
+                                            </p>
+                                        }
+                                        @if (!offer.IsPerMonthInline && offer.PerMonthText is not null)
+                                        {
+                                            <p class="small text-body-secondary mb-1" data-plan-offer-per-month>@offer.PerMonthText</p>
+                                        }
+                                        @if (offer.IsFounderPrice)
+                                        {
+                                            <p class="small mb-1"><span class="badge text-bg-info" data-plan-offer-founder>Precio de fundador</span></p>
+                                        }
+                                        <p class="small text-body-secondary mb-3" data-plan-offer-until>@offer.UntilText</p>
+                                        <span class="btn @(offer.IsRecommended ? "btn-primary" : "btn-outline-primary") w-100 mt-auto" data-plan-choose>Elegir @offer.Title</span>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+
+        <p class="small text-body-secondary mb-3" data-plan-payment-note>
+            Precios con IVA incluido. En el siguiente paso revisas tu pedido antes de pagar.
+        </p>
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Qué incluye cada plan</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0" data-plan-features>
+                    <thead>
+                        <tr>
+                            <th scope="col" class="fw-normal text-body-secondary small ps-3">Función</th>
+                            <th scope="col" class="small">Básico</th>
+                            <th scope="col" class="small pe-3">Pro</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        @foreach (var row in Model.Features)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    @row.Feature
+                                    @if (row.ComingSoon)
+                                    {
+                                        <partial name="_ComingSoonBadge" />
+                                    }
+                                </td>
+                                <td>@row.Basic</td>
+                                <td class="fw-semibold pe-3">@row.Pro</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

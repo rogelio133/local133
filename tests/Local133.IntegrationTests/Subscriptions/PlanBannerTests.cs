@@ -16,7 +16,7 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
     private const string AbandonedUrl = "https://pay.example.test/01ABANDONADO57";
 
     [Fact]
-    public async Task En_la_gracia_el_banner_lleva_a_Mi_plan_aunque_haya_un_link_pendiente()
+    public async Task En_la_gracia_el_banner_lleva_al_resumen_de_su_ultimo_pedido_aunque_haya_un_link_pendiente()
     {
         var client = await ActiveMerchantAsync(Email);
         await SeedPaidAsync(Email, endedDaysAgo: 1);
@@ -26,7 +26,7 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
         {
             var html = await client.GetStringAsync(page);
             Assert.Contains("data-plan-banner=\"grace\"", html, StringComparison.Ordinal);
-            Assert.Contains("href=\"/app/plan\" data-plan-banner-action", html, StringComparison.Ordinal);
+            Assert.Contains("href=\"/app/plan/checkout/pro/1-mes\" data-plan-banner-action", html, StringComparison.Ordinal);
             Assert.Contains("Renovar ahora", html, StringComparison.Ordinal);
             Assert.DoesNotContain(AbandonedUrl, html, StringComparison.Ordinal);
         }
@@ -35,7 +35,11 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
         Assert.DoesNotContain("data-plan-banner", plan, StringComparison.Ordinal);
         Assert.Contains("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.Contains("Renueva antes del", plan, StringComparison.Ordinal);
-        Assert.Contains("data-plan-offer-current", plan, StringComparison.Ordinal);
+        // En la gracia: «Renovar mi plan Pro» a la sección de Pro del checkout, y el aviso al mismo lugar.
+        Assert.Contains("href=\"/app/plan/checkout#pro\" data-plan-action=\"renew\"", plan, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-renewal-choose", plan, StringComparison.Ordinal); // el aviso ya no trae su propio botón
+        Assert.Contains("Renovar mi plan Pro", WebUtility.HtmlDecode(plan), StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-action=\"choose\"", plan, StringComparison.Ordinal);
         Assert.DoesNotContain(AbandonedUrl, plan, StringComparison.Ordinal);
         Assert.DoesNotContain("pago pendiente", plan, StringComparison.OrdinalIgnoreCase);
     }
@@ -50,6 +54,27 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.Contains("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.Contains("Tu plan Pro vence", plan, StringComparison.Ordinal);
+        Assert.Contains("href=\"/app/plan/checkout#pro\" data-plan-action=\"renew\"", plan, StringComparison.Ordinal);
+        Assert.Contains("Renovar mi plan Pro", WebUtility.HtmlDecode(plan), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Basico_a_dos_dias_de_vencer_dice_Basico_y_Renovar_mi_plan_Basico()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        await SeedPlanAsync(Email,
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-60), now.AddDays(-30)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, now.AddDays(-28), now.AddDays(2)));
+
+        var plan = WebUtility.HtmlDecode(await client.GetStringAsync(PlanUrl));
+
+        Assert.Contains("data-renewal-notice", plan, StringComparison.Ordinal);
+        Assert.Contains("Tu plan Básico vence", plan, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tu plan Pro vence", plan, StringComparison.Ordinal);
+        Assert.Contains("href=\"/app/plan/checkout#basico\" data-plan-action=\"renew\"", plan, StringComparison.Ordinal);
+        Assert.Contains("Renovar mi plan Básico", plan, StringComparison.Ordinal);
+        Assert.Contains("href=\"/app/plan/checkout#pro\" data-plan-action=\"upgrade\"", plan, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -63,6 +88,11 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.DoesNotContain("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.DoesNotContain(AbandonedUrl, plan, StringComparison.Ordinal);
+        // Fuera de la ventana de renovar: «Adquirir más días de Pro», sin «Cambiar a Pro» ni «Elegir plan».
+        Assert.Contains("href=\"/app/plan/checkout#pro\" data-plan-action=\"extend\"", plan, StringComparison.Ordinal);
+        Assert.Contains("Adquirir más días de Pro", WebUtility.HtmlDecode(plan), StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-action=\"upgrade\"", plan, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-plan-action=\"choose\"", plan, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -77,7 +107,8 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
             var html = WebUtility.HtmlDecode(await client.GetStringAsync(page));
             Assert.Contains("data-plan-banner=\"expired\"", html, StringComparison.Ordinal);
             Assert.Contains("Tu plan venció", html, StringComparison.Ordinal);
-            Assert.Contains($"href=\"{PlanUrls.ChoosePlan}\" data-plan-banner-action", html, StringComparison.Ordinal);
+            // Ya pagó antes: «Elegir plan» lleva al resumen de su último pedido (5.15).
+            Assert.Contains("href=\"/app/plan/checkout/pro/1-mes\" data-plan-banner-action", html, StringComparison.Ordinal);
             Assert.DoesNotContain(AbandonedUrl, html, StringComparison.Ordinal);
         }
 
@@ -89,6 +120,9 @@ public class PlanBannerTests(Local133WebFactory factory) : SubscriptionPaymentTe
         var plan = await client.GetStringAsync(PlanUrl);
         Assert.DoesNotContain("data-renewal-notice", plan, StringComparison.Ordinal);
         Assert.DoesNotContain(AbandonedUrl, plan, StringComparison.Ordinal);
+        // Vencido: «Renovar mi plan Pro» (su último plan) a la sección de Pro.
+        Assert.Contains("href=\"/app/plan/checkout#pro\" data-plan-action=\"renew\"", plan, StringComparison.Ordinal);
+        Assert.Contains("Renovar mi plan Pro", WebUtility.HtmlDecode(plan), StringComparison.Ordinal);
     }
 
     [Fact]

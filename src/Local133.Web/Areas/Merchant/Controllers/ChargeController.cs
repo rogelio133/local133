@@ -260,7 +260,7 @@ public class ChargeController(
             var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
             if (!plan.Entitlements.CanCharge)
             {
-                expired = PlanExpiredViewModel.For(plan.Status, clock.GetUtcNow());
+                expired = PlanExpiredViewModel.For(plan, clock.GetUtcNow());
             }
             else if (!plan.Entitlements.CanChargeWithCart)
             {
@@ -287,7 +287,7 @@ public class ChargeController(
             var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
             if (!plan.Entitlements.CanCharge)
             {
-                expired = PlanExpiredViewModel.For(plan.Status, clock.GetUtcNow());
+                expired = PlanExpiredViewModel.For(plan, clock.GetUtcNow());
             }
             else if (!plan.Entitlements.CanChargeWithCart)
             {

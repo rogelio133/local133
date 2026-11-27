@@ -225,7 +225,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         var paid = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Paid);
         Assert.Equal(charge.Id, paid.SubscriptionChargeId);
         Assert.True(subscription.IsFounder); // el cargo salió a precio de fundador
-        Assert.Equal("Recibimos tu pago de Pro · Local133", Factory.Emails.Last(Email).Subject);
+        Assert.Equal(Local133.Infrastructure.Email.MerchantEmails.SubscriptionPaidSubject, Factory.Emails.Last(Email).Subject);
 
         // Primer pago del referido ⇒ quien lo invitó gana sus días.
         Assert.True((await LoadSubscriptionAsync(OtherEmail)).ProUntil > referrerBefore);

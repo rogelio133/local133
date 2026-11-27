@@ -119,7 +119,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         if (!plan.Entitlements.HasDailyCashCut)
         {
-            return View("CashCutLocked", PlanExpiredViewModel.For(plan.Status, clock.GetUtcNow(),
+            return View("CashCutLocked", PlanExpiredViewModel.For(plan, clock.GetUtcNow(),
                 "Elige un plan para volver a ver tu corte de caja. Tus ventas siguen en tu historial."));
         }
 

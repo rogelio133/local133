@@ -65,22 +65,24 @@ public sealed record PlanSummaryViewModel(PlanTier Tier, string Title, string De
 }
 
 /// <summary>
-/// Banner del plan (5.7 y 5.14): la gracia o el vencido. Su botón va a «Mi plan» (el vencido, a
-/// <see cref="PlanUrls.ChoosePlan"/>): ahí se elige el paquete y nace el link de pago.
+/// Banner del plan (5.7 y 5.14): la gracia o el vencido. Su botón va al checkout
+/// (<see cref="PlanUrls.ChoosePlanFor(Local133.Application.Subscriptions.MerchantPlan)"/>, 5.15): el resumen de su
+/// último pedido o el paso 1. El link de pago solo nace al pulsar «Pagar» en el resumen.
 /// </summary>
 public sealed record PlanBannerViewModel(bool IsExpired, string Title, string Detail, string ActionText, string ActionPath)
 {
     /// <param name="planLabel">Plan que pagó: «Básico» o «Pro».</param>
     /// <param name="lastGraceDayText">Último día para pagar sin perder el plan («hoy» o «24 de diciembre»).</param>
-    public static PlanBannerViewModel Grace(string planLabel, string lastActiveDayText, string lastGraceDayText) => new(
+    /// <param name="actionPath">Adónde lleva «Renovar ahora».</param>
+    public static PlanBannerViewModel Grace(string planLabel, string lastActiveDayText, string lastGraceDayText, string actionPath) => new(
         false,
         $"Tu plan {planLabel} venció el {lastActiveDayText}",
         lastGraceDayText == "hoy"
             ? $"Hoy es el último día para pagar sin perder {planLabel}."
             : $"Paga a más tardar el {lastGraceDayText} para no perder {planLabel}.",
         "Renovar ahora",
-        PlanUrls.Plan);
+        actionPath);
 
-    public static PlanBannerViewModel Expired() => new(
-        true, "Tu plan venció", PlanExpiredViewModel.DefaultMessage, "Elegir plan", PlanUrls.ChoosePlan);
+    public static PlanBannerViewModel Expired(string actionPath) => new(
+        true, "Tu plan venció", PlanExpiredViewModel.DefaultMessage, "Elegir plan", actionPath);
 }
