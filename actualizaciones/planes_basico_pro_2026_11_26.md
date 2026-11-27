@@ -467,6 +467,15 @@ Cambios frente a lo de aquí:
 - **Playwright**: el flujo completo hasta antes de Pey, la confirmación con un webhook firmado a mano y el comprobante impreso.
 
 ### 5.16 Recordatorios, referidos y avisos
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.15, la 5.17 y la 5.18.* — [bitácora](../log_plan/fase-5.16-recordatorios-referidos-y-avisos.md)
+
+Cambios frente a lo de aquí:
+- El seguimiento del vencido es una ventana de los días 7 a 9 (si el job no corre el 7, sale el 8 o el 9), una sola vez.
+- El corte del anuncio es un renglón `PlanChange` de `AuditLogs` que inserta la migración `PlanChangeAnnouncement` al publicarse. El anuncio se manda durante 30 días.
+- Los tipos de aviso se renombraron: `DowngradedToFree` → `PlanExpired` y `ProDaysEnding` → `PlanDaysEnding`.
+- El resumen mensual del vencido lleva a la sección de Básico del checkout, porque su texto habla de Básico.
+- El regalo del admin sigue diciendo «días de Pro» hasta la 5.17.
+
 - Lo de §7 y §8:
   - las etapas `Expired` y `ExpiredFollowUp`;
   - los botones al checkout;

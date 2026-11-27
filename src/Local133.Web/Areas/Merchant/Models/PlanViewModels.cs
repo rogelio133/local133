@@ -30,12 +30,7 @@ public static class PlanUrls
     /// diseño).
     /// </summary>
     public static string ChoosePlanFor(SubscriptionPlan? lastPlan, SubscriptionPackage? lastPackage) =>
-        (lastPlan, lastPackage) switch
-        {
-            ({ } plan, { } package) when package.IsOffered() => CheckoutSummary(plan, package),
-            ({ } plan, _) => CheckoutFor(plan),
-            _ => Checkout,
-        };
+        SubscriptionPaths.ChoosePlanFor(lastPlan, lastPackage);
 
     public static string ChoosePlanFor(MerchantPlan plan)
     {
@@ -187,7 +182,7 @@ public sealed record RenewalNoticeViewModel(string Title, string Message, bool I
         }
 
         var name = plan.Label();
-        var lastDay = SaleFormats.Date(notice.LastProDay, today);
+        var lastDay = SaleFormats.Date(notice.LastActiveDay, today);
         var graceDay = notice.LastGraceDay is { } g ? (g == today ? "hoy" : SaleFormats.Date(g, today)) : null;
         const string choose = "Elige tu paquete para renovar.";
         return notice.Stage switch

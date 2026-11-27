@@ -11,17 +11,29 @@ public enum NotificationType
     /// <summary>La prueba termina pronto.</summary>
     TrialEnding,
 
-    /// <summary>Terminan los días de Pro regalados (premio de referido o regalo del admin).</summary>
-    ProDaysEnding,
+    /// <summary>
+    /// Terminan los días regalados (premio de referido o regalo del admin) o los de transición, de Básico o de Pro.
+    /// Antes de la 5.16 se llamaba <c>ProDaysEnding</c> (la migración <c>PlanChangeAnnouncement</c> renombró los renglones).
+    /// </summary>
+    PlanDaysEnding,
 
     /// <summary>El plan pagado vence hoy.</summary>
     SubscriptionDueToday,
 
-    /// <summary>Día 3 de la gracia: quedan pocos días para pagar sin perder Pro.</summary>
+    /// <summary>Día 3 de la gracia: quedan pocos días para pagar sin perder el plan.</summary>
     SubscriptionGrace,
 
-    /// <summary>Bajó al plan gratuito.</summary>
-    DowngradedToFree,
+    /// <summary>
+    /// El plan venció: ya no genera cobros (5.16). Antes se llamaba <c>DowngradedToFree</c> (la migración
+    /// <c>PlanChangeAnnouncement</c> renombró los renglones).
+    /// </summary>
+    PlanExpired,
+
+    /// <summary>Seguimiento del vencido, el día 7 (5.16).</summary>
+    PlanExpiredFollowUp,
+
+    /// <summary>Anuncio del cambio de planes 2026-12: Básico y Pro, sin gratuito (5.16).</summary>
+    PlanChangeAnnouncement,
 
     /// <summary>Un referido pagó: ganó días de Pro (5.8).</summary>
     ReferralRewardGranted,

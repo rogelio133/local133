@@ -50,6 +50,27 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
     }
 
     [Fact]
+    public async Task El_descuento_es_30_por_ciento_del_mes_del_plan_que_elige()
+    {
+        await CreateMerchantAsync(OtherEmail);
+        var client = await TrialMerchantAsync(Email);
+        await LinkReferralAsync(OtherEmail, Email);
+
+        var summary = WebUtility.HtmlDecode(await GetHtmlAsync(client, SummaryUrl(SubscriptionPlan.Basic, SubscriptionPackage.OneMonth)));
+        Assert.Contains("Descuento de bienvenida", summary);
+        Assert.Contains("$20.70", summary); // 30 % de $69 (Básico de fundador)
+
+        var basic = await CreateChargeAsync(client, SubscriptionPackage.OneMonth, SubscriptionPlan.Basic);
+        Assert.Equal(SubscriptionPlan.Basic, basic.Plan);
+        Assert.Equal(69m, basic.ListPrice);
+        Assert.Equal(20.70m, basic.DiscountAmount);
+        Assert.Equal(48.30m, basic.Amount);
+
+        var proAnnual = await CreateChargeAsync(client, SubscriptionPackage.Annual, SubscriptionPlan.Pro);
+        Assert.Equal(44.70m, proAnnual.DiscountAmount); // 30 % de un mes de Pro ($149), también en el anual
+    }
+
+    [Fact]
     public async Task Sin_codigo_no_hay_descuento()
     {
         var client = await TrialMerchantAsync(Email);
@@ -99,6 +120,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var subscription = await LoadSubscriptionAsync(OtherEmail);
         var reward = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
         Assert.Equal(referral.Id, reward.ReferralId);
+        Assert.Equal(SubscriptionPlan.Pro, reward.Plan); // en la prueba, el premio es de Pro
         Assert.Equal(referrerTrialEnd, reward.StartsAt); // se encadena al final de su prueba
         Assert.Equal(MexicoTime.AddDays(referrerTrialEnd, 10), reward.EndsAt);
         Assert.Equal(reward.EndsAt, subscription.ProUntil);
@@ -118,7 +140,7 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
     }
 
     [Fact]
-    public async Task Quien_invita_desde_el_gratuito_gana_Pro_desde_ese_momento()
+    public async Task Quien_invita_con_el_plan_vencido_vuelve_a_cobrar_desde_ese_momento()
     {
         await CreateMerchantAsync(OtherEmail);
         await SeedExpiredPlanAsync(OtherEmail);
@@ -132,7 +154,9 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var subscription = await LoadSubscriptionAsync(OtherEmail);
         var reward = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
         Assert.InRange(reward.StartsAt, before.AddSeconds(-1), DateTimeOffset.UtcNow);
+        Assert.Equal(SubscriptionPlan.Pro, reward.Plan); // su último periodo fue la prueba
         Assert.Equal(PlanTier.Pro, subscription.StatusAt(DateTimeOffset.UtcNow, 5).Tier);
+        Assert.Contains("Ya puedes volver a cobrar: tienes Pro hasta el", WebUtility.HtmlDecode(Factory.Emails.Last(OtherEmail).Html));
     }
 
     [Fact]
@@ -280,6 +304,49 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/Identity/Account/Login", Location(response));
+    }
+
+    [Fact]
+    public async Task Quien_invita_con_Basico_gana_dias_de_Basico_al_final_de_su_cadena()
+    {
+        await CreateMerchantAsync(OtherEmail);
+        await UpdateMerchantAsync(OtherEmail, m => m.Status = MerchantStatus.Active);
+        await SeedBasicPlanAsync(OtherEmail);
+        var basicEnd = (await LoadSubscriptionAsync(OtherEmail)).ProUntil;
+        var client = await TrialMerchantAsync(Email);
+        await LinkReferralAsync(OtherEmail, Email);
+        var charge = await CreateChargeAsync(client);
+
+        await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount)));
+
+        var subscription = await LoadSubscriptionAsync(OtherEmail);
+        var reward = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
+        Assert.Equal(SubscriptionPlan.Basic, reward.Plan);
+        Assert.Equal(basicEnd, reward.StartsAt);
+        Assert.Equal(PlanTier.Basic, subscription.StatusAt(DateTimeOffset.UtcNow, 5).Tier);
+        var email = Factory.Emails.Last(OtherEmail);
+        Assert.Equal("Ganaste 10 días de Básico · Local133", email.Subject);
+        Assert.Contains("Ahora tienes Básico hasta el", WebUtility.HtmlDecode(email.Html));
+    }
+
+    [Fact]
+    public async Task Quien_invita_con_Pro_pagado_gana_dias_de_Pro()
+    {
+        await CreateMerchantAsync(OtherEmail);
+        await UpdateMerchantAsync(OtherEmail, m => m.Status = MerchantStatus.Active);
+        var now = DateTimeOffset.UtcNow;
+        await SeedPlanAsync(OtherEmail,
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-25), now.AddDays(-10)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Pro, now.AddDays(-10), now.AddDays(20)));
+        var client = await TrialMerchantAsync(Email);
+        await LinkReferralAsync(OtherEmail, Email);
+        var charge = await CreateChargeAsync(client);
+
+        await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount)));
+
+        var reward = Assert.Single((await LoadSubscriptionAsync(OtherEmail)).Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
+        Assert.Equal(SubscriptionPlan.Pro, reward.Plan);
+        Assert.Equal("Ganaste 10 días de Pro · Local133", Factory.Emails.Last(OtherEmail).Subject);
     }
 
     // --- Ayudas ---------------------------------------------------------------------------------------------------------

@@ -305,3 +305,12 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - La casilla del resumen enlaza a `{App__LandingUrl}/terminos` y el cargo guarda `LegalDocuments.CurrentTermsVersion`. Cuando la 5.18 cambie la versión, la portada con los Términos nuevos se publica **antes o junto** con Web.
 - Ya no existe `POST /app/plan/pagar`; ninguna liga externa lo usaba (solo el formulario de «Mi plan»).
 - **Ajuste del 2026-11-27 (checkout simplificado: solo 1 mes y Anual, plan y duración en una página)**: sin cambios para Azure. Sin migración (`ThreeMonths`/`SixMonths` se quedan en el enum por los cargos que ya existen), recursos, App Settings, secretos, jobs ni webhooks nuevos. Un link pendiente de 3 o 6 meses que ya exista se puede seguir pagando y se abona; su «Regresar» (`/app/plan/checkout/{plan}/3-meses|6-meses`) redirige a la sección del plan.
+
+### Fase 5.16 — Recordatorios, referidos y avisos
+- **Se publica junto con la 5.12 a la 5.15, la 5.17 y la 5.18.**
+- **Migración `PlanChangeAnnouncement`** (corre al arrancar, después de `BasicAndProPlans` y `RemoveFreePlanSettings`). Solo cambia datos:
+  - renombra en `Notifications` los tipos `DowngradedToFree` → `PlanExpired` y `ProDaysEnding` → `PlanDaysEnding`;
+  - inserta un renglón global `PlanChange` en `AuditLogs` (actor `sistema`) con `SYSUTCDATETIME()`. **Esa hora es el corte del anuncio**: el `suscripciones-diario` siguiente manda el aviso y el correo «Nuevos planes: Básico y Pro» a los vendedores registrados antes, no dados de baja. Lo sigue intentando durante 30 días y se manda una sola vez por vendedor (llave `planes-2026-12`).
+- Como `BasicAndProPlans`, se publica en el horario acordado: el anuncio sale a las 9:00 (México) del día siguiente a la publicación. Con Resend configurado, esos correos **salen de verdad** a todos los vendedores existentes.
+- El job es el mismo (`suscripciones-diario`, 9:00 México) y sigue sin crear links de Pey. Los botones de los recordatorios llevan al checkout (`{App__PublicBaseUrl}/app/plan/checkout…`), así que `App__PublicBaseUrl` debe ser la URL pública con HTTPS, como ya se exige.
+- Sin recursos, App Settings, secretos ni webhooks nuevos.

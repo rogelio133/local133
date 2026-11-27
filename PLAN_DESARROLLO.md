@@ -257,7 +257,7 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - premio con el plan de quien invita y descuento por plan;
     - resumen mensual por plan y anuncio del cambio.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.15, la 5.17 y la 5.18)* — [bitácora](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
 17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
 18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
 
@@ -326,7 +326,8 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
   - cambiar desde el admin un parámetro que aparece en los Términos exige publicar una versión nueva: la pantalla de la 6.2 lo advierte, pero no lo impide;
   - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
-- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release); la portada y los Términos todavía mencionan los paquetes de 3 y 6 meses (5.18), y los recordatorios por correo dicen «Pro» aunque el plan sea Básico (5.16).
+- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release); la portada y los Términos todavía mencionan los paquetes de 3 y 6 meses (5.18). Los recordatorios con «Pro» se corrigieron en la 5.16.
+- [5.16](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md): el anuncio del cambio de planes sale a las 9:00 del día siguiente a la publicación, como correo real a todos los vendedores existentes (publicar en el horario acordado). `/app/avisos` y la campana siguen pendientes (5.4).
 - [6.2](log_plan/fase-6.2-plan-y-parametros.md): anular un premio y «Dar premios pendientes» en el navegador (la base de desarrollo no tiene premios; los cubren las pruebas de integración).
 - [Portada nueva](log_plan/portada-nueva.md):
   - «Quedan N lugares» de fundador está oculto: falta de dónde saca el dato la portada, que no tiene base;

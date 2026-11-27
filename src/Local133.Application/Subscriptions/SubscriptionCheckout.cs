@@ -30,6 +30,18 @@ public static class SubscriptionPaths
     public static string Summary(SubscriptionPlan plan, SubscriptionPackage package) =>
         $"{Checkout}/{plan.Slug()}/{package.Slug()}";
 
+    /// <summary>
+    /// «Elegir plan» o «Renovar» (vencido, gracia, Inicio, banner y correos): el resumen de su último plan y paquete; si
+    /// ese paquete ya no se ofrece (3 o 6 meses), la sección de su plan; si nunca pagó, el paso 1 (§6 del diseño).
+    /// </summary>
+    public static string ChoosePlanFor(SubscriptionPlan? lastPlan, SubscriptionPackage? lastPackage) =>
+        (lastPlan, lastPackage) switch
+        {
+            ({ } plan, { } package) when package.IsOffered() => Summary(plan, package),
+            ({ } plan, _) => ChoosePlan(plan),
+            _ => Checkout,
+        };
+
     /// <summary>Paso 4: confirmación (regreso de Pey tras pagar).</summary>
     public static string Payment(int chargeId) => $"/app/plan/pago/{chargeId.ToString(CultureInfo.InvariantCulture)}";
 

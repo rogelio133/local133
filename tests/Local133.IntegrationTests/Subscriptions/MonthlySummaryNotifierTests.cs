@@ -57,7 +57,7 @@ public class MonthlySummaryNotifierTests(Local133WebFactory factory) : SaleFlowT
     }
 
     [Fact]
-    public async Task En_el_gratuito_invita_a_Pro()
+    public async Task Al_vencido_le_dice_cuanto_pagaria_con_Basico_y_lo_lleva_al_checkout()
     {
         await ActiveMerchantAsync(Email);
         await SeedExpiredPlanAsync(Email);
@@ -67,9 +67,25 @@ public class MonthlySummaryNotifierTests(Local133WebFactory factory) : SaleFlowT
 
         var notification = Assert.Single(await NotificationsAsync());
         Assert.StartsWith("En octubre cobraste $150.50 en 1 venta. Con una terminal habrías pagado unos $6 de comisión", notification.Body);
-        Assert.Contains("Con Pro, por $199 al mes, cobras con tus productos", notification.Body);
-        Assert.Equal("/app/plan", notification.Url);
-        Assert.Equal("http://localhost:5231/app/plan", Factory.Emails.Last(Email).Link);
+        Assert.Contains("Tu plan venció: con Básico pagarías $99 al mes y vuelves a cobrar", notification.Body);
+        Assert.Equal("/app/plan/checkout#basico", notification.Url);
+        var email = Factory.Emails.Last(Email);
+        Assert.Equal("http://localhost:5231/app/plan/checkout#basico", email.Link);
+        Assert.Contains("Elegir mi plan", email.Html);
+    }
+
+    [Fact]
+    public async Task Con_Basico_compara_con_el_precio_de_Basico()
+    {
+        await ActiveMerchantAsync(Email);
+        await SeedBasicPlanAsync(Email);
+        await PaidSaleAsync(Email, 1_000m, FirstMinuteOfOctober.AddDays(3));
+
+        await SendAsync(October);
+
+        var notification = Assert.Single(await NotificationsAsync());
+        Assert.EndsWith("Tu plan Básico cuesta $99 al mes.", notification.Body);
+        Assert.Equal("/app/ventas", notification.Url);
     }
 
     [Fact]

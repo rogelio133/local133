@@ -79,15 +79,15 @@ public sealed class MonthlySummaryNotifier(
             .Select(s => s.IsFounder)
             .SingleOrDefaultAsync(cancellationToken);
         var plan = await services.GetRequiredService<IPlanAccess>().GetForMerchantAsync(total.MerchantId, cancellationToken);
-        // Hasta la 5.16 (resumen por plan) el vencido recibe el texto que tenía el gratuito.
-        var isFree = plan.Tier == PlanTier.Expired;
 
-        var summary = Domain.Subscriptions.MonthlySummary.For(total.Collected, total.SalesCount, settings, isFounder);
+        // Por plan (5.16): compara con el precio de su plan; el vencido, con el de Básico.
+        var summary = Domain.Subscriptions.MonthlySummary.For(
+            total.Collected, total.SalesCount, settings, isFounder, plan.Plan, plan.Tier == PlanTier.Expired);
         var message = MerchantEmails.MonthlySummary(
-            summary, month, isFree, Merchant.GreetingNameFor(merchant.OwnerName, merchant.BusinessName));
+            summary, month, Merchant.GreetingNameFor(merchant.OwnerName, merchant.BusinessName));
         var result = await services.GetRequiredService<INotificationService>().NotifyAsync(new NotificationRequest(
             total.MerchantId, NotificationType.MonthlySummary, message.Title, message.Body,
-            isFree ? MerchantEmails.PlanPath : MerchantEmails.SalesPath, DedupKeyFor(month), message.Email), cancellationToken);
+            message.Email.ActionPath, DedupKeyFor(month), message.Email), cancellationToken);
         return result is NotificationResult.Created;
     }
 

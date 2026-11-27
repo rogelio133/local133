@@ -225,6 +225,7 @@ public static class PlanLabels
         AuditAction.ReferralRewardRevoked => "Premio anulado",
         AuditAction.PendingReferralRewardsGranted => "Premios pendientes",
         AuditAction.PlanTransition => "Transición a Básico",
+        AuditAction.PlanChange => "Cambio de planes",
         _ => action.ToString(),
     };
 }

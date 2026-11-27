@@ -76,7 +76,14 @@ public class PlanController(
 
         var subscription = await db.Subscriptions.AsNoTracking()
             .Where(s => s.MerchantId == merchant.Id)
-            .Select(s => new { s.LastPeriodKind, s.LastPackage })
+            .Select(s => new
+            {
+                s.LastPeriodKind,
+                s.LastPackage,
+                // Plan del último periodo de la cadena (Subscription.ChainEndPlan), sin cargar los periodos.
+                EndingPlan = s.Periods.OrderByDescending(p => p.EndsAt).ThenByDescending(p => p.CreatedAt)
+                    .Select(p => (SubscriptionPlan?)p.Plan).FirstOrDefault() ?? SubscriptionPlan.Pro,
+            })
             .SingleOrDefaultAsync(cancellationToken);
         var canPay = subscription is not null && merchant.Status != MerchantStatus.Disabled;
 
@@ -84,7 +91,8 @@ public class PlanController(
         var actionPlan = MyPlanViewModel.ActionPlanFor(plan);
         var renewal = canPay
             ? RenewalNoticeViewModel.From(
-                SubscriptionReminders.RenewalNoticeFor(plan.Status, subscription!.LastPeriodKind, subscription.LastPackage, now),
+                SubscriptionReminders.RenewalNoticeFor(
+                    plan.Status, subscription!.LastPeriodKind, subscription.EndingPlan, subscription.LastPackage, now),
                 actionPlan,
                 today)
             : null;
