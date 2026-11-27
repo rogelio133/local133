@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Local133.Web.Areas.Admin.Controllers;
 
 /// <summary>
-/// Parámetros globales (/admin/parametros, 6.2): precios, fundador, prueba, gracia, límites del gratuito, uso justo,
+/// Parámetros globales (/admin/parametros, 6.2): precios, fundador, prueba, gracia, uso justo,
 /// referidos, IVA y expiración del QR. Cada guardado queda en <c>AuditLogs</c>; si cambia un número de los Términos,
 /// se avisa que hay que publicar otra versión.
 /// </summary>

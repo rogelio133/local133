@@ -27,14 +27,14 @@ Todo lo del plan gratuito (§2, §3 y §5 de aquel documento) queda reemplazado 
 | Inicio de la prueba | Con el **primer cobro pagado**: a la hora `PaidAt` del primer `Payment` del vendedor. Mientras no cobre, no empieza (decisión del usuario: sin el respaldo de «3 días después de activarse»). |
 | Al vencer | Estado **Vencido** (`Expired`): no genera cobros. Sí entra a su cuenta, lee su historial, comparte recibos de ventas anteriores y paga. Conserva su catálogo, su historial y sus datos. |
 | Gracia | 5 días, solo después de un periodo **pagado**, con las funciones del plan que pagó. La prueba, los premios y los regalos vencen sin gracia. |
-| Precios (IVA incluido) | Básico: $99 al mes o $990 al año. Pro: $199 al mes o $1,990 al año. Paquetes de 1, 3 y 6 meses, y anual. |
+| Precios (IVA incluido) | Básico: $99 al mes o $990 al año. Pro: $199 al mes o $1,990 al año. Paquetes de 1 mes y anual (los de 3 y 6 meses se retiraron el 2026-11-27). |
 | Fundador | Es un atributo del **vendedor**, con 100 lugares entre los dos planes. Paga $69 / $690 en Básico y $149 / $1,490 en Pro, de por vida. Si cambia de plan, conserva el precio de fundador del plan nuevo. |
 | Subir de Básico a Pro | Inmediato. El tiempo de Básico que le queda **se convierte en tiempo de Pro** en proporción al precio mensual que le toca (99/199; un fundador, 69/149). Lo pagado se encadena después. Nunca se devuelve dinero. |
 | Bajar de Pro a Básico | Básico empieza cuando termina lo pagado de Pro. |
 | Anual congelado | Por plan: quien renueva el anual del mismo plan sin haber vencido paga lo mismo que la vez anterior. |
 | Uso justo | 5,000 cobros concretados al mes, en los dos planes. Al pasarlos se alerta al admin, sin bloquear. |
 | Afiliados | Quien invita gana 10 días del plan que tenga (§8). El referido recibe 30 % del precio de un mes del plan que elija. Siguen el tope de 12 premios en 12 meses y la regla de que el premio solo llega con un pago real. |
-| Checkout | Por pasos: Plan → Duración → Resumen del pedido → Pago en Pey → Confirmación con número de pedido y comprobante (§6). |
+| Checkout | Por pasos: Plan (plan y duración en una página) → Resumen del pedido → Pago en Pey → Confirmación con número de pedido y comprobante (§6). |
 | Datos fiscales | No se piden (decisión del usuario). El CFDI sigue fuera de esta implementación. |
 | Links de Pey | Se crean **solo** al pulsar «Pagar» en el resumen. Ningún paso anterior, ningún job y ningún correo crea links. |
 | Vendedores existentes | Quien no ha pagado recibe 15 días de Básico de transición. Las pruebas de 30 días en curso se respetan. Lo pagado sigue siendo Pro (§10). |
@@ -66,14 +66,11 @@ Todo lo del plan gratuito (§2, §3 y §5 de aquel documento) queda reemplazado 
 | Paquete | Básico | Básico fundador | Pro | Pro fundador |
 |---|---|---|---|---|
 | 1 mes | $99 | $69 | $199 | $149 |
-| 3 meses | $297 | $207 | $597 | $447 |
-| 6 meses | $594 | $414 | $1,194 | $894 |
 | Anual | $990 | $690 | $1,990 | $1,490 |
 
-- 1, 3 y 6 meses = n × el precio mensual. El anual tiene su propio precio, que equivale a 2 meses de regalo.
-- Lo que se ve en pantalla de Básico:
-  - en el de 6 meses: «Por $396 más llévate el año completo»;
-  - en el anual: «Equivale a $82.50 al mes: 2 meses de regalo» ($57.50 al mes para un fundador).
+- **2026-11-27: solo se venden 1 mes y Anual.** Los paquetes de 3 y 6 meses (n × el precio mensual) se retiraron del checkout. Siguen en el código (`SubscriptionPackage.ThreeMonths`/`SixMonths`) por los cargos y periodos que ya existen.
+- El anual tiene su propio precio: 12 meses por el precio de 10 (2 meses de regalo).
+- Lo que se ve en pantalla del anual de Básico: «12 meses por el precio de 10» y «Equivale a $82.50 al mes» ($57.50 al mes para un fundador). En el resumen del pedido: «Estás obteniendo 12 meses por el precio de 10». Se calcula con los precios de lista (`SubscriptionOffer.PaidMonths`). Si los precios no dan meses de regalo, no sale.
 - Desglose del IVA: $99 = $85.34 + $13.66 de IVA, y $69 = $59.48 + $9.52 (`SubscriptionPricing.VatBreakdown`).
 - Los precios viven en `SystemSettings` y cada cargo guarda su monto, igual que hoy: cambiar un precio solo afecta los pedidos nuevos.
 
@@ -169,11 +166,13 @@ El pago se ve como el de una tienda en línea:
 **El estado va en la URL**, no en una sesión ni en un cargo a medias. El botón «atrás» del navegador funciona, y se puede mandar a alguien directo a un paso. **Ningún GET llama a Pey ni crea cargos.**
 
 ```
-Plan ─── Duración ─── Resumen ─── Pago ─── Listo
-                         ●
+Plan ─── Resumen ─── Pago ─── Listo
+            ●
 ┌──────────────────────────────────────┐
 │ Pedido                               │
-│ Pro · Anual                  Cambiar │
+│ Pro Anual                    Cambiar │
+│ 🎁 Estás obteniendo 12 meses por el  │
+│    precio de 10                      │
 │ Del 10/dic/2026 al 10/dic/2027       │
 │ Tus 20 días de Básico se vuelven     │
 │ unos 9 días de Pro desde hoy.        │
@@ -193,33 +192,32 @@ Plan ─── Duración ─── Resumen ─── Pago ─── Listo
 
 **«Mi plan» (`/app/plan`)** es la página de la cuenta, no del pago:
 - estado, vigencia y lo que viene después, por ejemplo: «Pro hasta el 9/dic, después Básico hasta el 9/ene»;
-- botones según el caso:
-  - «Elegir plan» (paso 1);
-  - «Renovar igual que la última vez» (resumen de `LastPlan` y `LastPackage`);
-  - «Cambiar a Pro» (paso 2 de Pro);
+- botones (simplificados el 2026-11-27). Cada uno lleva al paso 1 con el scroll en la sección de su plan (`/app/plan/checkout#basico` o `#pro`):
+  - el principal, con su plan (el actual; la prueba cuenta como Pro; si está vencido, el de su último pago; si nunca pagó, Pro):
+    - «Renovar mi plan Básico/Pro» si ya toca renovar: está en la ventana del aviso (15 días antes del anual, 3 días antes, el día del vencimiento o la gracia) o el plan venció;
+    - si no, «Adquirir más días de Básico/Pro»;
+  - «Cambiar a Pro» si tiene Básico (ahora o después);
+  - ya no hay «Elegir plan» ni «Renovar igual que la última vez»;
+- el aviso de renovar dice el plan que vence («Tu plan Básico vence en 2 días») y no trae botón propio: el principal va justo abajo;
 - **«Tus pedidos»**: reemplaza a «Pagos». Muestra los pedidos pagados, en proceso y parciales, con su número y la liga al comprobante. Los pedidos sin pagar **no** aparecen, como en la 5.7: un link abandonado no es un «pago pendiente»;
 - la tabla de funciones de los dos planes.
 
-**Paso 1, Plan** (`GET /app/plan/checkout`)
-- Tarjetas de Básico y Pro con «desde $X al mes» (el equivalente del anual), lo principal de cada uno e insignias:
+**Paso 1, Plan** (`GET /app/plan/checkout`; desde el 2026-11-27 incluye la duración)
+- Una sección por plan (`id="basico"` y `id="pro"`, a las que llegan los botones de «Mi plan»), con lo principal del plan, la nota de desde cuándo cuenta lo que pague e insignias:
   - «Tu plan»;
-  - «Recomendado» en Pro;
-  - «Precio de fundador» si aplica.
+  - «Recomendado» en Pro.
+- En cada sección, dos tarjetas: «Básico (1 mes)» y «Básico Anual», «Pro (1 mes)» y «Pro Anual». Cada una con:
+  - el precio y, si aplica, «Precio de fundador» y el precio tachado del descuento de bienvenida;
+  - en el anual, «12 meses por el precio de 10» y «Equivale a $X al mes»;
+  - «Hasta el 9 de diciembre de 2027» (`SubscriptionOffers` por plan);
+  - la insignia «Tu paquete» en el del último pago y «Mejor precio» en el anual.
+- Cada tarjeta lleva al resumen.
 - La tabla de funciones de §2, que reutiliza `MyPlanViewModel.FeaturesFor` y `PlanFeatureRow`.
 - Los avisos de fundador («Quedan N lugares») y del descuento de bienvenida.
-- Cada tarjeta lleva al paso 2 de su plan.
+- `GET /app/plan/checkout/{basico|pro}` (el antiguo paso de la duración) redirige a la sección de su plan.
 
-**Paso 2, Duración** (`GET /app/plan/checkout/{basico|pro}`)
-- 1, 3 y 6 meses y anual. Cada uno con:
-  - el precio;
-  - el equivalente al mes;
-  - el ahorro (los meses de regalo del anual o «Por $396 más llévate el año»);
-  - «Hasta el 9 de diciembre de 2027» (`SubscriptionOffers` por plan).
-- La insignia «Tu paquete» en el del último pago.
-- Cada opción lleva al paso 3.
-
-**Paso 3, Resumen del pedido** (`GET /app/plan/checkout/{plan}/{paquete}`; paquete `1-mes`, `3-meses`, `6-meses` o `anual`)
-- Plan y duración, con «Cambiar» al paso 1 o al 2.
+**Paso 2, Resumen del pedido** (`GET /app/plan/checkout/{plan}/{paquete}`; paquete `1-mes` o `anual`; `3-meses` y `6-meses` redirigen a la sección del plan, p. ej. el «Regresar» de un link viejo)
+- Plan y duración («Pro Anual»), con «Cambiar» a la sección del plan en el paso 1. En el anual: «Estás obteniendo 12 meses por el precio de 10».
 - Periodo: desde–hasta, con `NextPeriodStart` y la duración.
 - Qué pasa con lo que tiene:
   - «Tus 20 días de Básico se vuelven unos 9 días de Pro desde hoy»;
@@ -236,16 +234,16 @@ Plan ─── Duración ─── Resumen ─── Pago ─── Listo
 - Un plan o un paquete que no existe ⇒ 404. Un vendedor que no puede pagar (onboarding o dado de baja) ve el aviso de siempre en lugar del botón.
 
 **`POST /app/plan/checkout`** (`CheckoutInput`: `Plan`, `Package`, `AcceptTerms`, `ExpectedTotal` como texto invariante)
-1. Valida el plan, el paquete y la casilla. Sin la casilla, regresa al resumen con el error en el campo (también en el cliente) y **no** llama a Pey.
+1. Valida el plan, el paquete (solo 1 mes y Anual; otro que ya no se ofrece redirige a la sección del plan sin crear nada) y la casilla. Sin la casilla, regresa al resumen con el error en el campo (también en el cliente) y **no** llama a Pey.
 2. Vuelve a cotizar. Si el total ya no es el que vio el vendedor, regresa al resumen con «El precio de tu pedido cambió. Revisa el total antes de pagar» y no llama a Pey. Es el mismo patrón que `ExpectedTotal` y `SaleCartMessages.PricesChanged` del carrito. Esto pasa si cambió un precio, se acabaron los lugares de fundador o se abonó el descuento.
 3. Llama a `ISubscriptionCheckout.StartAsync(merchantId, plan, paquete, baseUrl, termsVersion)`, que hace lo de siempre (5.6 y 5.7), con estos cambios:
    - un link `Pending` se reutiliza solo si coincide en **plan**, paquete y monto y se creó hace a lo más `GraceDays` días;
    - el cargo guarda `Plan`, `TermsVersion` (`LegalDocuments`) y `TermsAcceptedAt`;
    - `successUrl` = `{base}/app/plan/pago/{id}`, como hoy;
    - `backUrl` = el resumen del mismo pedido (antes, «Mi plan»), para que «Regresar» de Pey vuelva al carrito.
-4. Redirige a Pey (**paso 4**). Los errores (`NotAllowed`, `HttpsRequired`, `GatewayFailed`) regresan al resumen con el aviso.
+4. Redirige a Pey (**paso 3**). Los errores (`NotAllowed`, `HttpsRequired`, `GatewayFailed`) regresan al resumen con el aviso.
 
-**Paso 5, Confirmación** (`GET /app/plan/pago/{id}`)
+**Paso 4, Confirmación** (`GET /app/plan/pago/{id}`)
 - Se queda en esta ruta porque es la `successUrl` de los links que ya existen.
 - Mientras Pey confirma: «Confirmando tu pago…», con la consulta a Pey con freno y el polling de `subscription-payment.js`, como hoy.
 - Pagado: «¡Gracias! Tu pedido #123 está pagado», con el resumen (plan, periodo y total), «Ver comprobante» e «Ir a Inicio».
@@ -270,11 +268,11 @@ Plan ─── Duración ─── Resumen ─── Pago ─── Listo
 **Barra de pasos.** Parcial `_CheckoutSteps` (`<ol>` con `aria-current="step"`):
 - los pasos ya hechos son ligas;
 - el de Pey nunca lo es;
-- en 375 px se compacta a «Paso 3 de 5 · Resumen».
+- en 375 px se compacta a «Paso 2 de 4 · Resumen».
 
 **Entradas al checkout** (rutas en `PlanUrls`):
-- `_ProRequired` («Conoce Pro») lleva al paso 2 de Pro;
-- el banner de vencido, la tarjeta de Inicio y los correos llevan al resumen de su último plan y paquete o, si nunca pagó, al paso 1.
+- `_ProRequired` («Conoce Pro») lleva a la sección de Pro del paso 1;
+- el banner de vencido, la tarjeta de Inicio y los correos llevan al resumen de su último plan y paquete; si ese paquete fue de 3 o 6 meses, a la sección de su plan; si nunca pagó, al paso 1.
 
 ## 7. Recordatorios y avisos
 - **`SubscriptionReminders`**:
@@ -359,6 +357,12 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
 - El orden sigue las dependencias: el dominio primero y la portada al final.
 
 ### 5.12 Planes y vigencia v2
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.13 a la 5.18.* — [bitácora](../log_plan/fase-5.12-planes-y-vigencia-v2.md)
+
+Cambios frente a lo de aquí:
+- Las columnas `Free*` y las banderas `CanShareReceipt`, `HasFullHistory` y `HasMonthlyChargeLimit` se quedan hasta la 5.14. El vencido conserva los límites del gratuito.
+- `ConvertBasicToPro` se conecta al abono en la 5.15.
+
 - **`Domain/Subscriptions`**:
   - `SubscriptionPlan`, `PlanTier` nuevo y `PlanStatus.Plan`;
   - la gracia según el plan pagado;
@@ -382,6 +386,12 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
   - la matriz de funciones.
 
 ### 5.13 Prueba al primer cobro
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 y la 5.14 a la 5.18.* — [bitácora](../log_plan/fase-5.13-prueba-al-primer-cobro.md)
+
+Cambios frente a lo de aquí:
+- Los textos de la portada («Tu prueba empieza con tu primer cobro…») se quedan para la 5.18, con el resto de la portada.
+- Un vendedor dado de baja no recibe la prueba; uno suspendido sí, si le pagan un cobro generado antes.
+
 - El disparador en `PaymentRecorder` y el respaldo en `suscripciones-diario` (§4).
 - Se quita el inicio de la prueba de `BankAccountStatusSync` y `BankAccountRegistration`.
 - En el onboarding, el catálogo en línea no se publica (`IPublicCatalogSettings` ⇒ `PlanRequired`, con el texto «Se activa con tu prueba»).
@@ -395,6 +405,13 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
   - el respaldo del job.
 
 ### 5.14 Acceso por plan y vencido
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12, la 5.13 y la 5.15 a la 5.18.* — [bitácora](../log_plan/fase-5.14-acceso-por-plan-y-vencido.md)
+
+Cambios frente a lo de aquí:
+- «Elegir plan» va a «Mi plan» (`PlanUrls.ChoosePlan`) hasta que la 5.15 lo apunte al checkout.
+- Los recordatorios ya no prometen el gratuito (solo el texto); las etapas nuevas siguen en la 5.16.
+- El banner del vencido no sale en Inicio ni en Cobrar, que ya muestran el aviso completo.
+
 - **En el servidor**:
   - `PlanExpired` en `SaleCharging.PlanBlockAsync`;
   - el carrito con `PlanRequired` en Básico;
@@ -414,6 +431,14 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
   - el aislamiento entre vendedores.
 
 ### 5.15 Checkout por pasos
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.14 y la 5.16 a la 5.18.* — [bitácora](../log_plan/fase-5.15-checkout-por-pasos.md)
+
+Cambios frente a lo de aquí:
+- El resumen también muestra «Tu precio anual congelado» cuando aplica, además del precio de fundador.
+- Reutilizar un link exige además la misma versión de los Términos.
+- El asunto del correo es «Recibimos tu pago · Local133»; el número de pedido va en el cuerpo.
+- Los botones de los correos de recordatorio siguen en «Mi plan» hasta la 5.16.
+
 - **Pantallas y rutas** de §6:
   - «Mi plan» rediseñado;
   - los pasos 1 a 3;
@@ -442,6 +467,15 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
 - **Playwright**: el flujo completo hasta antes de Pey, la confirmación con un webhook firmado a mano y el comprobante impreso.
 
 ### 5.16 Recordatorios, referidos y avisos
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.15, la 5.17 y la 5.18.* — [bitácora](../log_plan/fase-5.16-recordatorios-referidos-y-avisos.md)
+
+Cambios frente a lo de aquí:
+- El seguimiento del vencido es una ventana de los días 7 a 9 (si el job no corre el 7, sale el 8 o el 9), una sola vez.
+- El corte del anuncio es un renglón `PlanChange` de `AuditLogs` que inserta la migración `PlanChangeAnnouncement` al publicarse. El anuncio se manda durante 30 días.
+- Los tipos de aviso se renombraron: `DowngradedToFree` → `PlanExpired` y `ProDaysEnding` → `PlanDaysEnding`.
+- El resumen mensual del vencido lleva a la sección de Básico del checkout, porque su texto habla de Básico.
+- El regalo del admin sigue diciendo «días de Pro» hasta la 5.17.
+
 - Lo de §7 y §8:
   - las etapas `Expired` y `ExpiredFollowUp`;
   - los botones al checkout;

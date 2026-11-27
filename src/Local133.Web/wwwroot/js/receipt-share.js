@@ -26,7 +26,7 @@
             }
         }
 
-        // Plan gratuito: la liga va en un campo de solo lectura; al tocarlo se selecciona completa para copiarla.
+        // Liga en un campo de solo lectura («Invita y gana», catálogo en línea): al tocarlo se selecciona completa.
         var urlField = root.querySelector('[data-receipt-url-field]');
         if (urlField) {
             urlField.addEventListener('focus', function () { urlField.select(); });

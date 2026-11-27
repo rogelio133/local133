@@ -44,7 +44,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
 
         // Transacciones globales del admin (6.4).
         builder.HasIndex(s => s.CreatedAt);
-        // Límite del gratuito (5.5): cobros concretados del mes (ventas con PaidAt en el mes).
+        // Uso justo (5.14): cobros concretados del mes (ventas con PaidAt en el mes).
         builder.HasIndex(s => new { s.MerchantId, s.PaidAt });
         // Job de expiración (pendientes con el QR vencido) y conciliación (sin pagar, por vencimiento).
         builder.HasIndex(s => new { s.Status, s.ExpiresAt });

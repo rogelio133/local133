@@ -1,3 +1,5 @@
+using Local133.Application.Subscriptions;
+using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Models;
@@ -12,11 +14,21 @@ namespace Local133.Web.Areas.Merchant.Services;
 /// </summary>
 public static class ProductListQuery
 {
+    /// <summary>
+    /// Por qué el catálogo es de solo lectura: dado de baja, o un plan sin <c>CanEditCatalog</c> (Básico o vencido,
+    /// 5.14); <c>null</c> = puede editar.
+    /// </summary>
+    public static CatalogReadOnlyReason? ReadOnlyReasonFor(Domain.Merchants.Merchant merchant, MerchantPlan plan) =>
+        !merchant.CanManageProducts ? CatalogReadOnlyReason.Disabled
+        : plan.Entitlements.CanEditCatalog ? null
+        : plan.Tier == PlanTier.Expired ? CatalogReadOnlyReason.Expired
+        : CatalogReadOnlyReason.Basic;
+
     /// <param name="listPath">Página que muestra la lista (para la paginación y «Ver todos»).</param>
-    /// <param name="canManage">Puede editar: no está dado de baja y su plan lo permite (el gratuito es de solo lectura).</param>
+    /// <param name="readOnlyReason">Por qué no puede editar (<see cref="ReadOnlyReasonFor"/>); <c>null</c> = puede.</param>
     public static async Task<ProductListViewModel> BuildAsync(
         AppDbContext db, Domain.Merchants.Merchant merchant, string? q, int? page, IUrlHelper url, string listPath,
-        bool canManage, CancellationToken cancellationToken)
+        CatalogReadOnlyReason? readOnlyReason, CancellationToken cancellationToken)
     {
         var query = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
         if (query is { Length: > ProductListViewModel.QueryMaxLength })
@@ -48,9 +60,8 @@ public static class ProductListQuery
                 ThumbnailUrl(url, p.Id, p.PhotoKey))).ToList(),
             Page = pageInfo,
             Query = query,
-            CanManage = canManage,
-            ReadOnlyReason = canManage ? null
-                : merchant.CanManageProducts ? CatalogReadOnlyReason.Plan : CatalogReadOnlyReason.Disabled,
+            CanManage = readOnlyReason is null,
+            ReadOnlyReason = readOnlyReason,
             ListPath = listPath,
         };
     }

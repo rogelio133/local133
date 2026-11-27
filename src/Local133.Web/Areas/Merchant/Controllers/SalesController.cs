@@ -14,8 +14,8 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 
 /// <summary>
 /// Ventas (/app/ventas): resumen del día, historial con filtros y búsqueda, detalle de cada venta con sus productos,
-/// sus pagos y el recibo para compartir; en Pro, exportación a Excel y corte de caja diario (5.9). Solo lectura: lo ve
-/// cualquier vendedor, también suspendido o dado de baja.
+/// sus pagos y el recibo para compartir; corte de caja diario (Básico y Pro) y exportación a Excel (Pro, 5.9). Solo
+/// lectura: lo ve cualquier vendedor, también suspendido, dado de baja o con el plan vencido.
 /// </summary>
 [Area("Merchant")]
 [Authorize(Roles = Roles.Merchant)]
@@ -23,8 +23,6 @@ namespace Local133.Web.Areas.Merchant.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks receiptLinks, TimeProvider clock) : Controller
 {
-    /// <summary>Mensaje (TempData) que el detalle muestra una vez (p. ej. WhatsApp en el gratuito).</summary>
-    public const string NoticeKey = "SaleDetailNotice";
     /// <summary>Mensaje (TempData) que la lista muestra una vez (p. ej. una exportación demasiado grande).</summary>
     public const string ListNoticeKey = "SalesListNotice";
 
@@ -45,7 +43,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
     }
 
     /// <summary>
-    /// Exportación a Excel (5.9, Pro) con los mismos filtros que la lista, sin paginar. En el gratuito ⇒ 403 (el botón
+    /// Exportación a Excel (5.9, Pro) con los mismos filtros que la lista, sin paginar. En Básico o vencido ⇒ 403 (el botón
     /// no aparece; la regla se aplica aquí). Más de <see cref="SalesWorkbook.MaxRows"/> ventas ⇒ regresa a la lista
     /// con un aviso para acotar las fechas.
     /// </summary>
@@ -65,7 +63,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         }
 
         var now = clock.GetUtcNow();
-        var filtered = SalesHistoryQuery.Filter(db, merchant.Id, plan, Filters(status, from, to, query), now);
+        var filtered = SalesHistoryQuery.Filter(db, merchant.Id, Filters(status, from, to, query), now);
         if (await filtered.Sales.CountAsync(cancellationToken) > SalesWorkbook.MaxRows)
         {
             TempData[ListNoticeKey] = SalesWorkbook.TooManyRowsMessage;
@@ -111,8 +109,8 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
     }
 
     /// <summary>
-    /// Corte de caja de un día (5.9, Pro; <c>?fecha=AAAA-MM-DD</c>, sin fecha o con una futura ⇒ hoy en México). En el
-    /// gratuito responde 200 con el aviso de Pro.
+    /// Corte de caja de un día (5.9; Básico y Pro; <c>?fecha=AAAA-MM-DD</c>, sin fecha o con una futura ⇒ hoy en
+    /// México). Con el plan vencido responde 200 con el aviso de elegir plan (5.14).
     /// </summary>
     [HttpGet("corte")]
     public async Task<IActionResult> CashCut([FromQuery(Name = "fecha")] string? date, CancellationToken cancellationToken)
@@ -121,7 +119,8 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         if (!plan.Entitlements.HasDailyCashCut)
         {
-            return View("CashCutLocked");
+            return View("CashCutLocked", PlanExpiredViewModel.For(plan, clock.GetUtcNow(),
+                "Elige un plan para volver a ver tu corte de caja. Tus ventas siguen en tu historial."));
         }
 
         var now = clock.GetUtcNow();
@@ -141,15 +140,8 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         }
 
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
-        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         var now = clock.GetUtcNow();
         var today = MexicoTime.Today(now);
-        if (plan.HistoryStartUtc(now) is { } historyStart && sale.CreatedAt < historyStart)
-        {
-            // Gratuito: la venta sigue guardada, pero fuera de los días de historial. Aviso de Pro, no 404.
-            return View("DetailLocked", new SaleLockedViewModel(
-                sale.Folio, SaleFormats.DateTime(sale.CreatedAt, today), plan.FreeHistoryDays));
-        }
 
         var payments = await db.Payments.AsNoTracking()
             .Where(p => p.SaleId == sale.Id)
@@ -181,7 +173,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
                 .ToList(),
             sale.HasReceipt
                 ? receiptLinks.ShareFor(Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, amountText,
-                    sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id), plan.Entitlements.CanShareReceipt)
+                    sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id))
                 : null);
         return View(model);
     }
@@ -203,14 +195,8 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
             return NotFound();
         }
 
+        // En todos los planes, también vencido (5.14): el recibo es de una venta que ya existe.
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
-        if (!(await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements.CanShareReceipt)
-        {
-            // Gratuito (5.5): el recibo se comparte copiando la liga; WhatsApp es de Pro.
-            TempData[NoticeKey] = ReceiptLinks.ShareRequiresPro;
-            return RedirectToAction(nameof(Detail), new { id });
-        }
-
         var message = ReceiptLinks.Message(
             merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount), receiptLinks.UrlFor(Request, sale.ReceiptToken));
         Response.Headers.CacheControl = "no-store";

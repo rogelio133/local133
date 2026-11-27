@@ -94,7 +94,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         var html = await GetHtmlAsync(await AdminAsync(), PlanTab(id));
 
         Assert.DoesNotContain("data-grant-days-form", html);
-        Assert.Contains("La prueba de Pro empieza cuando su cuenta bancaria quede activa", html);
+        Assert.Contains("La prueba de Pro empieza con su primer cobro pagado", html);
     }
 
     // --- Regalar días ------------------------------------------------------------------------------------------------
@@ -225,7 +225,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         var paid = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Paid);
         Assert.Equal(charge.Id, paid.SubscriptionChargeId);
         Assert.True(subscription.IsFounder); // el cargo salió a precio de fundador
-        Assert.Equal("Recibimos tu pago de Pro · Local133", Factory.Emails.Last(Email).Subject);
+        Assert.Equal(Local133.Infrastructure.Email.MerchantEmails.SubscriptionPaidSubject, Factory.Emails.Last(Email).Subject);
 
         // Primer pago del referido ⇒ quien lo invitó gana sus días.
         Assert.True((await LoadSubscriptionAsync(OtherEmail)).ProUntil > referrerBefore);
@@ -444,7 +444,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         {
             var subscription = await db.Subscriptions.IgnoreQueryFilters().Include(s => s.Periods)
                 .SingleAsync(s => s.MerchantId == referrer.Id);
-            subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, now, graceDays: 5, referral.Id);
+            subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, now, graceDays: 5, referral.Id);
             referral.MarkRewarded(now.AddDays(-1));
             await db.SaveChangesAsync();
         }

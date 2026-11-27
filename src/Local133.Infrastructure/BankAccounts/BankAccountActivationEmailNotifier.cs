@@ -1,6 +1,7 @@
 using Local133.Application.BankAccounts;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
+using Local133.Domain.Settings;
 using Local133.Infrastructure.Email;
 using Local133.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -52,6 +53,13 @@ internal sealed class BankAccountActivationEmailNotifier(
                 .Where(b => b.MerchantId == merchantId)
                 .Select(b => b.Clabe)
                 .SingleAsync(cancellationToken);
+            // La prueba empieza con su primer cobro (5.13): el correo lo dice si todavía no la tiene.
+            int? trialDays = await db.Subscriptions.IgnoreQueryFilters().AnyAsync(s => s.MerchantId == merchantId, cancellationToken)
+                ? null
+                : await db.SystemSettings.AsNoTracking()
+                    .Where(s => s.Id == SystemSettings.SingletonId)
+                    .Select(s => s.TrialDays)
+                    .SingleAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(recipient.Email))
             {
                 logger.LogWarning("El vendedor {MerchantId} no tiene correo: no se le avisó que su cuenta quedó activa", merchantId);
@@ -61,7 +69,7 @@ internal sealed class BankAccountActivationEmailNotifier(
             await emailSender.SendEmailAsync(
                 recipient.Email,
                 MerchantEmails.BankAccountActiveSubject,
-                MerchantEmails.BankAccountActiveBody(Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName), Clabe.Mask(clabe), baseUrl));
+                MerchantEmails.BankAccountActiveBody(Merchant.GreetingNameFor(recipient.OwnerName, recipient.BusinessName), Clabe.Mask(clabe), baseUrl, trialDays));
             logger.LogInformation("Se avisó al vendedor {MerchantId} que su cuenta {Clabe} quedó activa", merchantId, Clabe.Mask(clabe));
         }
         catch (Exception ex)

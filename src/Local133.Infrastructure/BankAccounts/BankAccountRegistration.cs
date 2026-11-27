@@ -4,7 +4,6 @@ using Local133.Application.Payments;
 using Local133.Domain.BankAccounts;
 using Local133.Domain.Merchants;
 using Local133.Infrastructure.Persistence;
-using Local133.Infrastructure.Subscriptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -107,12 +106,7 @@ internal sealed class BankAccountRegistration(
             merchant.BusinessName = BusinessName.Normalize(alias);
         }
 
-        // Pey la activó en el alta: la prueba de Pro empieza ya, en el mismo guardado.
-        if (activated)
-        {
-            await TrialStarter.EnsureTrialAsync(db, merchant.Id, now, cancellationToken);
-        }
-
+        // Aunque Pey la active en el alta, la prueba de Pro empieza con el primer cobro pagado (5.13, PaymentRecorder).
         try
         {
             await db.SaveChangesAsync(cancellationToken);

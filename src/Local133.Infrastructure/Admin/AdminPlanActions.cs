@@ -64,7 +64,7 @@ internal sealed class AdminPlanActions(
 
             var graceDays = await GraceDaysAsync(cancellationToken);
             var before = subscription.ProUntil;
-            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, days, now, graceDays);
+            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, subscription.ChainEndPlan, days, now, graceDays);
             proUntil = subscription.ProUntil;
             await db.SaveChangesAsync(cancellationToken); // id del periodo para la bitácora y el aviso
 
@@ -133,7 +133,7 @@ internal sealed class AdminPlanActions(
 
             db.AuditLogs.Add(AuditLog.Create(
                 actor.UserId, actor.Email, AuditAction.ChargeCreditedManually, merchantId,
-                $"Abonó a mano el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)} ({charge.Package.Label()}, {Money(charge.Amount)}; estaba {statusBefore}): Pro hasta el {LastDay(credit.Result.ProUntil)}.",
+                $"Abonó a mano el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)} ({charge.Plan.Label()} · {charge.Package.Label()}, {Money(charge.Amount)}; estaba {statusBefore}): vigente hasta el {LastDay(credit.Result.ProUntil)}.",
                 note,
                 Json(new
                 {
@@ -157,7 +157,7 @@ internal sealed class AdminPlanActions(
         await crediting.NotifyAsync(credit);
 
         return new AdminPlanResult.Done(
-            $"Listo: se abonó el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)}. Tiene Pro hasta el {LastDay(credit.Result.ProUntil)}.");
+            $"Listo: se abonó el cargo #{chargeId.ToString(CultureInfo.InvariantCulture)}. Vigente hasta el {LastDay(credit.Result.ProUntil)}.");
     }
 
     public async Task<AdminPlanResult> RevokeReferralRewardAsync(
@@ -262,7 +262,7 @@ internal sealed class AdminPlanActions(
             var subscription = await SubscriptionAsync(merchantId, cancellationToken);
             if (subscription is null)
             {
-                return new AdminPlanResult.Rejected("Su prueba todavía no empieza: los premios pendientes se le darán solos al activarse su cuenta.");
+                return new AdminPlanResult.Rejected("Su prueba todavía no empieza: los premios pendientes se le darán solos al empezarla, con su primer cobro.");
             }
 
             var pending = await db.Referrals.IgnoreQueryFilters()

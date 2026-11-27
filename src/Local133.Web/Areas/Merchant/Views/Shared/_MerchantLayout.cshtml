@@ -42,8 +42,8 @@
     <main class="container app-main pt-3">
         @if (ViewContext.RouteData.Values["controller"] as string != "Plan")
         {
-            @* Gracia (5.7): en «Mi plan» no hace falta, la tarjeta del plan ya lo dice. *@
-            <div class="d-print-none">@await Component.InvokeAsync("GraceBanner")</div>
+            @* Gracia y vencido (5.7, 5.14): en «Mi plan» no hace falta, la tarjeta del plan ya lo dice. *@
+            <div class="d-print-none">@await Component.InvokeAsync("PlanBanner")</div>
         }
         @RenderBody()
     </main>

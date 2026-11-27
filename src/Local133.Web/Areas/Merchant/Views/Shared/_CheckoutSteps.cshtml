@@ -1,0 +1,41 @@
+@model Local133.Web.Areas.Merchant.Models.CheckoutStepsViewModel
+@* Barra de pasos del checkout (5.15): Plan ─ Resumen ─ Pago ─ Listo. Los pasos hechos son ligas mientras el
+   pedido no se paga; el de Pey nunca. En pantallas chicas se compacta a «Paso 2 de 4 · Resumen». *@
+<nav class="checkout-steps mb-3 d-print-none" aria-label="Pasos del pago" data-checkout-steps="@Model.Current">
+    <p class="small fw-semibold text-body-secondary mb-0 d-sm-none" data-checkout-steps-compact>@Model.CompactText</p>
+    <ol class="checkout-steps-list d-none d-sm-flex list-unstyled mb-0">
+        @foreach (var step in Model.Steps)
+        {
+            <li class="checkout-step @(step.IsCurrent ? "is-current" : null) @(step.IsDone ? "is-done" : null)"
+                aria-current="@(step.IsCurrent ? "step" : null)" data-checkout-step="@step.Number">
+                @if (step.Url is not null)
+                {
+                    <a class="checkout-step-link" href="@Url.Content("~" + step.Url)">
+                        <span class="checkout-step-number" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+                        <span class="checkout-step-name">@step.Name</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="checkout-step-link">
+                        <span class="checkout-step-number" aria-hidden="true">
+                            @if (step.IsDone)
+                            {
+                                <i class="bi bi-check-lg"></i>
+                            }
+                            else
+                            {
+                                @step.Number
+                            }
+                        </span>
+                        <span class="checkout-step-name">@step.Name</span>
+                    </span>
+                }
+                @if (step.IsDone)
+                {
+                    <span class="visually-hidden"> (hecho)</span>
+                }
+            </li>
+        }
+    </ol>
+</nav>

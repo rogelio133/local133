@@ -52,11 +52,14 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Avisos de pago en tiempo real enviados (además de enviarse por SignalR).</summary>
     public RecordingSaleNotifier Notifier { get; } = new();
 
-    /// <summary>Umbrales del límite del gratuito y del uso justo de Pro detectados tras cada pago (5.5).</summary>
+    /// <summary>Uso justo (Básico y Pro) detectado tras cada pago (5.14).</summary>
     public RecordingChargeLimitNotifier LimitNotifier { get; } = new();
 
     /// <summary>Reloj del sitio: la hora real salvo que la prueba lo congele (jobs, 5.7).</summary>
     public TestClock Clock { get; } = new();
+
+    /// <summary>Falla simulada del disparador de la prueba al primer cobro (5.13).</summary>
+    public TrialStarterFaults TrialFaults { get; } = new();
 
     /// <summary>Meses del resumen mensual que pidió el job diario (5.7).</summary>
     public RecordingMonthlySummaryNotifier MonthlySummaries { get; } = new();
@@ -119,6 +122,12 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IMonthlySummaryNotifier>();
             services.AddSingleton<IMonthlySummaryNotifier>(MonthlySummaries);
 
+            // El disparador real de la prueba (clase interna), envuelto para poder simular una falla.
+            var trialStarter = services.Single(d => d.ServiceType == typeof(ITrialStarter));
+            services.Remove(trialStarter);
+            services.AddScoped<ITrialStarter>(sp => new FaultyTrialStarter(
+                TrialFaults, (ITrialStarter)ActivatorUtilities.CreateInstance(sp, trialStarter.ImplementationType!)));
+
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
 
@@ -154,6 +163,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Notifier.Reset();
         LimitNotifier.Reset();
         MonthlySummaries.Reset();
+        TrialFaults.Reset();
         Clock.Reset();
         Services.GetRequiredService<Local133.Web.Areas.Admin.Services.DashboardCache>().Clear();
         var defaults = new FakeExternalUser();

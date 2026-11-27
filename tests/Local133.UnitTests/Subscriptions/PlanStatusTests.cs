@@ -19,7 +19,7 @@ public class PlanStatusTests
         Assert.Null(status.ProUntil);
         Assert.Null(status.GraceEndsAt);
         Assert.Null(status.DaysLeft(Activated));
-        Assert.False(status.IsProLike);
+        Assert.False(status.IsCurrent);
     }
 
     [Fact]
@@ -31,9 +31,9 @@ public class PlanStatusTests
         var status = subscription.StatusAt(now, GraceDays);
 
         Assert.Equal(PlanTier.Trial, status.Tier);
-        Assert.True(status.IsProLike);
+        Assert.True(status.IsCurrent);
         Assert.Equal(Mx(2026, 12, 19, 15), status.ProUntil);
-        Assert.Equal(new DateOnly(2026, 12, 19), status.LastProDay);
+        Assert.Equal(new DateOnly(2026, 12, 19), status.LastActiveDay);
         Assert.Equal(23, status.DaysLeft(now));
         Assert.Null(status.GraceEndsAt); // la prueba no tiene gracia
     }
@@ -48,7 +48,7 @@ public class PlanStatusTests
         Assert.Equal(0, lastDay.DaysLeft(Mx(2026, 12, 19, 14, 59)));
 
         var ended = subscription.StatusAt(Mx(2026, 12, 19, 15), GraceDays);
-        Assert.Equal(PlanTier.Free, ended.Tier);
+        Assert.Equal(PlanTier.Expired, ended.Tier);
         Assert.Null(ended.GraceEndsAt);
         Assert.Equal(0, ended.DaysLeft(Mx(2026, 12, 20, 10)));
     }
@@ -57,7 +57,7 @@ public class PlanStatusTests
     public void Un_periodo_pagado_vigente_es_Pro()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
+        subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
 
         var status = subscription.StatusAt(Mx(2026, 12, 25, 10), GraceDays);
 
@@ -70,7 +70,7 @@ public class PlanStatusTests
     public void Con_un_pago_abonado_durante_la_prueba_ya_es_Pro_y_dice_cuando_termina_la_prueba()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 11, 20, 17), GraceDays);
+        subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 11, 20, 17), GraceDays);
         var now = Mx(2026, 11, 20, 17, 30);
 
         var status = subscription.StatusAt(now, GraceDays);
@@ -79,7 +79,7 @@ public class PlanStatusTests
         Assert.Equal(Mx(2027, 1, 19, 15), status.ProUntil);
         Assert.Equal(Mx(2026, 12, 19, 15), status.TrialEndsAt);
         Assert.Equal(new DateOnly(2026, 12, 19), status.LastTrialDay);
-        Assert.Equal(new DateOnly(2027, 1, 19), status.LastProDay);
+        Assert.Equal(new DateOnly(2027, 1, 19), status.LastActiveDay);
         Assert.Equal(60, status.DaysLeft(now));
 
         // Ya terminada la prueba sigue Pro, sin fecha de prueba.
@@ -94,7 +94,7 @@ public class PlanStatusTests
     public void Un_premio_o_regalo_despues_de_la_prueba_no_la_vuelve_Pro(SubscriptionPeriodKind kind)
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddDaysPeriod(kind, 10, Mx(2026, 11, 25, 10), GraceDays);
+        subscription.AddDaysPeriod(kind, SubscriptionPlan.Pro, 10, Mx(2026, 11, 25, 10), GraceDays);
 
         var status = subscription.StatusAt(Mx(2026, 11, 25, 11), GraceDays);
 
@@ -106,7 +106,7 @@ public class PlanStatusTests
     public void La_gracia_dura_cinco_dias_despues_de_un_periodo_pagado()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
+        subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
         var paidEnd = Mx(2027, 1, 19, 15);
 
         Assert.Equal(PlanTier.Grace, subscription.StatusAt(paidEnd, GraceDays).Tier);
@@ -114,16 +114,16 @@ public class PlanStatusTests
         Assert.Equal(PlanTier.Grace, subscription.StatusAt(Mx(2027, 1, 24, 14, 59), GraceDays).Tier);
         Assert.Equal(new DateOnly(2027, 1, 24), subscription.StatusAt(paidEnd, GraceDays).LastGraceDay);
         // Día 6: ya está en el gratuito.
-        Assert.Equal(PlanTier.Free, subscription.StatusAt(Mx(2027, 1, 24, 15), GraceDays).Tier);
+        Assert.Equal(PlanTier.Expired, subscription.StatusAt(Mx(2027, 1, 24, 15), GraceDays).Tier);
     }
 
     [Fact]
     public void Sin_dias_de_gracia_baja_al_gratuito_en_cuanto_vence()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), graceDays: 0);
+        subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), graceDays: 0);
 
-        Assert.Equal(PlanTier.Free, subscription.StatusAt(Mx(2027, 1, 19, 15), graceDays: 0).Tier);
+        Assert.Equal(PlanTier.Expired, subscription.StatusAt(Mx(2027, 1, 19, 15), graceDays: 0).Tier);
     }
 
     [Theory]
@@ -133,11 +133,11 @@ public class PlanStatusTests
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
         var now = Mx(2027, 2, 1, 10); // ya en el gratuito
-        subscription.AddDaysPeriod(kind, 10, now, GraceDays);
+        subscription.AddDaysPeriod(kind, SubscriptionPlan.Pro, 10, now, GraceDays);
 
         Assert.Equal(PlanTier.Pro, subscription.StatusAt(Mx(2027, 2, 11, 9, 59), GraceDays).Tier);
         var ended = subscription.StatusAt(Mx(2027, 2, 11, 10), GraceDays);
-        Assert.Equal(PlanTier.Free, ended.Tier);
+        Assert.Equal(PlanTier.Expired, ended.Tier);
         Assert.Null(ended.GraceEndsAt);
     }
 
@@ -145,11 +145,11 @@ public class PlanStatusTests
     public void Un_premio_despues_de_un_pago_quita_la_gracia_de_ese_pago()
     {
         var subscription = Subscription.StartTrial(1, Activated, trialDays: 30);
-        subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
-        subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2027, 1, 5, 10), GraceDays);
+        subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 12, 1, 10), GraceDays);
+        subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2027, 1, 5, 10), GraceDays);
 
         // El premio empieza al terminar el mes pagado (19/01) y termina el 29/01; después no hay gracia.
-        Assert.Equal(PlanTier.Free, subscription.StatusAt(Mx(2027, 1, 29, 15), GraceDays).Tier);
+        Assert.Equal(PlanTier.Expired, subscription.StatusAt(Mx(2027, 1, 29, 15), GraceDays).Tier);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class PlanStatusTests
 
         Assert.Equal(new DateTimeOffset(2026, 12, 20, 6, 0, 0, TimeSpan.Zero), status.ProUntil);
         Assert.Equal(PlanTier.Trial, status.Tier);
-        Assert.Equal(new DateOnly(2026, 12, 19), status.LastProDay); // no el 20: a esa medianoche ya terminó
+        Assert.Equal(new DateOnly(2026, 12, 19), status.LastActiveDay); // no el 20: a esa medianoche ya terminó
         Assert.Equal(0, status.DaysLeft(now));
     }
 

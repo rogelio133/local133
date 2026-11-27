@@ -73,11 +73,10 @@ enum ChargeMethod    { DynamicQr, StaticQr, PushNotification }
 enum SaleSource      { Cart, DirectAmount, OpenAmount }      // OpenAmount = QR fijo
 enum SaleStatus      { Pending, Paid, Expired, Cancelled }
 enum SuspensionReason{ Admin, BankAccountError }             // la falta de pago ya no suspende (2026-11-18)
-enum PlanTier        { Onboarding, Trial, Pro, Grace, Free } // calculado, no se guarda
-                                                             // 5.12: { Onboarding, Trial, Basic, Pro, Grace, Expired }
+enum PlanTier        { Onboarding, Trial, Basic, Pro, Grace, Expired } // calculado, no se guarda (5.12; antes Free)
 enum SubscriptionPlan         { Basic, Pro }                 // 5.12, en periodos y cargos
 enum SubscriptionPackage      { OneMonth, ThreeMonths, SixMonths, Annual }
-enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant } // 5.12: + Conversion, Transition
+enum SubscriptionPeriodKind   { Trial, Paid, ReferralReward, AdminGrant, Conversion, Transition } // los dos últimos desde la 5.12
 enum SubscriptionChargeStatus { Pending, Processing, Paid, Partial, Failed }
 ```
 
@@ -237,26 +236,28 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - conversión de Básico a Pro al subir de plan;
     - migración con la transición de los vendedores existentes.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
-13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.13 a la 5.18; las columnas y banderas del gratuito se quedan hasta la 5.14)* — [bitácora](log_plan/fase-5.12-planes-y-vigencia-v2.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
+13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea.
+
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 y la 5.14 a la 5.18)* — [bitácora](log_plan/fase-5.13-prueba-al-primer-cobro.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
 14. **Acceso por plan y vencido**:
     - el vencido no genera cobros (se valida en el servidor) y ve el banner y la tarjeta para elegir plan;
     - Básico no tiene carrito, catálogo editable, Excel ni catálogo en línea;
     - se retira todo lo del gratuito (límite mensual, historial de 30 días y recibo limitado).
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#514-acceso-por-plan-y-vencido)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12, la 5.13 y la 5.15 a la 5.18)* — [bitácora](log_plan/fase-5.14-acceso-por-plan-y-vencido.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#514-acceso-por-plan-y-vencido)
 15. **Checkout por pasos**:
     - plan, duración y resumen del pedido (total, IVA y casilla de términos), sin llamar a Pey hasta «Pagar»;
     - confirmación con número de pedido, comprobante imprimible y «Tus pedidos» en «Mi plan»;
     - abono por plan, con conversión y encadenado.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#515-checkout-por-pasos)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.14 y la 5.16 a la 5.18; ajuste del 2026-11-27: checkout simplificado, solo 1 mes y Anual, plan y duración en una página y botones «Renovar mi plan …» / «Adquirir más días de …»)* — [bitácora](log_plan/fase-5.15-checkout-por-pasos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#515-checkout-por-pasos)
 16. **Recordatorios, referidos y avisos**:
     - etapas de vencido y seguimiento del día 7;
     - premio con el plan de quien invita y descuento por plan;
     - resumen mensual por plan y anuncio del cambio.
 
-    — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.15, la 5.17 y la 5.18)* — [bitácora](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
 17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
 18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
 
@@ -287,6 +288,8 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
+- [5.13](log_plan/fase-5.13-prueba-al-primer-cobro.md): el primer cobro real de $0.01 empieza la prueba de 15 días de Pro (punto 1 de la verificación de extremo a extremo de los planes Básico y Pro).
+- [5.15](log_plan/fase-5.15-checkout-por-pasos.md): pagar Básico durante la prueba y subir a Pro con links reales ⇒ webhook ⇒ conversión de los días; «Regresar» de Pey vuelve al resumen del pedido (puntos 2 y 3 de la verificación de extremo a extremo).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
 **Confirmar con soporte de Pey** (ver también §6):
@@ -323,6 +326,8 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
   - cambiar desde el admin un parámetro que aparece en los Términos exige publicar una versión nueva: la pantalla de la 6.2 lo advierte, pero no lo impide;
   - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
+- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release); la portada y los Términos todavía mencionan los paquetes de 3 y 6 meses (5.18). Los recordatorios con «Pro» se corrigieron en la 5.16.
+- [5.16](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md): el anuncio del cambio de planes sale a las 9:00 del día siguiente a la publicación, como correo real a todos los vendedores existentes (publicar en el horario acordado). `/app/avisos` y la campana siguen pendientes (5.4).
 - [6.2](log_plan/fase-6.2-plan-y-parametros.md): anular un premio y «Dar premios pendientes» en el navegador (la base de desarrollo no tiene premios; los cubren las pruebas de integración).
 - [Portada nueva](log_plan/portada-nueva.md):
   - «Quedan N lugares» de fundador está oculto: falta de dónde saca el dato la portada, que no tiene base;

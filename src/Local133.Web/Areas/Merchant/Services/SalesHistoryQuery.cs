@@ -14,11 +14,9 @@ namespace Local133.Web.Areas.Merchant.Services;
 public sealed record SalesHistoryFilters(
     SaleStatusFilter Status = SaleStatusFilter.All, DateOnly? From = null, DateOnly? To = null, string? Query = null);
 
-/// <summary>Ventas que dejan ver los filtros, con los filtros ya ajustados al plan.</summary>
-/// <param name="All">Todas las ventas del vendedor, sin filtros ni recorte del plan.</param>
-/// <param name="HistoryStart">Desde cuándo ve el historial el gratuito; <c>null</c> = completo (Pro).</param>
-public sealed record FilteredSales(
-    IQueryable<Sale> Sales, IQueryable<Sale> All, SalesHistoryFilters Filters, DateTimeOffset? HistoryStart);
+/// <summary>Ventas que dejan ver los filtros, con los filtros ya normalizados.</summary>
+/// <param name="All">Todas las ventas del vendedor, sin filtros.</param>
+public sealed record FilteredSales(IQueryable<Sale> Sales, IQueryable<Sale> All, SalesHistoryFilters Filters);
 
 /// <summary>
 /// Historial de ventas del vendedor (/app/ventas): de la más reciente a la más antigua, filtrado por estatus efectivo,
@@ -31,7 +29,7 @@ public static class SalesHistoryQuery
         AppDbContext db, Domain.Merchants.Merchant merchant, MerchantPlan plan, SalesHistoryFilters filters, int? page,
         DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var (sales, all, applied, historyStart) = Filter(db, merchant.Id, plan, filters, now);
+        var (sales, all, applied) = Filter(db, merchant.Id, filters, now);
 
         var pageInfo = PageInfo.For(page, SalesHistoryViewModel.PageSize, await sales.CountAsync(cancellationToken));
         var rows = await sales
@@ -67,35 +65,25 @@ public static class SalesHistoryQuery
             Query = applied.Query,
             Today = today,
             HasAnySales = pageInfo.TotalCount > 0 || await all.AnyAsync(cancellationToken),
-            HistoryDays = historyStart is null ? null : plan.FreeHistoryDays,
-            HiddenOlderCount = historyStart is { } hiddenBefore
-                ? await all.CountAsync(s => s.CreatedAt < hiddenBefore, cancellationToken)
-                : 0,
             CanExport = plan.Entitlements.CanExportHistory,
             HasCashCut = plan.Entitlements.HasDailyCashCut,
         };
     }
 
-    /// <summary>
-    /// Aplica los filtros. En el gratuito (5.5) solo cuentan los últimos días y el estatus: el rango de fechas y la
-    /// búsqueda son de Pro y se descartan aquí, en el servidor.
-    /// </summary>
-    public static FilteredSales Filter(
-        AppDbContext db, int merchantId, MerchantPlan plan, SalesHistoryFilters filters, DateTimeOffset now)
+    /// <summary>Aplica los filtros. Todos los planes ven el historial completo, con fechas y búsqueda (5.14).</summary>
+    public static FilteredSales Filter(AppDbContext db, int merchantId, SalesHistoryFilters filters, DateTimeOffset now)
     {
-        var historyStart = plan.HistoryStartUtc(now);
-        var (from, to) = historyStart is null ? (filters.From, filters.To) : (null, null);
+        var (from, to) = (filters.From, filters.To);
         if (from is { } f && to is { } t && t < f)
         {
             (from, to) = (to, from);
         }
 
-        var query = historyStart is null ? SaleSearch.Normalize(filters.Query) : null;
+        var query = SaleSearch.Normalize(filters.Query);
 
         // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
         var all = db.Sales.AsNoTracking().Where(s => s.MerchantId == merchantId);
-        var visible = historyStart is { } cutoff ? all.Where(s => s.CreatedAt >= cutoff) : all;
-        var sales = WithStatus(visible, filters.Status, now);
+        var sales = WithStatus(all, filters.Status, now);
         if (from is { } start)
         {
             var startUtc = MexicoTime.DayRange(start).StartUtc;
@@ -113,7 +101,7 @@ public static class SalesHistoryQuery
             sales = SaleSearch.Apply(sales, query);
         }
 
-        return new FilteredSales(sales, all, new SalesHistoryFilters(filters.Status, from, to, query), historyStart);
+        return new FilteredSales(sales, all, new SalesHistoryFilters(filters.Status, from, to, query));
     }
 
     /// <summary>Estatus efectivo con columnas sueltas (proyecciones): una pendiente con el QR vencido es vencida.</summary>
@@ -136,7 +124,7 @@ public static class SalesHistoryQuery
 }
 
 /// <summary>
-/// Búsqueda del historial (5.9, Pro): por folio o por el concepto que escribió el vendedor, sin distinguir mayúsculas
+/// Búsqueda del historial (5.9; todos los planes desde la 5.14): por folio o por el concepto que escribió el vendedor, sin distinguir mayúsculas
 /// ni acentos. En las ventas anteriores al 2026-11-26, que guardan «Tacos Juan · 2 tacos», no busca en el nombre del
 /// negocio: si no, «tacos» encontraría todas. Las ventas nuevas guardan solo el concepto y se busca en todo él.
 /// </summary>

@@ -830,3 +830,95 @@ button.more-card:focus-visible .more-card-art {
   --more-card-color: #{$gray-600};
   color: var(--bs-secondary-color);
 }
+
+// Barra de pasos del checkout (5.15, parcial _CheckoutSteps): Plan ─ Resumen ─ Pago ─ Listo. Cada paso es un
+// círculo con su número (o una palomita si ya se hizo) unido al siguiente por una línea. En pantallas chicas se
+// muestra solo «Paso 2 de 4 · Resumen».
+.checkout-steps-list {
+  gap: .5rem;
+}
+
+// Entre sm y lg no caben los cinco nombres: solo se ve el del paso actual (los demás quedan para lectores de pantalla).
+@include media-breakpoint-down(lg) {
+  .checkout-step:not(.is-current) .checkout-step-name {
+    @include visually-hidden();
+  }
+}
+
+.checkout-step {
+  display: flex;
+  flex: 1 1 auto; // mide su contenido; lo que sobra es para la línea
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  font-size: $font-size-sm;
+  color: var(--bs-secondary-color);
+
+  // Línea hacia el siguiente paso.
+  &:not(:last-child)::after {
+    flex: 1 1 auto;
+    min-width: 1rem;
+    height: 2px;
+    content: "";
+    background-color: var(--bs-border-color);
+  }
+
+  &.is-done:not(:last-child)::after {
+    background-color: $primary;
+  }
+
+  &:last-child {
+    flex: 0 0 auto;
+  }
+
+  &.is-current {
+    font-weight: $font-weight-bold;
+    color: var(--bs-body-color);
+  }
+}
+
+.checkout-step-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .375rem;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.checkout-step-link:hover,
+a.checkout-step-link:focus-visible {
+  color: $primary;
+  text-decoration: underline;
+}
+
+.checkout-step-number {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  border: 2px solid var(--bs-border-color);
+  border-radius: 50%;
+
+  .is-done & {
+    color: $white;
+    background-color: $primary;
+    border-color: $primary;
+  }
+
+  .is-current & {
+    color: $primary;
+    border-color: $primary;
+  }
+}
+
+// Sección de un plan en el paso 1 del checkout (#basico, #pro): los botones de «Mi plan» llegan aquí por el ancla, y
+// la barra superior (sticky) no debe tapar el nombre del plan.
+.checkout-plan-section {
+  scroll-margin-top: 4.5rem;
+}

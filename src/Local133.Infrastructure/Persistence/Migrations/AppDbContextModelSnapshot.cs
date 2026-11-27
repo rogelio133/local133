@@ -553,39 +553,46 @@ namespace Local133.Infrastructure.Persistence.Migrations
                     b.Property<int>("Id")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("AnnualPrice")
+                    b.Property<decimal>("BasicAnnualPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("FounderAnnualPrice")
+                    b.Property<decimal>("BasicFounderAnnualPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("FounderMonthlyPrice")
+                    b.Property<decimal>("BasicFounderMonthlyPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BasicMonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("FairUseMonthlyPaid")
+                        .HasColumnType("int");
 
                     b.Property<int>("FounderSlots")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreeHistoryDays")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreeMonthlyGeneratedLimit")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FreeMonthlyPaidLimit")
                         .HasColumnType("int");
 
                     b.Property<int>("GraceDays")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("MonthlyPrice")
+                    b.Property<decimal>("ProAnnualPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("ProFairUseMonthlyPaid")
-                        .HasColumnType("int");
+                    b.Property<decimal>("ProFounderAnnualPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ProFounderMonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ProMonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("ReferenceTerminalFeeRate")
                         .HasPrecision(5, 4)
@@ -617,9 +624,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_SystemSettings_GraceDays", "[GraceDays] >= 0");
 
-                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FreeMonthlyPaidLimit] >= 0 AND [FreeMonthlyGeneratedLimit] >= 0 AND [FreeHistoryDays] >= 0 AND [ProFairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
+                            t.HasCheckConstraint("CK_SystemSettings_Limits", "[FounderSlots] >= 0 AND [FairUseMonthlyPaid] >= 0 AND [ReferralRewardDays] >= 0 AND [ReferralRewardsPerYear] >= 0");
 
-                            t.HasCheckConstraint("CK_SystemSettings_Prices", "[MonthlyPrice] > 0 AND [AnnualPrice] > 0 AND [FounderMonthlyPrice] > 0 AND [FounderAnnualPrice] > 0");
+                            t.HasCheckConstraint("CK_SystemSettings_Prices", "[BasicMonthlyPrice] > 0 AND [BasicAnnualPrice] > 0 AND [BasicFounderMonthlyPrice] > 0 AND [BasicFounderAnnualPrice] > 0 AND [ProMonthlyPrice] > 0 AND [ProAnnualPrice] > 0 AND [ProFounderMonthlyPrice] > 0 AND [ProFounderAnnualPrice] > 0");
 
                             t.HasCheckConstraint("CK_SystemSettings_Rates", "[ReferralWelcomeDiscountRate] >= 0 AND [ReferralWelcomeDiscountRate] < 1 AND [ReferenceTerminalFeeRate] >= 0 AND [ReferenceTerminalFeeRate] < 1");
 
@@ -634,22 +641,23 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 1,
-                            AnnualPrice = 1990m,
-                            FounderAnnualPrice = 1490m,
-                            FounderMonthlyPrice = 149m,
+                            BasicAnnualPrice = 990m,
+                            BasicFounderAnnualPrice = 690m,
+                            BasicFounderMonthlyPrice = 69m,
+                            BasicMonthlyPrice = 99m,
+                            FairUseMonthlyPaid = 5000,
                             FounderSlots = 100,
-                            FreeHistoryDays = 30,
-                            FreeMonthlyGeneratedLimit = 300,
-                            FreeMonthlyPaidLimit = 100,
                             GraceDays = 5,
-                            MonthlyPrice = 199m,
-                            ProFairUseMonthlyPaid = 5000,
+                            ProAnnualPrice = 1990m,
+                            ProFounderAnnualPrice = 1490m,
+                            ProFounderMonthlyPrice = 149m,
+                            ProMonthlyPrice = 199m,
                             ReferenceTerminalFeeRate = 0.035m,
                             ReferralRewardDays = 10,
                             ReferralRewardsPerYear = 12,
                             ReferralWelcomeDiscountRate = 0.30m,
                             SaleQrExpirationSeconds = 600,
-                            TrialDays = 30,
+                            TrialDays = 15,
                             VatRate = 0.16m
                         });
                 });
@@ -724,6 +732,14 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("LastPeriodKind")
                         .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("LastPlan")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("LockedAnnualPlan")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
@@ -822,10 +838,22 @@ namespace Local133.Infrastructure.Persistence.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(64)");
 
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTimeOffset?>("TermsAcceptedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("TermsVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Url")
                         .HasMaxLength(2048)
@@ -933,6 +961,11 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("MerchantId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<int?>("ReferralId")
                         .HasColumnType("int");

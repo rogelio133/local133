@@ -1,6 +1,7 @@
-// Confirmación del pago de Pro (/app/plan/pago/{id}), al volver de la página de Pey. Consulta el estado del cargo
-// cada 3 s (el servidor le pregunta a Pey con freno) hasta que queda pagado, incompleto o fallido. El navegador no
-// abona nada: solo refleja lo que ya registró el servidor (webhook o consulta a Pey).
+// Confirmación del pedido (/app/plan/pago/{id}, paso 4 del checkout), al volver de la página de Pey. Consulta el
+// estado del cargo cada 3 s (el servidor le pregunta a Pey con freno) hasta que queda pagado, incompleto o fallido. El
+// navegador no abona nada: solo refleja lo que ya registró el servidor (webhook o consulta a Pey). Con
+// data-reload-on-paid, al quedar pagado recarga la página para que el servidor pinte el pedido con su periodo.
 (function () {
     'use strict';
 
@@ -47,6 +48,10 @@
             toggle('[data-pay-again]', false);
             if (navigator.vibrate) {
                 try { navigator.vibrate(200); } catch (e) { /* sin vibración */ }
+            }
+
+            if (root.hasAttribute('data-reload-on-paid')) {
+                window.location.reload();
             }
         }
     }

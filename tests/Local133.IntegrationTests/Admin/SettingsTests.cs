@@ -48,20 +48,20 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
         {
             var admin = await AdminAsync();
             var values = await CurrentAsync();
-            values.MonthlyPrice = 249m;
+            values.ProMonthlyPrice = 249m;
             values.VatRate = 0.08m;
 
             var response = await PostFormAsync(admin, Url, Fields(values));
 
             Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
             var saved = await CurrentAsync();
-            Assert.Equal(249m, saved.MonthlyPrice);
+            Assert.Equal(249m, saved.ProMonthlyPrice);
             Assert.Equal(0.08m, saved.VatRate);
             var audit = Assert.Single(await WithDbAsync(db => db.AuditLogs.AsNoTracking().ToListAsync()));
             Assert.Equal(AuditAction.SettingsUpdated, audit.Action);
             Assert.Null(audit.MerchantId);
             Assert.Equal(AdminEmail, audit.ActorEmail);
-            Assert.Contains("MonthlyPrice 199 → 249", audit.Summary);
+            Assert.Contains("ProMonthlyPrice 199 → 249", audit.Summary);
 
             var html = await GetHtmlAsync(admin, Url);
             Assert.Contains("data-settings-terms-warning", html);
@@ -101,10 +101,10 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
     }
 
     [Theory]
-    [InlineData(nameof(SystemSettings.FounderMonthlyPrice), "250", "no puede ser mayor que el normal")]
+    [InlineData(nameof(SystemSettings.ProFounderMonthlyPrice), "250", "no puede ser mayor que el normal")]
     [InlineData(nameof(SystemSettings.SaleQrExpirationSeconds), "300", "Pey exige al menos 360")]
-    [InlineData(nameof(SystemSettings.MonthlyPrice), "199.999", "Escribe un precio")]
-    [InlineData(nameof(SystemSettings.FreeMonthlyGeneratedLimit), "50", "no puede ser menor")]
+    [InlineData(nameof(SystemSettings.ProMonthlyPrice), "199.999", "Escribe un precio")]
+    [InlineData(nameof(SystemSettings.FairUseMonthlyPaid), "0", "Escribe un número entre 1")]
     public async Task Valores_invalidos_no_se_guardan(string field, string value, string message)
     {
         var admin = await AdminAsync();
@@ -115,7 +115,7 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains(message, await response.Content.ReadAsStringAsync());
-        Assert.Equal(SystemSettings.DefaultMonthlyPrice, (await CurrentAsync()).MonthlyPrice);
+        Assert.Equal(SystemSettings.DefaultProMonthlyPrice, (await CurrentAsync()).ProMonthlyPrice);
         Assert.Empty(await WithDbAsync(db => db.AuditLogs.ToListAsync()));
     }
 
@@ -145,14 +145,14 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
         {
             var merchant = await TrialMerchantAsync(Email);
             var old = await CreateChargeAsync(merchant);
-            Assert.Equal(SystemSettings.DefaultMonthlyPrice, old.Amount);
+            Assert.Equal(SystemSettings.DefaultProMonthlyPrice, old.Amount);
             var values = await CurrentAsync();
-            values.MonthlyPrice = 249m;
+            values.ProMonthlyPrice = 249m;
 
             await PostFormAsync(await AdminAsync(), Url, Fields(values));
             var fresh = await CreateChargeAsync(merchant);
 
-            Assert.Equal(SystemSettings.DefaultMonthlyPrice, (await LoadChargeAsync(old.Id)).Amount);
+            Assert.Equal(SystemSettings.DefaultProMonthlyPrice, (await LoadChargeAsync(old.Id)).Amount);
             Assert.NotEqual(old.Id, fresh.Id);
             Assert.Equal(249m, fresh.Amount);
         });

@@ -51,16 +51,16 @@ public class MerchantPublicCatalogTests
         var merchant = NewMerchant(status);
         merchant.PublishCatalog("tacos");
 
-        Assert.Equal(expected, merchant.CanShowPublicCatalog(PlanEntitlements.Pro));
+        Assert.Equal(expected, merchant.CanShowPublicCatalog(PlanEntitlements.ForPlan(SubscriptionPlan.Pro)));
     }
 
     [Fact]
-    public void En_el_gratuito_no_se_muestra()
+    public void En_Basico_no_se_muestra()
     {
         var merchant = NewMerchant();
         merchant.PublishCatalog("tacos");
 
-        Assert.False(merchant.CanShowPublicCatalog(PlanEntitlements.Free));
+        Assert.False(merchant.CanShowPublicCatalog(PlanEntitlements.ForPlan(SubscriptionPlan.Basic)));
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class MerchantPublicCatalogTests
         merchant.PublishCatalog("tacos");
         merchant.UnpublishCatalog();
 
-        Assert.False(merchant.CanShowPublicCatalog(PlanEntitlements.Pro));
-        Assert.False(NewMerchant().CanShowPublicCatalog(PlanEntitlements.Pro));
+        Assert.False(merchant.CanShowPublicCatalog(PlanEntitlements.ForPlan(SubscriptionPlan.Pro)));
+        Assert.False(NewMerchant().CanShowPublicCatalog(PlanEntitlements.ForPlan(SubscriptionPlan.Pro)));
     }
 }

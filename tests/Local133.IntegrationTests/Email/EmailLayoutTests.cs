@@ -78,6 +78,17 @@ public class EmailLayoutTests
     }
 
     [Fact]
+    public void Correo_de_cuenta_activa_sin_prueba_dice_que_empieza_con_el_primer_cobro()
+    {
+        var conPrueba = WebUtility.HtmlDecode(MerchantEmails.BankAccountActiveBody("Ramón", "•••• 5713", Site, trialDays: 15));
+        var yaLaTuvo = WebUtility.HtmlDecode(MerchantEmails.BankAccountActiveBody("Ramón", "•••• 5713", Site));
+
+        Assert.Contains("Haz tu primer cobro: ese día empiezan tus 15 días de Pro.", conPrueba);
+        Assert.Contains("Con tu primer cobro empiezan tus 15 días de Pro.", conPrueba);
+        Assert.DoesNotContain("primer cobro: ese día", yaLaTuvo);
+    }
+
+    [Fact]
     public void Correo_de_cuenta_activa_sin_nombre_de_negocio_saluda_sin_nombre() =>
         Assert.Contains("¡Hola!", WebUtility.HtmlDecode(MerchantEmails.BankAccountActiveBody(null, "•••• 5713", Site)));
 

@@ -22,6 +22,15 @@ public enum AuditAction
 
     /// <summary>Reprocesó un webhook guardado en la bitácora (6.4).</summary>
     WebhookReprocessed,
+
+    /// <summary>La migración del cambio de planes (2026-12) le dio días de Básico de transición (actor «sistema»).</summary>
+    PlanTransition,
+
+    /// <summary>
+    /// Cambio de planes 2026-12 (global, actor «sistema»): lo inserta la migración <c>PlanChangeAnnouncement</c> al
+    /// publicarse, y su hora es el corte del anuncio a los vendedores (5.16).
+    /// </summary>
+    PlanChange,
 }
 
 /// <summary>

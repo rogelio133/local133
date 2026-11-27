@@ -12,10 +12,6 @@
         <partial name="_ChargeModeNav" model="false" />
 
         <div class="charge-mode-panel">
-            @if (Model.Usage is { } usage)
-            {
-                <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
-            }
             @if (Model.Blocked is { } blocked)
             {
                 <div data-charge-blocked>
@@ -23,6 +19,11 @@
                     <p class="text-body-secondary">@blocked.Message</p>
                     <a class="btn btn-primary btn-lg w-100" href="@Url.Content(blocked.LinkHref)">@blocked.LinkText</a>
                 </div>
+            }
+            else if (Model.Expired is { } expired)
+            {
+                @* Plan vencido (5.14): no genera cobros; el servidor también lo bloquea. *@
+                <partial name="_PlanExpired" model="expired" />
             }
             else
             {
@@ -58,10 +59,10 @@
             }
             @if (Model.MissingCatalogText is { } missingCatalog)
             {
-                @* Lo que te pierdes (5.10): en el gratuito, el catálogo que ya tiene y no puede usar para cobrar. *@
+                @* Lo que te pierdes (5.10): en Básico, el catálogo que ya tiene y no puede usar para cobrar. *@
                 <p class="small text-body-secondary text-center mt-3 mb-0" data-charge-missing-catalog>
                     <i class="bi bi-cart3 me-1" aria-hidden="true"></i> @missingCatalog
-                    <a href="@Url.Content("~" + PlanUrls.Plan)">Con Pro cobras con ellos.</a>
+                    <a href="@Url.Content("~" + PlanUrls.CheckoutFor(Local133.Domain.Subscriptions.SubscriptionPlan.Pro))">Conoce Pro</a>
                 </p>
             }
         </div>
@@ -69,7 +70,7 @@
 </div>
 
 @section Scripts {
-    @if (Model.Blocked is null)
+    @if (Model.ShowsForm)
     {
         <partial name="_ValidationScriptsPartial" />
         <script src="~/js/amount-input.js"></script>

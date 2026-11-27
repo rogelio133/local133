@@ -145,7 +145,7 @@ internal sealed class ProductCatalog(
         return new DeleteProductResult.Deleted();
     }
 
-    /// <summary>El gratuito deja el catálogo en solo lectura (dado de baja ya se revisó antes: el estatus manda).</summary>
+    /// <summary>Básico y vencido dejan el catálogo en solo lectura (dado de baja ya se revisó antes: el estatus manda).</summary>
     private async Task<bool> CanEditCatalogAsync(int merchantId, CancellationToken cancellationToken) =>
         (await plans.GetForMerchantAsync(merchantId, cancellationToken)).Entitlements.CanEditCatalog;
 

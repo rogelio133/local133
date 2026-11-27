@@ -112,17 +112,13 @@ public abstract record CreateSaleResult
     /// <summary>El vendedor no puede cobrar (no está activo o su cuenta bancaria no está activa).</summary>
     public sealed record NotAllowed : CreateSaleResult;
 
-    /// <summary>La función es de Pro y el vendedor está en el gratuito (cobro con carrito).</summary>
+    /// <summary>La función es de Pro y el plan del vendedor no la tiene (cobro con carrito en Básico).</summary>
     public sealed record PlanRequired : CreateSaleResult;
 
     /// <summary>
-    /// Gratuito: ya concretó el límite del mes. No genera cobros hasta <see cref="ResetsOn"/> o hasta
-    /// que pague Pro.
+    /// El plan venció (5.14): no genera cobros nuevos hasta que pague. Lo ya generado se abona siempre.
     /// </summary>
-    public sealed record MonthlyLimitReached(DateOnly ResetsOn) : CreateSaleResult;
-
-    /// <summary>Gratuito: llegó al tope técnico de cobros generados en el mes (aunque no se hayan pagado).</summary>
-    public sealed record GenerationLimitReached(DateOnly ResetsOn) : CreateSaleResult;
+    public sealed record PlanExpired : CreateSaleResult;
 
     /// <summary>
     /// Falla de la pasarela; <see cref="Message"/> se puede mostrar al vendedor. <see cref="SaleId"/> viene solo cuando

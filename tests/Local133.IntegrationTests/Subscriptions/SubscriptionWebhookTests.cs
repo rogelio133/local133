@@ -46,6 +46,11 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
         var email = Factory.Emails.Last(Email);
         Assert.Equal(MerchantEmails.SubscriptionPaidSubject, email.Subject);
         Assert.Contains("fundador número 1", email.Html);
+        Assert.Contains($"pedido #{charge.Id}: Pro · 1 mes", email.Html);
+        Assert.Contains("Ver comprobante", email.Html);
+        // El botón sigue siendo la primera liga del correo, ahora al comprobante.
+        var firstLink = System.Text.RegularExpressions.Regex.Match(email.Html, "href=\"([^\"]+)\"").Groups[1].Value;
+        Assert.EndsWith($"/app/plan/pedidos/{charge.Id}/comprobante", firstLink);
     }
 
     [Fact]
@@ -68,9 +73,10 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
             Assert.DoesNotContain("Prueba: te quedan", html);
         }
 
+        // Su Pro sigue sin interrupción: todavía no toca renovar.
         var plan = System.Net.WebUtility.HtmlDecode(await GetHtmlAsync(client, "/app/plan"));
-        Assert.Contains("Agrega más tiempo de Pro", plan);
-        Assert.DoesNotContain("sigue después de tu prueba", plan);
+        Assert.Contains("data-plan-action=\"extend\"", plan);
+        Assert.Contains("Adquirir más días de Pro", plan);
     }
 
     [Fact]
@@ -150,18 +156,18 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
         var client = await TrialMerchantAsync(Email);
         var trialEnd = (await LoadSubscriptionAsync(Email)).ProUntil;
         var monthly = await CreateChargeAsync(client);
-        var quarterly = await CreateChargeAsync(client, SubscriptionPackage.ThreeMonths);
+        var annual = await CreateChargeAsync(client, SubscriptionPackage.Annual);
 
         await PostWebhookAsync(LinkWebhookBody(monthly, "paid", (NewTransactionId(), monthly.Amount)));
-        await PostWebhookAsync(LinkWebhookBody(quarterly, "paid", (NewTransactionId(), quarterly.Amount)));
+        await PostWebhookAsync(LinkWebhookBody(annual, "paid", (NewTransactionId(), annual.Amount)));
 
         var periods = (await LoadSubscriptionAsync(Email)).Periods
             .Where(p => p.Kind == SubscriptionPeriodKind.Paid).OrderBy(p => p.StartsAt).ToList();
         Assert.Equal(2, periods.Count);
         Assert.Equal(trialEnd, periods[0].StartsAt);
         Assert.Equal(periods[0].EndsAt, periods[1].StartsAt);
-        Assert.Equal(MexicoTime.AddMonths(periods[0].EndsAt, 3), periods[1].EndsAt);
-        Assert.Contains("este pago extiende tu plan", Factory.Emails.Last(Email).Html);
+        Assert.Equal(MexicoTime.AddMonths(periods[0].EndsAt, 12), periods[1].EndsAt);
+        Assert.Contains("Empieza cuando termina lo que ya tenías", Factory.Emails.Last(Email).Html);
     }
 
     [Fact]
@@ -184,7 +190,7 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
     public async Task En_el_gratuito_empieza_al_pagar()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedExpiredPlanAsync(Email);
         var charge = await CreateChargeAsync(client);
         var before = DateTimeOffset.UtcNow.AddSeconds(-5);
 
@@ -201,7 +207,7 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
         var annual = await CreateChargeAsync(client, SubscriptionPackage.Annual);
         await PostWebhookAsync(LinkWebhookBody(annual, "paid", (NewTransactionId(), annual.Amount)));
 
-        await WithSettingsAsync(s => s.FounderAnnualPrice = 1690m, async () =>
+        await WithSettingsAsync(s => s.ProFounderAnnualPrice = 1690m, async () =>
         {
             var renewal = await CreateChargeAsync(client, SubscriptionPackage.Annual);
 
@@ -266,5 +272,107 @@ public class SubscriptionWebhookTests(Local133WebFactory factory) : Subscription
         Assert.Equal(SubscriptionChargeStatus.Pending, (await LoadChargeAsync(charge.Id)).Status);
         Assert.Equal(WebhookEventStatus.Failed,
             (await WithDbAsync(db => db.WebhookEvents.AsNoTracking().SingleAsync())).Status);
+    }
+
+    // --- Abono por plan (5.15) ------------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Pro_pagado_con_Basico_por_delante_convierte_los_dias_y_el_anual_va_despues()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        await SeedBasicPlanAsync(Email); // Básico pagado hasta dentro de 25 días
+        var basicEnd = (await LoadSubscriptionAsync(Email)).ProUntil;
+        var charge = await CreateChargeAsync(client, SubscriptionPackage.Annual, SubscriptionPlan.Pro);
+
+        var status = await WebhookStatusAsync(await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount))));
+
+        Assert.Equal("Processed", status);
+        Assert.True(charge.IsFounderPrice);
+        var subscription = await LoadSubscriptionAsync(Email);
+        var basic = Assert.Single(subscription.Periods, p => p.Plan == SubscriptionPlan.Basic);
+        var conversion = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Conversion);
+        var annual = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Paid && p.Plan == SubscriptionPlan.Pro);
+
+        // Lo usado de Básico se queda; lo que quedaba (≈ 25 días) se vuelve Pro a 69/149 (fundador).
+        Assert.Equal(conversion.StartsAt, basic.EndsAt);
+        Assert.Equal(SubscriptionPlan.Pro, conversion.Plan);
+        var remaining = basicEnd - conversion.StartsAt;
+        var expected = TimeSpan.FromTicks((long)(remaining.Ticks * (69m / 149m)));
+        Assert.InRange((conversion.EndsAt - conversion.StartsAt - expected).Duration(), TimeSpan.Zero, TimeSpan.FromSeconds(2));
+        Assert.Equal(conversion.EndsAt, annual.StartsAt);
+        Assert.Equal(MexicoTime.AddMonths(annual.StartsAt, 12), annual.EndsAt);
+        Assert.Equal(charge.Id, annual.SubscriptionChargeId);
+        Assert.Equal(SubscriptionPlan.Pro, subscription.LastPlan);
+        Assert.Equal(SubscriptionPlan.Pro, subscription.LockedAnnualPlan);
+        Assert.Equal(1490m, subscription.LockedAnnualPrice);
+        Assert.Equal(PlanTier.Pro, subscription.StatusAt(DateTimeOffset.UtcNow, 5).Tier);
+
+        var email = Factory.Emails.Last(Email);
+        Assert.Contains("Subiste a Pro", email.Html);
+        Assert.Contains("de Básico que quedaban se volvieron 11 días de Pro", email.Html); // 25 × 69/149 = 11.58
+    }
+
+    [Fact]
+    public async Task Basico_pagado_durante_Pro_se_encadena_al_final()
+    {
+        var client = await ActiveMerchantAsync(Email);
+        var now = DateTimeOffset.UtcNow;
+        await SeedPlanAsync(Email,
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-40), now.AddDays(-25)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Pro, now.AddDays(-20), now.AddDays(10)));
+        var proEnd = (await LoadSubscriptionAsync(Email)).ProUntil;
+        var charge = await CreateChargeAsync(client, SubscriptionPackage.OneMonth, SubscriptionPlan.Basic);
+
+        await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount)));
+
+        Assert.Equal(69m, charge.Amount); // Básico de fundador
+        var subscription = await LoadSubscriptionAsync(Email);
+        var basic = Assert.Single(subscription.Periods, p => p.Plan == SubscriptionPlan.Basic);
+        Assert.Equal(proEnd, basic.StartsAt);
+        Assert.Equal(SubscriptionPeriodKind.Paid, basic.Kind);
+        Assert.DoesNotContain(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Conversion);
+        var status = subscription.StatusAt(DateTimeOffset.UtcNow, 5);
+        Assert.Equal(PlanTier.Pro, status.Tier);
+        Assert.Equal(SubscriptionPlan.Basic, status.NextPlan);
+        Assert.Equal(SubscriptionPlan.Basic, subscription.LastPlan);
+        Assert.Contains("Empieza cuando termina lo que ya tenías", Factory.Emails.Last(Email).Html);
+    }
+
+    [Fact]
+    public async Task Basico_pagado_durante_la_prueba_sigue_en_la_prueba()
+    {
+        var client = await TrialMerchantAsync(Email);
+        var trialEnd = (await LoadSubscriptionAsync(Email)).ProUntil;
+        var charge = await CreateChargeAsync(client, SubscriptionPackage.Annual, SubscriptionPlan.Basic);
+
+        await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount)));
+
+        var subscription = await LoadSubscriptionAsync(Email);
+        var basic = Assert.Single(subscription.Periods, p => p.Plan == SubscriptionPlan.Basic);
+        Assert.Equal(trialEnd, basic.StartsAt);
+        Assert.Equal(MexicoTime.AddMonths(trialEnd, 12), basic.EndsAt);
+        var status = subscription.StatusAt(DateTimeOffset.UtcNow, 5);
+        Assert.Equal(PlanTier.Trial, status.Tier);
+        Assert.Equal(SubscriptionPlan.Basic, status.NextPlan);
+    }
+
+    [Fact]
+    public async Task Un_cargo_de_antes_de_la_migracion_sin_version_de_Terminos_se_abona_igual()
+    {
+        var client = await TrialMerchantAsync(Email);
+        var charge = await CreateChargeAsync(client);
+        await UpdateChargeAsync(charge.Id, c =>
+        {
+            c.TermsVersion = null;
+            c.TermsAcceptedAt = null;
+        });
+
+        var status = await WebhookStatusAsync(await PostWebhookAsync(LinkWebhookBody(charge, "paid", (NewTransactionId(), charge.Amount))));
+
+        Assert.Equal("Processed", status);
+        var paid = await LoadChargeAsync(charge.Id);
+        Assert.Equal(SubscriptionChargeStatus.Paid, paid.Status);
+        Assert.Equal(SubscriptionPlan.Pro, paid.Plan);
+        Assert.Single((await LoadSubscriptionAsync(Email)).Periods, p => p.Kind == SubscriptionPeriodKind.Paid);
     }
 }

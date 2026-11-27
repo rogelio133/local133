@@ -4,6 +4,7 @@ using Local133.Domain.Merchants;
 using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.IntegrationTests.Infrastructure;
+using Local133.Web.Areas.Merchant.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -95,12 +96,13 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
     // ---- Plan (5.3) ----
 
     [Fact]
-    public async Task En_el_onboarding_avisa_que_la_prueba_empieza_al_activarse_y_no_muestra_plan()
+    public async Task En_el_onboarding_avisa_que_la_prueba_empieza_con_el_primer_cobro_y_no_muestra_plan()
     {
         var html = await HomeAsync(Email, MerchantStatus.BankAccountInReview);
 
         Assert.Contains("data-trial-notice", html);
-        Assert.Contains("Al activarse empiezan tus 30 días de prueba de Pro", html);
+        Assert.Contains("Haz tu primer cobro: ese día empiezan tus 15 días de Pro.", html);
+        Assert.DoesNotContain("data-trial-first-charge", html);
         Assert.DoesNotContain("data-plan-tier", html);
     }
 
@@ -114,6 +116,7 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         Assert.Contains("Prueba: te quedan 23 días", html);
         Assert.Contains("Tienes todo Pro hasta el", html);
         Assert.DoesNotContain("data-trial-notice", html);
+        Assert.DoesNotContain("data-trial-first-charge", html);
     }
 
     [Fact]
@@ -143,13 +146,61 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
     }
 
     [Fact]
-    public async Task Al_terminar_la_prueba_muestra_el_plan_gratuito()
+    public async Task Al_terminar_la_prueba_muestra_que_el_plan_vencio()
     {
         var now = DateTimeOffset.UtcNow;
         var html = await HomeWithPlanAsync(MerchantStatus.Active, (SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)));
 
-        Assert.Contains("data-plan-tier=\"Free\"", html);
-        Assert.Contains("Plan gratuito", html);
+        // 5.14: la tarjeta «Tu plan venció» va en lugar de «Ya puedes cobrar» y no se repite la del plan.
+        Assert.Contains("data-home-plan-expired", html);
+        Assert.DoesNotContain("data-plan-tier", html);
+        Assert.Contains("Tu plan venció el", html);
+        Assert.Contains("Elige un plan para seguir cobrando.", html);
+        Assert.Contains("border-danger", html);
+    }
+
+    [Fact]
+    public async Task Con_Basico_pagado_vigente_muestra_Basico()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var html = await HomeWithPlansAsync(
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-40), now.AddDays(-10)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, now.AddDays(-10), now.AddDays(20)));
+
+        Assert.Contains("data-plan-tier=\"Basic\"", html);
+        Assert.Contains("Plan Básico", html);
+        Assert.Contains("Vigente hasta el", html);
+    }
+
+    [Fact]
+    public async Task Con_Basico_despues_de_Pro_muestra_los_dos_tramos()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var proEnd = MexicoTime.AddDays(now, 10);
+        var basicEnd = MexicoTime.AddDays(now, 40);
+        var html = await HomeWithPlansAsync(
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-40), now.AddDays(-20)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Pro, now.AddDays(-20), proEnd),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, proEnd, basicEnd));
+
+        var today = MexicoTime.Today(now);
+        Assert.Contains("data-plan-tier=\"Pro\"", html);
+        Assert.Contains(
+            $"Pro hasta el {SaleFormats.Date(MexicoTime.DateOf(proEnd), today)}, después Básico hasta el {SaleFormats.Date(MexicoTime.DateOf(basicEnd), today)}.",
+            html);
+    }
+
+    [Fact]
+    public async Task En_la_gracia_de_Basico_dice_que_no_pierde_Basico()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var html = await HomeWithPlansAsync(
+            (SubscriptionPeriodKind.Trial, SubscriptionPlan.Pro, now.AddDays(-60), now.AddDays(-30)),
+            (SubscriptionPeriodKind.Paid, SubscriptionPlan.Basic, now.AddDays(-30), now.AddDays(-2)));
+
+        Assert.Contains("data-plan-tier=\"Grace\"", html);
+        Assert.Contains("para pagar sin perder Básico", html);
+        Assert.Contains("Tu plan Básico venció el", html); // banner de gracia
     }
 
     [Fact]
@@ -174,6 +225,15 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
 
         // Activo sin periodos propios (datos de prueba): no hay tarjeta de plan, ni la del otro vendedor.
         Assert.DoesNotContain("data-plan-tier", html);
+    }
+
+    private async Task<string> HomeWithPlansAsync(
+        params (SubscriptionPeriodKind Kind, SubscriptionPlan Plan, DateTimeOffset Start, DateTimeOffset End)[] periods)
+    {
+        await CreateMerchantAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.Status = MerchantStatus.Active);
+        await SeedPlanAsync(Email, periods);
+        return await GetHomeAsync(Email);
     }
 
     private async Task<string> HomeWithPlanAsync(

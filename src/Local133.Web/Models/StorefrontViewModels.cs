@@ -53,7 +53,7 @@ public sealed record StorefrontViewModel(
 /// <summary>Producto del catálogo público.</summary>
 public sealed record StorefrontProduct(string Name, string? Description, string PriceText, string? ThumbnailUrl);
 
-/// <summary>Catálogo que no se puede ver (sin publicar, gratuito, suspendido, de baja o inexistente).</summary>
+/// <summary>Catálogo que no se puede ver (sin publicar, sin Pro, suspendido, de baja o inexistente).</summary>
 public sealed record StorefrontUnavailableViewModel(string? BusinessName);
 
 /// <summary>Rutas públicas del catálogo (<c>StorefrontController</c>).</summary>

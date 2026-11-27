@@ -8,21 +8,21 @@
         <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
         <h1 class="h4 mb-1">Invita y gana</h1>
         <p class="text-body-secondary mb-3">
-            Por cada vendedor que pague Pro con tu código ganas <strong>@ReferralRow.DaysText(Model.RewardDays) de Pro</strong>.
+            Por cada vendedor que pague un plan con tu código ganas <strong>@ReferralRow.DaysText(Model.RewardDays) de tu plan</strong>, Básico o Pro.
             Quien se registra con tu código tiene @Model.DiscountText de descuento en su primer pago.
         </p>
 
         @if (Model.IsDisabled)
         {
             <div class="alert alert-secondary" role="status" data-invite-disabled>
-                Tu cuenta está dada de baja: tus invitados conservan su descuento, pero ya no ganas días de Pro.
+                Tu cuenta está dada de baja: tus invitados conservan su descuento, pero ya no ganas días de premio.
             </div>
         }
         else if (Model.IsOnboarding)
         {
             <div class="alert alert-info small" role="status" data-invite-onboarding>
-                Ya puedes invitar. Si alguien paga antes de que se active tu cuenta bancaria, tus días de Pro se suman al
-                terminar tu prueba.
+                Ya puedes invitar. Si alguien paga antes de tu primer cobro, tus días de Pro se suman al terminar tu
+                prueba, que empieza con ese cobro.
             </div>
         }
 
@@ -59,7 +59,7 @@
             <div class="col">
                 <div class="card card-body h-100 text-center" data-invite-days>
                     <span class="fs-3 fw-bold">@Model.DaysEarned</span>
-                    <span class="small text-body-secondary">días de Pro ganados</span>
+                    <span class="small text-body-secondary">días ganados</span>
                 </div>
             </div>
             <div class="col">
@@ -99,8 +99,8 @@
             <div class="card-header fw-semibold">Cómo funciona</div>
             <ol class="list-group list-group-flush list-group-numbered small">
                 <li class="list-group-item">Comparte tu liga o tu código con otros vendedores.</li>
-                <li class="list-group-item">Se registran con tu código y tienen @Model.DiscountText de descuento en su primer pago de Pro.</li>
-                <li class="list-group-item">Cuando pagan por primera vez, ganas @ReferralRow.DaysText(Model.RewardDays) de Pro, también si estás en el plan gratuito.</li>
+                <li class="list-group-item">Se registran con tu código y tienen @Model.DiscountText de descuento en su primer pago, del plan que elijan.</li>
+                <li class="list-group-item">Cuando pagan por primera vez, ganas @ReferralRow.DaysText(Model.RewardDays) de tu plan. Si tu plan venció, vuelves a cobrar con esos días.</li>
                 <li class="list-group-item">Puedes ganar hasta @Model.RewardsPerYear premios en 12 meses. Cada vendedor solo puede registrarse con un código.</li>
             </ol>
         </div>

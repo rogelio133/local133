@@ -27,7 +27,7 @@ public abstract record PublishCatalogResult
     /// <summary>Otro vendedor ya tiene ese slug.</summary>
     public sealed record SlugTaken(string Slug) : PublishCatalogResult;
 
-    /// <summary>El plan no permite publicar (gratuito).</summary>
+    /// <summary>El plan no permite publicar (onboarding, Básico o vencido).</summary>
     public sealed record PlanRequired : PublishCatalogResult;
 
     /// <summary>Falta el nombre del negocio, que es el título del catálogo.</summary>
@@ -59,6 +59,9 @@ public static class PublicCatalogMessages
     public const string SlugTaken = "Esa liga ya la usa otro negocio. Prueba con otra.";
 
     public const string PlanRequired = "Publicar tu catálogo es parte de Pro.";
+
+    /// <summary>En el onboarding (5.13): todavía no empieza su prueba.</summary>
+    public const string TrialRequired = "Se activa con tu prueba, que empieza con tu primer cobro.";
 
     public const string BusinessNameRequired = "Primero escribe el nombre de tu negocio en «Mi información».";
 

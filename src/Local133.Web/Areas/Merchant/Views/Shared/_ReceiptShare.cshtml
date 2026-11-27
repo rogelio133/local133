@@ -6,29 +6,6 @@
 @{
     var customerPath = Model.CustomerWhatsAppPath is null ? null : Url.Content("~" + Model.CustomerWhatsAppPath);
 }
-@if (!Model.CanShare)
-{
-    @* Plan gratuito (5.5): sin WhatsApp ni «Compartir»; la liga se copia (botón con JS o desde el campo). *@
-    <div class="d-grid gap-2" data-receipt-share data-receipt-share-limited data-receipt-url="@Model.Url" data-receipt-message="@Model.Message">
-        <label class="visually-hidden" for="receipt-url-@(Model.Path[(Model.Path.LastIndexOf('/') + 1)..])">Liga del recibo</label>
-        <input class="form-control form-control-sm text-body-secondary" type="text" readonly value="@Model.Url"
-               id="receipt-url-@(Model.Path[(Model.Path.LastIndexOf('/') + 1)..])" data-receipt-url-field />
-        <div class="d-flex flex-wrap gap-2 justify-content-center">
-            <button type="button" class="btn btn-outline-primary btn-sm d-none" data-receipt-copy>
-                <i class="bi bi-link-45deg me-1" aria-hidden="true"></i> Copiar liga
-            </button>
-            <a class="btn btn-outline-primary btn-sm" href="@Url.Content("~" + Model.Path)" target="_blank" rel="noopener" data-receipt-view>
-                <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i> Ver recibo
-            </a>
-        </div>
-        <p class="small text-success text-center mb-0 d-none" role="status" data-receipt-copied>Liga copiada.</p>
-        <p class="small text-body-secondary text-center mb-0" data-receipt-pro-hint>
-            <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>Envíalo por WhatsApp en un toque con
-            <a href="@Url.Content("~" + Local133.Web.Areas.Merchant.Models.PlanUrls.Plan)">Pro</a>.
-        </p>
-    </div>
-    return;
-}
 <div class="d-grid gap-2" data-receipt-share data-receipt-url="@Model.Url" data-receipt-message="@Model.Message">
     @if (customerPath is not null)
     {

@@ -12,12 +12,13 @@
     <div class="col-md-10 col-lg-8" data-sales>
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
             <h1 class="h4 mb-0">Ventas</h1>
-            @* Corte de caja (5.9): en el gratuito la misma liga muestra el aviso de Pro. *@
+            @* Corte de caja (5.9): con el plan vencido la misma liga muestra el aviso de elegir plan (5.14). *@
             <a class="btn btn-outline-primary btn-sm" href="@Url.Content("~" + SalesUrls.CashCut)" data-cash-cut-link>
                 <i class="bi bi-cash-stack me-1" aria-hidden="true"></i> Corte de caja
                 @if (!Model.HasCashCut)
                 {
-                    <span class="badge text-bg-primary ms-1" data-cash-cut-pro>Pro</span>
+                    <i class="bi bi-lock-fill ms-1" aria-hidden="true" data-cash-cut-locked-icon></i>
+                    <span class="visually-hidden">(bloqueado)</span>
                 }
             </a>
         </div>
@@ -39,8 +40,8 @@
                 </div>
             </div>
             <div class="col-4">
-                @* El atajo filtra por el día de hoy: el filtro de fechas es de Pro, así que en el gratuito es solo el número. *@
-                <a class="card h-100 text-decoration-none text-body" href="@(Model.IsHistoryLimited ? Url.Content("~" + Model.UrlFor(SaleStatusFilter.Paid)) : Url.Content("~" + SalesUrls.List + $"?{SaleStatusFilters.QueryKey}=pagadas&desde={today}&hasta={today}"))">
+                @* El atajo filtra las pagadas del día de hoy. *@
+                <a class="card h-100 text-decoration-none text-body" href="@Url.Content("~" + SalesUrls.List + $"?{SaleStatusFilters.QueryKey}=pagadas&desde={today}&hasta={today}")">
                     <div class="card-body py-2 px-2 px-sm-3">
                         <div class="small text-body-secondary lh-sm mb-1">Pagadas<br>hoy</div>
                         <div class="fs-4 fw-bold" data-day-paid>@summary.PaidSalesCount.ToString("N0")</div>
@@ -80,16 +81,7 @@
                 }
             </nav>
 
-            @if (Model.IsHistoryLimited)
-            {
-                <p class="small text-body-secondary mb-3" data-date-filter-pro>
-                    <i class="bi bi-calendar3 me-1" aria-hidden="true"></i>Últimos @Model.HistoryDays días.
-                    Consulta todo tu historial, filtra por fecha, busca y exporta a Excel con <a href="@Url.Content("~" + PlanUrls.Plan)">Pro</a>.
-                </p>
-            }
-            else
-            {
-            @* Búsqueda (5.9, Pro): folio o concepto; conserva estatus y fechas. *@
+            @* Búsqueda (5.9; todos los planes): folio o concepto; conserva estatus y fechas. *@
             <form method="get" action="@Url.Content("~" + SalesUrls.List)" class="mb-2" role="search" data-sales-search>
                 @if (SaleStatusFilters.Slug(Model.Status) is { } searchSlug)
                 {
@@ -149,7 +141,6 @@
                     </div>
                 </form>
             </details>
-            }
 
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                 <p class="small text-body-secondary mb-0" data-sales-count>
@@ -172,7 +163,7 @@
             {
                 <div class="card" data-sales-no-results>
                     <div class="card-body text-center text-body-secondary">
-                        @(Model.IsHistoryLimited && !Model.IsFiltered ? $"No tienes ventas en los últimos {Model.HistoryDays} días." : "No hay ventas con estos filtros.")
+                        No hay ventas con estos filtros.
                     </div>
                 </div>
             }
@@ -201,17 +192,6 @@
 
                 <div class="mt-3">
                     <partial name="_Pager" model="pager" />
-                </div>
-            }
-
-            @if (Model.HiddenOlderText is { } hiddenOlder)
-            {
-                <div class="mt-3" data-sales-hidden-older="@Model.HiddenOlderCount">
-                    <partial name="_ProRequired" model='new ProRequiredViewModel(
-                        hiddenOlder,
-                        $"Con el plan gratuito ves las ventas de los últimos {Model.HistoryDays} días. Las anteriores siguen guardadas: con Pro consultas todo tu historial.",
-                        null,
-                        "bi-clock-history")' />
                 </div>
             }
         }

@@ -17,7 +17,7 @@ namespace Local133.Web.Areas.Admin.Services;
 /// Pestañas del detalle de un cliente en el admin. Solo lectura (las acciones llegan en la 6.2 y la 6.3). Devuelven
 /// <c>null</c> si el vendedor no existe. Nunca muestran la CLABE completa ni el celular completo.
 /// </summary>
-public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, IChargeUsage usage, TimeProvider clock)
+public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, TimeProvider clock)
 {
     public async Task<CustomerGeneralViewModel?> GeneralAsync(int id, CancellationToken cancellationToken)
     {
@@ -108,17 +108,17 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
             .Select(s => new { s.Id, s.Folio, s.CreatedAt, s.Concept, s.Amount, s.Status, s.ExpiresAt, s.Method, s.Source, s.PhoneNumber })
             .ToListAsync(cancellationToken);
 
-        var month = await usage.GetMonthAsync(id, cancellationToken);
-        var plan = await plans.GetForMerchantAsync(id, cancellationToken);
+        // Cobros del mes (concretados y generados), con su propia consulta (5.14: ya no hay límite del gratuito).
+        var monthPaid = await all.CountAsync(s => s.PaidAt >= monthStart && s.PaidAt < monthEnd, cancellationToken);
+        var monthGenerated = await all.CountAsync(s => s.CreatedAt >= monthStart && s.CreatedAt < monthEnd, cancellationToken);
         return new CustomerSalesViewModel
         {
             Header = header,
             CollectedTotalText = SaleQrViewModel.FormatAmount(collectedTotal),
             CollectedMonthText = SaleQrViewModel.FormatAmount(collectedMonth),
             PaidSalesCount = paidSales,
-            MonthPaidCount = month.Paid,
-            MonthGeneratedCount = month.Generated,
-            MonthlyLimit = plan.Entitlements.HasMonthlyChargeLimit ? month.Allowance.PaidLimit : null,
+            MonthPaidCount = monthPaid,
+            MonthGeneratedCount = monthGenerated,
             Rows = rows.Select(s => new CustomerSaleRow(
                     s.Id,
                     s.Folio,
@@ -191,7 +191,7 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, ICha
             PlanDateText = AdminLabels.PlanDate(status, today),
             DaysLeft = status.DaysLeft(now),
             TrialStartedText = subscription is null ? null : SaleFormats.DateTime(subscription.TrialStartedAt, today),
-            ProUntilText = status.LastProDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
+            ProUntilText = status.LastActiveDay is { } lastPro ? SaleFormats.Date(lastPro, today) : null,
             GraceUntilText = status.LastGraceDay is { } lastGrace ? SaleFormats.Date(lastGrace, today) : null,
             IsFounder = subscription?.IsFounder ?? false,
             FounderNumber = subscription?.FounderNumber,

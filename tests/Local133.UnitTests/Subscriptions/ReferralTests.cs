@@ -87,7 +87,7 @@ public class ReferralTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), 30);
 
-        var period = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, Mx(2026, 11, 20, 10), GraceDays, referralId: 9);
+        var period = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, Mx(2026, 11, 20, 10), GraceDays, referralId: 9);
 
         Assert.Equal(9, period.ReferralId);
         Assert.Equal(Mx(2026, 12, 1, 10), period.StartsAt);
@@ -101,7 +101,7 @@ public class ReferralTests
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), 30);
 
         Assert.Throws<ArgumentException>(() =>
-            subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, 10, Mx(2026, 11, 20, 10), GraceDays, referralId: 9));
+            subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, SubscriptionPlan.Pro, 10, Mx(2026, 11, 20, 10), GraceDays, referralId: 9));
     }
 
     // --- Descuento de bienvenida ----------------------------------------------------------------------------------------
@@ -112,9 +112,9 @@ public class ReferralTests
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), 30);
         var status = subscription.StatusAt(Mx(2026, 11, 20, 10), GraceDays);
 
-        var (month, _) = subscription.QuoteFor(SubscriptionPackage.OneMonth, Settings, status, false, welcomeDiscount: true);
-        var (annual, _) = subscription.QuoteFor(SubscriptionPackage.Annual, Settings, status, false, welcomeDiscount: true);
-        var (plain, _) = subscription.QuoteFor(SubscriptionPackage.OneMonth, Settings, status, false);
+        var (month, _) = subscription.QuoteFor(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Settings, status, false, welcomeDiscount: true);
+        var (annual, _) = subscription.QuoteFor(SubscriptionPlan.Pro, SubscriptionPackage.Annual, Settings, status, false, welcomeDiscount: true);
+        var (plain, _) = subscription.QuoteFor(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Settings, status, false);
 
         Assert.Equal(139.30m, month.Amount);
         Assert.Equal(1930.30m, annual.Amount);
@@ -128,11 +128,11 @@ public class ReferralTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 1, 10), 30);
 
-        var offers = SubscriptionOffers.For(subscription, Settings, Mx(2026, 11, 20, 10), founderSlotAvailable: false, welcomeDiscount: true);
+        var offers = SubscriptionOffers.For(subscription, SubscriptionPlan.Pro, Settings, Mx(2026, 11, 20, 10), founderSlotAvailable: false, welcomeDiscount: true);
 
         var annual = offers.Single(o => o.Package == SubscriptionPackage.Annual);
         Assert.Equal(2, annual.GiftMonths);
+        Assert.Equal(10, annual.PaidMonths); // «12 meses por el precio de 10», con los precios de lista
         Assert.Equal(59.70m, annual.Quote.DiscountAmount);
-        Assert.Equal(796m, offers.Single(o => o.Package == SubscriptionPackage.SixMonths).AnnualUpgradeDifference);
     }
 }

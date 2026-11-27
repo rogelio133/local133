@@ -27,7 +27,6 @@ public class ChargeController(
     AppDbContext db,
     ISaleCharging charging,
     IPlanAccess plans,
-    IChargeUsage usage,
     ReceiptLinks receiptLinks,
     TimeProvider clock) : Controller
 {
@@ -70,7 +69,7 @@ public class ChargeController(
         }
 
         var form = await FormAsync(input, cancellationToken);
-        return form.Blocked is null ? View(nameof(Index), form) : RedirectToAction(nameof(Index));
+        return form.ShowsForm ? View(nameof(Index), form) : RedirectToAction(nameof(Index));
     }
 
     /// <summary>Venta con productos: catálogo con búsqueda (misma <c>q</c>/<c>pagina</c> que la lista) y carrito.</summary>
@@ -91,7 +90,8 @@ public class ChargeController(
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
-        var model = await ProductListQuery.BuildAsync(db, merchant, q, page, Url, ChargeUrls.Cart, merchant.CanManageProducts, cancellationToken);
+        var model = await ProductListQuery.BuildAsync(
+            db, merchant, q, page, Url, ChargeUrls.Cart, ProductListQuery.ReadOnlyReasonFor(merchant, plan), cancellationToken);
         Response.Headers.CacheControl = "no-store";
         return PartialView("_CartCatalogResults", model);
     }
@@ -142,7 +142,7 @@ public class ChargeController(
         }
 
         var form = await CartFormAsync(input, null, null, await InitialLinesAsync(input.Lines, cancellationToken), hasErrors: true, cancellationToken);
-        return form.Blocked is null ? View(nameof(Cart), form) : RedirectToAction(nameof(Cart));
+        return form.Blocked is null && form.Expired is null ? View(nameof(Cart), form) : RedirectToAction(nameof(Cart));
     }
 
     /// <summary>QR de una venta. El filtro multi-tenant de EF Core hace que la venta de otro vendedor dé 404.</summary>
@@ -156,18 +156,10 @@ public class ChargeController(
         }
 
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
-        var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
-        var now = clock.GetUtcNow();
-        if (plan.HistoryStartUtc(now) is { } historyStart && sale.CreatedAt < historyStart)
-        {
-            // Gratuito: la venta quedó fuera de los días de historial; el detalle explica que es de Pro.
-            return RedirectToAction(nameof(SalesController.Detail), "Sales", new { id });
-        }
-
         var receipt = receiptLinks.ShareFor(
             Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount),
-            sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id), plan.Entitlements.CanShareReceipt);
-        return View(SaleQrViewModel.From(sale, now, receipt));
+            sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id));
+        return View(SaleQrViewModel.From(sale, clock.GetUtcNow(), receipt));
     }
 
     /// <summary>Cancela un cobro pendiente (solo local: el QR sigue vigente en CoDi hasta que expire).</summary>
@@ -221,9 +213,8 @@ public class ChargeController(
 
             case CreateSaleResult.NotAllowed:
             case CreateSaleResult.PlanRequired:
-            case CreateSaleResult.MonthlyLimitReached:
-            case CreateSaleResult.GenerationLimitReached:
-                // El formulario vuelve a calcular el plan y el uso del mes y muestra el aviso correspondiente.
+            case CreateSaleResult.PlanExpired:
+                // El formulario vuelve a calcular el estatus y el plan, y muestra el aviso correspondiente.
                 return RedirectToAction(formAction);
 
             case CreateSaleResult.Invalid invalid:
@@ -262,34 +253,25 @@ public class ChargeController(
         }
 
         var blocked = ChargeFormViewModel.BlockedNoticeFor(merchant, account);
-        var (usageModel, planBlocked) = blocked is null ? await MonthlyUsageAsync(merchant.Id, cancellationToken) : (null, null);
+        PlanExpiredViewModel? expired = null;
         string? missingCatalog = null;
-        if (blocked is null && !(await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements.CanChargeWithCart)
+        if (blocked is null)
         {
-            missingCatalog = ProductListViewModel.WaitingCatalogText(await ActiveProductCountAsync(merchant.Id, cancellationToken));
+            var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
+            if (!plan.Entitlements.CanCharge)
+            {
+                expired = PlanExpiredViewModel.For(plan, clock.GetUtcNow());
+            }
+            else if (!plan.Entitlements.CanChargeWithCart)
+            {
+                missingCatalog = ProductListViewModel.WaitingCatalogText(await ActiveProductCountAsync(merchant.Id, cancellationToken));
+            }
         }
 
         return new ChargeFormViewModel
         {
-            Input = input, Blocked = blocked ?? planBlocked, Usage = usageModel, MissingCatalogText = missingCatalog,
+            Input = input, Blocked = blocked, Expired = expired, MissingCatalogText = missingCatalog,
         };
-    }
-
-    /// <summary>
-    /// Contador del mes y bloqueo por el límite del gratuito (5.5). Sin límite (prueba, Pro, gracia) no hay nada.
-    /// </summary>
-    private async Task<(ChargeUsageViewModel? Usage, ChargeBlockedNotice? Blocked)> MonthlyUsageAsync(
-        int merchantId, CancellationToken cancellationToken)
-    {
-        var plan = await plans.GetForMerchantAsync(merchantId, cancellationToken);
-        if (!plan.Entitlements.HasMonthlyChargeLimit)
-        {
-            return (null, null);
-        }
-
-        var month = await usage.GetMonthAsync(merchantId, cancellationToken);
-        var today = Domain.Common.MexicoTime.Today(clock.GetUtcNow());
-        return (ChargeUsageViewModel.From(month, today), PlanBlockedNotices.For(month, today));
     }
 
     private async Task<CartChargeViewModel> CartFormAsync(
@@ -299,17 +281,17 @@ public class ChargeController(
         var (merchant, account) = await MerchantAndAccountAsync(cancellationToken);
         var blocked = ChargeFormViewModel.BlockedNoticeFor(merchant, account);
         ProRequiredViewModel? proRequired = null;
-        ChargeUsageViewModel? usageModel = null;
+        PlanExpiredViewModel? expired = null;
         if (blocked is null)
         {
             var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
-            if (!plan.Entitlements.CanChargeWithCart)
+            if (!plan.Entitlements.CanCharge)
+            {
+                expired = PlanExpiredViewModel.For(plan, clock.GetUtcNow());
+            }
+            else if (!plan.Entitlements.CanChargeWithCart)
             {
                 proRequired = await CartProRequiredAsync(merchant.Id, cancellationToken);
-            }
-            else
-            {
-                (usageModel, blocked) = await MonthlyUsageAsync(merchant.Id, cancellationToken);
             }
         }
 
@@ -317,10 +299,11 @@ public class ChargeController(
         {
             Input = input,
             Blocked = blocked,
+            Expired = expired,
             ProRequired = proRequired,
-            Usage = usageModel,
-            Catalog = blocked is null && proRequired is null
-                ? await ProductListQuery.BuildAsync(db, merchant, q, page, Url, ChargeUrls.Cart, merchant.CanManageProducts, cancellationToken)
+            Catalog = blocked is null && expired is null && proRequired is null
+                ? await ProductListQuery.BuildAsync(db, merchant, q, page, Url, ChargeUrls.Cart,
+                    merchant.CanManageProducts ? null : CatalogReadOnlyReason.Disabled, cancellationToken)
                 : null,
             InitialLines = initialLines,
             HasErrors = hasErrors,
@@ -328,18 +311,18 @@ public class ChargeController(
         };
     }
 
-    /// <summary>Productos vigentes del vendedor (para «Tu catálogo de N productos te espera»).</summary>
+    /// <summary>Productos vigentes del vendedor (para «Tu catálogo de N productos te espera en Pro»).</summary>
     private Task<int> ActiveProductCountAsync(int merchantId, CancellationToken cancellationToken) =>
         // El filtro multi-tenant ya limita al vendedor de la sesión; el MerchantId explícito es la consulta en sí.
         db.Products.AsNoTracking().CountAsync(p => p.MerchantId == merchantId && !p.IsDeleted, cancellationToken);
 
-    /// <summary>Aviso del carrito en el gratuito, con el catálogo que ya tiene esperando.</summary>
+    /// <summary>Aviso del carrito en Básico, con el catálogo que ya tiene esperando.</summary>
     private async Task<ProRequiredViewModel> CartProRequiredAsync(int merchantId, CancellationToken cancellationToken)
     {
         var count = await ActiveProductCountAsync(merchantId, cancellationToken);
         return new ProRequiredViewModel(
             "Cobra con tus productos",
-            "Con Pro armas la venta con tu catálogo en unos toques. Con el plan gratuito puedes cobrar por monto.",
+            "Con Pro armas la venta con tu catálogo en unos toques. Con Básico puedes cobrar por monto.",
             ProductListViewModel.WaitingCatalogText(count),
             "bi-cart3");
     }

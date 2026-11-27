@@ -431,10 +431,10 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
     }
 
     [Fact]
-    public async Task El_gratuito_no_busca_ni_exporta_ni_tiene_corte()
+    public async Task Basico_busca_y_tiene_corte_pero_no_exporta()
     {
         var client = await ActiveMerchantAsync(Email);
-        await SeedFreePlanAsync(Email);
+        await SeedBasicPlanAsync(Email);
         var now = DateTimeOffset.UtcNow;
         var platano = await InsertSaleAsync(Email, 10m, now.AddMinutes(-30), concept: "Tacos Don Ramón · Plátano frito");
         var refresco = await InsertSaleAsync(Email, 20m, now.AddMinutes(-20), concept: "Tacos Don Ramón · Refresco");
@@ -442,10 +442,11 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         var html = await GetHtmlAsync(client, Url + "?q=platano");
 
         Assert.Contains($"data-sale-row=\"{platano.Id}\"", html);
-        Assert.Contains($"data-sale-row=\"{refresco.Id}\"", html);
-        Assert.DoesNotContain("data-sales-search", html);
+        Assert.DoesNotContain($"data-sale-row=\"{refresco.Id}\"", html);
+        Assert.Contains("data-sales-search", html);
+        Assert.Contains("data-date-filter", html);
         Assert.DoesNotContain("data-sales-export", html);
-        Assert.Contains("data-date-filter-pro", html);
-        Assert.Contains("data-cash-cut-pro", html);
+        Assert.Contains("data-cash-cut-link", html);
+        Assert.DoesNotContain("data-cash-cut-locked-icon", html);
     }
 }

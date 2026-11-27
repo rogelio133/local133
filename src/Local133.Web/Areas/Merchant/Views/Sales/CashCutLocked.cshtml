@@ -1,8 +1,9 @@
 @using Local133.Web.Areas.Merchant.Models
+@model PlanExpiredViewModel
 @{
     ViewData["Title"] = "Corte de caja";
 }
-@* Plan gratuito: el corte de caja diario es de Pro (5.9). *@
+@* Plan vencido (5.14): el corte de caja es de Básico y Pro. *@
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-cash-cut-locked>
         <a class="d-inline-block mb-3" href="@Url.Content("~" + SalesUrls.List)" data-back-to-sales>
@@ -11,10 +12,6 @@
 
         <h1 class="h4 mb-3">Corte de caja</h1>
 
-        <partial name="_ProRequired" model='new ProRequiredViewModel(
-            "Cierra tu día en un toque",
-            "Con Pro ves cada día cuánto cobraste, por QR y al celular, tu ticket promedio, los productos que más vendiste y lo que quedó sin pagar. Lo imprimes o lo mandas por WhatsApp.",
-            null,
-            "bi-cash-stack")' />
+        <partial name="_PlanExpired" model="Model" />
     </div>
 </div>

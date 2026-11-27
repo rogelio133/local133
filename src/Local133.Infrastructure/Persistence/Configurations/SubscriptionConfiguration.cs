@@ -18,6 +18,8 @@ public class SubscriptionConfiguration : IEntityTypeConfiguration<Subscription>
 
         builder.Property(s => s.LastPeriodKind).HasConversion<string>().HasMaxLength(30);
         builder.Property(s => s.LastPackage).HasConversion<string>().HasMaxLength(30);
+        builder.Property(s => s.LastPlan).HasConversion<string>().HasMaxLength(30);
+        builder.Property(s => s.LockedAnnualPlan).HasConversion<string>().HasMaxLength(30);
         builder.Property(s => s.LockedAnnualPrice).HasPrecision(18, 2);
 
         // Una por vendedor: la llave alterna es también el índice único que impide una segunda prueba (dos
@@ -46,6 +48,7 @@ public class SubscriptionPeriodConfiguration : IEntityTypeConfiguration<Subscrip
         builder.ToTable("SubscriptionPeriods", t => t.HasCheckConstraint("CK_SubscriptionPeriods_Range", "[EndsAt] > [StartsAt]"));
 
         builder.Property(p => p.Kind).HasConversion<string>().HasMaxLength(30);
+        builder.Property(p => p.Plan).HasConversion<string>().HasMaxLength(30);
 
         // Periodo pagado ⇒ el cargo que lo pagó (Restrict: el historial no se borra en cascada).
         builder.HasOne<SubscriptionCharge>().WithMany().HasForeignKey(p => p.SubscriptionChargeId).OnDelete(DeleteBehavior.Restrict);

@@ -18,7 +18,9 @@ public class SubscriptionChargeConfiguration : IEntityTypeConfiguration<Subscrip
             t.HasCheckConstraint("CK_SubscriptionCharges_Months", "[Months] > 0");
         });
 
+        builder.Property(c => c.Plan).HasConversion<string>().HasMaxLength(30);
         builder.Property(c => c.Package).HasConversion<string>().HasMaxLength(30);
+        builder.Property(c => c.TermsVersion).HasMaxLength(SubscriptionCharge.TermsVersionMaxLength);
         builder.Property(c => c.DiscountReason).HasConversion<string>().HasMaxLength(30);
         builder.Property(c => c.Origin).HasConversion<string>().HasMaxLength(30);
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);

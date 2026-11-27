@@ -9,9 +9,9 @@ namespace Local133.Web.Areas.Merchant.Models;
 /// <param name="Url">Liga absoluta de invitación (<c>/r/{código}</c>).</param>
 /// <param name="Message">Texto para WhatsApp y «Compartir» (incluye la liga).</param>
 /// <param name="RewardsInWindow">Premios ganados en los últimos 12 meses (para el tope).</param>
-/// <param name="DaysEarned">Días de Pro ganados en total con referidos.</param>
+/// <param name="DaysEarned">Días ganados en total con referidos (del plan que tenía cada vez).</param>
 /// <param name="IsDisabled">Cuenta dada de baja: ya no gana premios.</param>
-/// <param name="IsOnboarding">Su cuenta bancaria aún no está activa: los premios esperan a su prueba.</param>
+/// <param name="IsOnboarding">Aún no tiene suscripción (no ha cobrado): los premios esperan a su prueba.</param>
 public sealed record InviteViewModel(
     string Code,
     string Url,
@@ -47,7 +47,7 @@ public sealed record InviteViewModel(
 
     /// <summary>Mensaje para compartir: invita, da el código, el descuento y la liga, en tres renglones.</summary>
     public static string MessageFor(string code, string url, SystemSettings settings) =>
-        $"Cobra con CoDi en tu negocio con Local133.\nRegístrate con mi código {code} y llévate {PercentText(settings.ReferralWelcomeDiscountRate)} de descuento en tu primer pago de Pro:\n{url}";
+        $"Cobra con CoDi en tu negocio con Local133.\nRegístrate con mi código {code} y llévate {PercentText(settings.ReferralWelcomeDiscountRate)} de descuento en tu primer pago:\n{url}";
 
     public static InviteViewModel Create(
         string code, string url, SystemSettings settings, int rewardsInWindow, int daysEarned, bool isDisabled,
@@ -98,7 +98,7 @@ public sealed record ReferralRow(string Name, string RegisteredText, ReferralRow
             { QualifiedAt: null } => (ReferralRowState.NotPaid, "Aún no paga"),
             { RevokedAt: not null } => (ReferralRowState.Skipped, "Pagó · premio anulado"),
             { RewardedAt: not null } => (ReferralRowState.Rewarded,
-                daysEarned is { } d ? $"Pagó · ganaste {DaysText(d)}" : "Pagó · ganaste días de Pro"),
+                daysEarned is { } d ? $"Pagó · ganaste {DaysText(d)}" : "Pagó · ganaste días de premio"),
             { SkippedReason: ReferralSkipReason.RewardCap } => (ReferralRowState.Skipped,
                 $"Pagó · sin premio (tope de {rewardsPerYear.ToString(CultureInfo.InvariantCulture)} al año)"),
             { SkippedReason: not null } => (ReferralRowState.Skipped, "Pagó · sin premio"),

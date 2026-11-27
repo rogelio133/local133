@@ -275,3 +275,42 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 
 ### Ajustes 2026-11-26 — Bloque 5: menú del admin
 - Punto 13 (menú del admin): sin cambios para Azure. Solo vista, CSS y `wwwroot/js/admin-menu.js`; el estado del menú (oculto o visible) se guarda en el navegador (`localStorage`), no en el servidor.
+
+### Fase 5.12 — Planes y vigencia v2 (Básico y Pro)
+- **Se publica junto con la 5.13 a la 5.18** (rama aparte): publicar solo la 5.12 dejaría a los vendedores del gratuito con una transición de Básico sin el checkout para pagarlo.
+- **Migración `BasicAndProPlans`** (corre al arrancar, como las demás):
+  - renombra los precios de `SystemSettings` a `Pro*` y `ProFairUseMonthlyPaid` a `FairUseMonthlyPaid`; agrega los cuatro precios de Básico (99, 990, 69, 690) y pone `TrialDays = 15`;
+  - agrega `Plan` a `SubscriptionPeriods` y `SubscriptionCharges` (lo existente queda en Pro), `LastPlan` y `LockedAnnualPlan` a `Subscriptions`, y `TermsVersion`/`TermsAcceptedAt` a `SubscriptionCharges`;
+  - **crea la transición de los vendedores existentes con la hora del servidor** (`SYSUTCDATETIME()`): 15 días de Básico al gratuito desde ese momento, al que está en prueba al terminarla y al que está en gracia hasta 15 días después. Cada una deja un renglón en `AuditLogs` (`PlanTransition`, actor `sistema`). Por eso **la publicación va en un horario acordado** y se anuncia (el correo del anuncio es de la 5.16).
+  - Corre una sola vez: si se aplicó a mano antes (`dotnet ef database update` o un script), al arrancar no se repite.
+  - Antes de publicar, respaldar la base (o tener a mano un punto de restauración de Azure SQL): el `Down` quita la transición, pero no deshace las conversiones de Básico a Pro que haya después.
+- Las columnas `Free*` de `SystemSettings` se quedan hasta la 5.14, que las borra con su propia migración (`RemoveFreePlanSettings`).
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
+
+### Fase 5.13 — Prueba al primer cobro
+- **Se publica junto con la 5.12 y la 5.14 a la 5.18.** Sin migración, recursos, App Settings, secretos ni webhooks nuevos.
+- La prueba de Pro ya no empieza al activarse la cuenta: la empieza el webhook `codi.qr.payment_received` / `codi.pn.payment_received` (o la conciliación `conciliar-pagos`) con el primer cobro pagado. Nada que configurar: es el mismo webhook.
+- `suscripciones-diario` (mismo job, misma hora) suma el respaldo: empieza la prueba de los vendedores activos que ya cobraron y no la tienen. No llama a Pey.
+- Al publicar, los vendedores activos que todavía no tienen suscripción (sin prueba) quedan en «sin prueba» hasta su siguiente cobro; si ya tenían pagos de antes, la primera corrida del job les empieza la prueba con la fecha de su **primer** pago (podría ya haber terminado). En la base de producción no debería haber ninguno: hasta la 5.12 la prueba empezaba al activarse.
+
+### Fase 5.14 — Acceso por plan y vencido
+- **Se publica junto con la 5.12, la 5.13 y la 5.15 a la 5.18.** Desde aquí el vencido ya no genera cobros: publicarla sin el checkout dejaría a los vendedores sin forma de volver a cobrar.
+- **Migración `RemoveFreePlanSettings`** (corre al arrancar, después de `BasicAndProPlans`): borra `FreeMonthlyPaidLimit`, `FreeMonthlyGeneratedLimit` y `FreeHistoryDays` de `SystemSettings` y rehace el check `CK_SystemSettings_Limits`. No toca datos de vendedores. El `Down` las vuelve a crear con 100, 300 y 30.
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos. El webhook de pagos sigue abonando las ventas generadas antes de vencer.
+
+### Fase 5.15 — Checkout por pasos
+- **Se publica junto con la 5.12 a la 5.14 y la 5.16 a la 5.18.** Sin migración: las columnas `Plan`, `TermsVersion` y `TermsAcceptedAt` de `SubscriptionCharges` ya las creó `BasicAndProPlans`.
+- Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
+- **URLs de regreso de Pey**: siguen saliendo de `App__PublicBaseUrl` (HTTPS obligatorio). `successUrl` no cambia (`/app/plan/pago/{id}`); `backUrl` ahora es el resumen del pedido (`/app/plan/checkout/{plan}/{paquete}`). Los links que ya existían conservan su `backUrl` viejo (`/app/plan`), que sigue funcionando.
+- La casilla del resumen enlaza a `{App__LandingUrl}/terminos` y el cargo guarda `LegalDocuments.CurrentTermsVersion`. Cuando la 5.18 cambie la versión, la portada con los Términos nuevos se publica **antes o junto** con Web.
+- Ya no existe `POST /app/plan/pagar`; ninguna liga externa lo usaba (solo el formulario de «Mi plan»).
+- **Ajuste del 2026-11-27 (checkout simplificado: solo 1 mes y Anual, plan y duración en una página)**: sin cambios para Azure. Sin migración (`ThreeMonths`/`SixMonths` se quedan en el enum por los cargos que ya existen), recursos, App Settings, secretos, jobs ni webhooks nuevos. Un link pendiente de 3 o 6 meses que ya exista se puede seguir pagando y se abona; su «Regresar» (`/app/plan/checkout/{plan}/3-meses|6-meses`) redirige a la sección del plan.
+
+### Fase 5.16 — Recordatorios, referidos y avisos
+- **Se publica junto con la 5.12 a la 5.15, la 5.17 y la 5.18.**
+- **Migración `PlanChangeAnnouncement`** (corre al arrancar, después de `BasicAndProPlans` y `RemoveFreePlanSettings`). Solo cambia datos:
+  - renombra en `Notifications` los tipos `DowngradedToFree` → `PlanExpired` y `ProDaysEnding` → `PlanDaysEnding`;
+  - inserta un renglón global `PlanChange` en `AuditLogs` (actor `sistema`) con `SYSUTCDATETIME()`. **Esa hora es el corte del anuncio**: el `suscripciones-diario` siguiente manda el aviso y el correo «Nuevos planes: Básico y Pro» a los vendedores registrados antes, no dados de baja. Lo sigue intentando durante 30 días y se manda una sola vez por vendedor (llave `planes-2026-12`).
+- Como `BasicAndProPlans`, se publica en el horario acordado: el anuncio sale a las 9:00 (México) del día siguiente a la publicación. Con Resend configurado, esos correos **salen de verdad** a todos los vendedores existentes.
+- El job es el mismo (`suscripciones-diario`, 9:00 México) y sigue sin crear links de Pey. Los botones de los recordatorios llevan al checkout (`{App__PublicBaseUrl}/app/plan/checkout…`), así que `App__PublicBaseUrl` debe ser la URL pública con HTTPS, como ya se exige.
+- Sin recursos, App Settings, secretos ni webhooks nuevos.

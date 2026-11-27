@@ -479,11 +479,11 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
     }
 
     [Fact]
-    public async Task Plan_gratuito_deja_el_catalogo_en_solo_lectura()
+    public async Task Basico_deja_el_catalogo_en_solo_lectura()
     {
         var client = await MerchantClientAsync(Email);
         var id = (await SeedProductsAsync(Email, ["Gringa", "Taco"]))[0];
-        await SeedFreePlanAsync(Email);
+        await SeedBasicPlanAsync(Email);
 
         var list = WebUtility.HtmlDecode(await GetHtmlAsync(client, ListUrl));
         var newPage = await client.GetAsync(NewUrl);
@@ -492,9 +492,9 @@ public partial class ProductCrudTests(Local133WebFactory factory) : SaleFlowTest
         var update = await PostMultipartAsync(client, TokenPage, ProductFields("Gringa grande", "60"), postUrl: EditUrl(id));
         var delete = await PostFormAsync(client, TokenPage, new Dictionary<string, string>(), DeleteUrl(id));
 
-        Assert.Contains("data-products-readonly-plan", list);
+        Assert.Contains("data-products-readonly-plan=\"basic\"", list);
         Assert.Contains("data-pro-required", list);
-        Assert.Contains("Tu catálogo de 2 productos te espera", list);
+        Assert.Contains("Tu catálogo de 2 productos te espera en Pro.", list);
         Assert.DoesNotContain("Tu cuenta está dada de baja", list);
         Assert.DoesNotContain(EditUrl(id), list);
         Assert.DoesNotContain("data-new-product", list);

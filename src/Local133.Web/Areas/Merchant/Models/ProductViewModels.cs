@@ -84,12 +84,12 @@ public sealed class ProductListViewModel
     /// <summary>Por qué es de solo lectura (<c>null</c> si <see cref="CanManage"/>).</summary>
     public CatalogReadOnlyReason? ReadOnlyReason { get; init; }
 
-    /// <summary>«Tu catálogo de 63 productos te espera.» (gratuito, 5.5); <c>null</c> sin productos.</summary>
+    /// <summary>«Tu catálogo de 63 productos te espera en Pro.» (Básico o vencido); <c>null</c> sin productos.</summary>
     public static string? WaitingCatalogText(int count) => count switch
     {
         <= 0 => null,
-        1 => "Tu catálogo de 1 producto te espera.",
-        _ => $"Tu catálogo de {count.ToString("#,0", CultureInfo.GetCultureInfo("es-MX"))} productos te espera.",
+        1 => "Tu catálogo de 1 producto te espera en Pro.",
+        _ => $"Tu catálogo de {count.ToString("#,0", CultureInfo.GetCultureInfo("es-MX"))} productos te espera en Pro.",
     };
 
     /// <summary>Ruta de la página que muestra la lista (paginación y «Ver todos»): la de productos o la del carrito.</summary>
@@ -152,6 +152,9 @@ public enum CatalogReadOnlyReason
     /// <summary>El vendedor está dado de baja.</summary>
     Disabled,
 
-    /// <summary>El plan gratuito deja el catálogo en solo lectura (5.5).</summary>
-    Plan,
+    /// <summary>Básico: el catálogo se consulta; editarlo es de Pro.</summary>
+    Basic,
+
+    /// <summary>El plan venció (5.14): el catálogo se consulta hasta que elija un plan.</summary>
+    Expired,
 }

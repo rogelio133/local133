@@ -6,6 +6,8 @@
     ViewData["Title"] = "Mi plan";
     var notice = TempData[PlanController.NoticeKey] as string;
 }
+@* «Mi plan» (5.15): la página de la cuenta, no del pago. Los botones llevan a la sección de su plan en el checkout; el link de Pey solo nace al
+   pulsar «Pagar» en el resumen del pedido. *@
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-my-plan>
         <a class="d-inline-block mb-3" href="~/app/mas"><i class="bi bi-chevron-left" aria-hidden="true"></i> Más</a>
@@ -18,8 +20,8 @@
 
         @if (Model.Plan is { } plan)
         {
-            <div class="card card-body mb-3 d-flex flex-row align-items-center gap-3 @(plan.Tier == PlanTier.Grace ? "border-warning" : "")" data-plan-tier="@plan.Tier">
-                <i class="bi @plan.Icon fs-3 @(plan.Tier == PlanTier.Free ? "text-body-secondary" : plan.Tier == PlanTier.Grace ? "text-warning" : "text-primary")" aria-hidden="true"></i>
+            <div class="card card-body mb-3 d-flex flex-row align-items-center gap-3 @plan.BorderClass" data-plan-tier="@plan.Tier">
+                <i class="bi @plan.Icon fs-3 @plan.IconClass" aria-hidden="true"></i>
                 <span class="flex-grow-1">
                     <span class="d-block fw-bold" data-plan-title>@plan.Title</span>
                     <span class="d-block small text-body-secondary" data-plan-detail>@plan.Detail</span>
@@ -30,147 +32,62 @@
         {
             <div class="card card-body mb-3" data-plan-onboarding>
                 <span class="fw-bold">Tu prueba de Pro aún no empieza</span>
-                <span class="small text-body-secondary">Al activarse tu cuenta bancaria tendrás @Model.TrialDays días de Pro sin costo. Después podrás pagar Pro desde aquí.</span>
+                <span class="small text-body-secondary">Tu prueba de @Model.TrialDays días de Pro empieza con tu primer cobro. Después podrás elegir tu plan.</span>
             </div>
-        }
-
-        @if (Model.Usage is { } usage)
-        {
-            <div class="mb-3"><partial name="_ChargeUsage" model="usage" /></div>
         }
 
         @if (Model.RenewalNotice is { } renewal)
         {
-            <div class="alert @(renewal.IsUrgent ? "alert-warning" : "alert-info") d-flex flex-column flex-sm-row align-items-sm-center gap-2" role="status" data-renewal-notice>
+            @* Sin botón propio: «Renovar mi plan …» va justo abajo, al mismo lugar (2026-11-27). *@
+            <div class="alert @(renewal.IsUrgent ? "alert-warning" : "alert-info") d-flex align-items-center gap-2" role="status" data-renewal-notice>
                 <i class="bi @(renewal.IsUrgent ? "bi-hourglass-split" : "bi-calendar-event") fs-4 d-none d-sm-inline" aria-hidden="true"></i>
                 <span class="flex-grow-1">
                     <span class="d-block fw-bold">@renewal.Title</span>
                     <span class="d-block small">@renewal.Message</span>
                 </span>
-                <a class="btn btn-primary text-nowrap" href="#plan-offers-title" data-renewal-choose>Elegir paquete</a>
             </div>
         }
 
-        @if (Model.InProgress.Count > 0)
+        @if (Model.Actions.Count > 0)
         {
-            <div class="card mb-3 border-info" data-plan-in-progress>
-                <div class="card-header fw-semibold">Pagos en proceso</div>
-                <ul class="list-group list-group-flush">
-                    @foreach (var row in Model.InProgress)
-                    {
-                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2" data-plan-charge="@row.Id">
-                            <span>
-                                <span class="d-block">@row.PackageText · @row.AmountText</span>
-                                <span class="d-block small text-body-secondary">@row.StatusText · @row.DateText</span>
-                            </span>
-                            <a class="btn btn-outline-primary btn-sm text-nowrap" href="@Url.Content("~" + PlanUrls.PaymentStatus(row.Id))">Ver estado</a>
-                        </li>
-                    }
-                </ul>
+            <div class="d-grid gap-2 d-sm-flex flex-sm-wrap mb-3" data-plan-actions>
+                @foreach (var action in Model.Actions)
+                {
+                    <a class="btn @(action.IsPrimary ? "btn-primary" : "btn-outline-primary") d-flex flex-column justify-content-center"
+                       href="@Url.Content("~" + action.Url)" data-plan-action="@action.Key">
+                        <span>@action.Text</span>
+                        @if (action.Detail is not null)
+                        {
+                            <span class="small fw-normal opacity-75">@action.Detail</span>
+                        }
+                    </a>
+                }
             </div>
-        }
-
-        @if (Model.CanPay)
-        {
-            <section class="mb-3" aria-labelledby="plan-offers-title" data-plan-offers>
-                <h2 class="h5 mb-1" id="plan-offers-title">@Model.OffersTitle</h2>
-                @if (Model.OffersNote is not null)
-                {
-                    <p class="small text-body-secondary mb-2" data-plan-offers-note>@Model.OffersNote</p>
-                }
-                @if (Model.WelcomeDiscountNotice is not null)
-                {
-                    <div class="alert alert-success py-2 small d-flex align-items-center gap-2" role="status" data-welcome-discount>
-                        <i class="bi bi-gift-fill" aria-hidden="true"></i>
-                        <span>@Model.WelcomeDiscountNotice</span>
-                    </div>
-                }
-                @if (Model.FounderNotice is not null)
-                {
-                    <div class="alert alert-info py-2 small d-flex align-items-center gap-2" role="status" data-plan-founder>
-                        <i class="bi bi-award-fill text-primary" aria-hidden="true"></i>
-                        <span>@Model.FounderNotice</span>
-                    </div>
-                }
-                @if (Model.HttpsWarning is not null && notice != Model.HttpsWarning)
-                {
-                    <div class="alert alert-warning small" role="alert" data-plan-https-warning>@Model.HttpsWarning</div>
-                }
-
-                <div class="row row-cols-1 row-cols-sm-2 g-3">
-                    @foreach (var offer in Model.Offers)
-                    {
-                        <div class="col">
-                            <div class="card h-100 plan-offer @(offer.IsRecommended ? "border-primary plan-offer-recommended" : "")" data-plan-offer="@offer.Value">
-                                <div class="card-body d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                                        <h3 class="h6 fw-bold mb-0">@offer.Title</h3>
-                                        <span class="d-flex flex-wrap justify-content-end gap-1">
-                                            @if (offer.IsCurrentPackage)
-                                            {
-                                                <span class="badge text-bg-secondary" data-plan-offer-current>Tu paquete</span>
-                                            }
-                                            @if (offer.IsRecommended)
-                                            {
-                                                <span class="badge text-bg-primary">Mejor precio</span>
-                                            }
-                                        </span>
-                                    </div>
-                                    <p class="mb-0">
-                                        @if (offer.ListPriceText is not null)
-                                        {
-                                            <del class="text-body-secondary me-1" data-plan-offer-list-price><span class="visually-hidden">Antes </span>@offer.ListPriceText</del>
-                                        }
-                                        <span class="fs-3 fw-bold" data-plan-offer-price>@offer.PriceText</span>
-                                        @if (offer.PerMonthText is not null)
-                                        {
-                                            <span class="small text-body-secondary">@offer.PerMonthText</span>
-                                        }
-                                    </p>
-                                    @if (offer.IsFounderPrice)
-                                    {
-                                        <p class="small mb-1"><span class="badge text-bg-info" data-plan-offer-founder>Precio de fundador</span></p>
-                                    }
-                                    @if (offer.Highlight is not null)
-                                    {
-                                        <p class="small fw-semibold text-success mb-1" data-plan-offer-highlight>@offer.Highlight</p>
-                                    }
-                                    <p class="small text-body-secondary mb-3" data-plan-offer-until>@offer.ProUntilText</p>
-                                    <form asp-area="Merchant" asp-controller="Plan" asp-action="Pay" method="post" class="mt-auto" data-disable-on-submit>
-                                        <input type="hidden" name="package" value="@offer.Value" />
-                                        <button type="submit" class="btn @(offer.IsRecommended ? "btn-primary" : "btn-outline-primary") w-100" data-plan-pay>
-                                            Pagar @offer.PriceText
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-                <p class="small text-body-secondary mt-2 mb-0" data-plan-payment-note>
-                    Precios con IVA incluido. Pagas en la página segura de Pey, con CoDi o con tarjeta; con tarjeta, Pey puede
-                    sumar una comisión al precio.
-                </p>
-            </section>
         }
         else if (Model.IsDisabled)
         {
-            <div class="alert alert-secondary" role="status" data-plan-disabled>Tu cuenta está dada de baja: no puedes pagar Pro.</div>
+            <div class="alert alert-secondary" role="status" data-plan-disabled>Tu cuenta está dada de baja: no puedes pagar un plan.</div>
         }
 
-        @if (Model.Payments.Count > 0)
+        @if (Model.Orders.Count > 0)
         {
-            <div class="card mb-3" data-plan-payments>
-                <div class="card-header fw-semibold">Tus pagos</div>
+            <div class="card mb-3" data-plan-orders>
+                <div class="card-header fw-semibold">Tus pedidos</div>
                 <ul class="list-group list-group-flush">
-                    @foreach (var row in Model.Payments)
+                    @foreach (var order in Model.Orders)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2" data-plan-payment="@row.Id">
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                            data-plan-order="@order.Id" data-plan-order-status="@order.Status">
                             <span>
-                                <span class="d-block">Pro · @row.PackageText</span>
-                                <span class="d-block small text-body-secondary">@row.DateText@(row.MethodText is null ? "" : $" · {row.MethodText}")</span>
+                                <span class="d-block">
+                                    <span class="fw-semibold">Pedido @order.Number</span> · @order.Title
+                                </span>
+                                <span class="d-block small text-body-secondary">
+                                    @order.AmountText · @order.StatusText · @order.DateText@(order.MethodText is null ? "" : $" · {order.MethodText}")
+                                </span>
                             </span>
-                            <span class="fw-semibold text-nowrap">@row.AmountText</span>
+                            <a class="btn @(order.IsPaid ? "btn-outline-secondary" : "btn-outline-primary") btn-sm text-nowrap"
+                               href="@Url.Content("~" + order.Url)" data-plan-order-link>@order.LinkText</a>
                         </li>
                     }
                 </ul>
@@ -184,7 +101,7 @@
                     <thead>
                         <tr>
                             <th scope="col" class="fw-normal text-body-secondary small ps-3">Función</th>
-                            <th scope="col" class="small">Gratuito</th>
+                            <th scope="col" class="small">Básico</th>
                             <th scope="col" class="small pe-3">Pro</th>
                         </tr>
                     </thead>
@@ -199,7 +116,7 @@
                                         <partial name="_ComingSoonBadge" />
                                     }
                                 </td>
-                                <td>@row.Free</td>
+                                <td>@row.Basic</td>
                                 <td class="fw-semibold pe-3">@row.Pro</td>
                             </tr>
                         }
@@ -209,7 +126,7 @@
         </div>
 
         <a class="d-inline-flex align-items-center gap-2 small mb-3" href="~/app/invita" data-plan-invite>
-            <i class="bi bi-gift" aria-hidden="true"></i> Gana días de Pro invitando a otros vendedores
+            <i class="bi bi-gift" aria-hidden="true"></i> Gana días de tu plan invitando a otros vendedores
         </a>
     </div>
 </div>

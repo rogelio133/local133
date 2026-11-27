@@ -35,7 +35,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 19, 15), trialDays: 30);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 11, 25, 10), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 11, 25, 10), GraceDays);
 
         Assert.Equal(Mx(2026, 12, 19, 15), paid.StartsAt);
         Assert.Equal(Mx(2027, 1, 19, 15), paid.EndsAt);
@@ -55,7 +55,7 @@ public class SubscriptionPeriodChainTests
         var payday = Mx(2026, 3, 13, 18);
         Assert.Equal(PlanTier.Grace, subscription.StatusAt(payday, GraceDays).Tier);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, payday, GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, payday, GraceDays);
 
         Assert.Equal(Mx(2026, 3, 10, 10), paid.StartsAt);
         Assert.Equal(Mx(2026, 4, 10, 10), paid.EndsAt);
@@ -67,9 +67,9 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = PaidUntilMarch10();
         var payday = Mx(2026, 3, 20, 12);
-        Assert.Equal(PlanTier.Free, subscription.StatusAt(payday, GraceDays).Tier);
+        Assert.Equal(PlanTier.Expired, subscription.StatusAt(payday, GraceDays).Tier);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, payday, GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, payday, GraceDays);
 
         Assert.Equal(payday, paid.StartsAt);
         Assert.Equal(Mx(2026, 4, 20, 12), paid.EndsAt);
@@ -80,7 +80,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = PaidUntilMarch10();
 
-        var annual = subscription.AddPaidPeriod(SubscriptionPackage.Annual, Mx(2026, 2, 20, 9), GraceDays);
+        var annual = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.Annual, Mx(2026, 2, 20, 9), GraceDays);
 
         Assert.Equal(Mx(2026, 3, 10, 10), annual.StartsAt);
         Assert.Equal(Mx(2027, 3, 10, 10), annual.EndsAt);
@@ -95,7 +95,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = PaidUntilMarch10();
 
-        var paid = subscription.AddPaidPeriod(package, Mx(2026, 3, 1, 9), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, package, Mx(2026, 3, 1, 9), GraceDays);
 
         Assert.Equal(Mx(2026, endMonth, 10, 10), paid.EndsAt);
     }
@@ -106,8 +106,8 @@ public class SubscriptionPeriodChainTests
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 19, 15), trialDays: 30);
         var now = Mx(2027, 1, 5, 8); // ya en el gratuito
 
-        var first = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, now, GraceDays);
-        var second = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, 10, now, GraceDays);
+        var first = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, now, GraceDays);
+        var second = subscription.AddDaysPeriod(SubscriptionPeriodKind.ReferralReward, SubscriptionPlan.Pro, 10, now, GraceDays);
 
         Assert.Equal(now, first.StartsAt);
         Assert.Equal(first.EndsAt, second.StartsAt);
@@ -121,7 +121,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2025, 12, 1, 12), trialDays: 30);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 1, 31, 12), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 1, 31, 12), GraceDays);
 
         Assert.Equal(Mx(2026, 2, 28, 12), paid.EndsAt);
     }
@@ -131,7 +131,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2027, 12, 1, 12), trialDays: 30);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2028, 1, 31, 12), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2028, 1, 31, 12), GraceDays);
 
         Assert.Equal(Mx(2028, 2, 29, 12), paid.EndsAt);
     }
@@ -142,7 +142,7 @@ public class SubscriptionPeriodChainTests
         // 31/01 a las 23:00 en México = 01/02 a las 05:00 en UTC: en UTC el mes llegaría al 1 de marzo.
         var subscription = Subscription.StartTrial(1, Mx(2025, 12, 1, 12), trialDays: 30);
 
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 1, 31, 23), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 1, 31, 23), GraceDays);
 
         Assert.Equal(Mx(2026, 2, 28, 23), paid.EndsAt);
     }
@@ -154,7 +154,7 @@ public class SubscriptionPeriodChainTests
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 19, 15), trialDays: 30);
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => subscription.AddDaysPeriod(kind, 10, Mx(2026, 11, 20, 0), GraceDays));
+        Assert.Throws<ArgumentOutOfRangeException>(() => subscription.AddDaysPeriod(kind, SubscriptionPlan.Pro, 10, Mx(2026, 11, 20, 0), GraceDays));
     }
 
     [Fact]
@@ -163,14 +163,14 @@ public class SubscriptionPeriodChainTests
         Assert.Throws<ArgumentOutOfRangeException>(() => Subscription.StartTrial(1, Mx(2026, 11, 19, 15), trialDays: 0));
         var subscription = Subscription.StartTrial(1, Mx(2026, 11, 19, 15), trialDays: 30);
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, 0, Mx(2026, 11, 20, 0), GraceDays));
+            subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, SubscriptionPlan.Pro, 0, Mx(2026, 11, 20, 0), GraceDays));
     }
 
     /// <summary>Prueba del 8/01 al 7/02 y un mes pagado el 10/02 a las 10:00 (ya en el gratuito) ⇒ vence el 10/03.</summary>
     private static Subscription PaidUntilMarch10()
     {
         var subscription = Subscription.StartTrial(1, Mx(2026, 1, 8, 10), trialDays: 30);
-        var paid = subscription.AddPaidPeriod(SubscriptionPackage.OneMonth, Mx(2026, 2, 10, 10), GraceDays);
+        var paid = subscription.AddPaidPeriod(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, Mx(2026, 2, 10, 10), GraceDays);
         Assert.Equal(Mx(2026, 2, 10, 10), paid.StartsAt);
         Assert.Equal(Mx(2026, 3, 10, 10), paid.EndsAt);
         return subscription;

@@ -11,11 +11,13 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Subscriptions;
 
 /// <summary>
-/// «Mi plan» (5.6): cotiza los paquetes y crea el cargo con su link de pago de Pey (§4 del diseño). El cargo se inserta
-/// antes de llamar a Pey (su id va en <c>clientReferenceId</c> y en la metadata). Un link <c>pending</c> del mismo
-/// paquete y monto creado en los últimos <c>GraceDays</c> días se reutiliza; uno más viejo se abandona (5.7). El link
-/// solo nace cuando el vendedor elige un paquete: el job diario no crea links. Si Pey no responde, el cargo queda <c>Failed</c>: nadie conoce la URL del link, así
-/// que nadie lo puede pagar, y al reintentar se crea otro.
+/// Checkout por pasos (5.6, 5.15): cotiza los paquetes de cada plan, arma el resumen del pedido y, solo al pulsar
+/// «Pagar», crea el cargo con su link de pago de Pey (§4 del diseño de suscripciones). Antes vuelve a cotizar: si el
+/// total ya no es el que vio el vendedor, no crea nada. El cargo se inserta antes de llamar a Pey (su id va en
+/// <c>clientReferenceId</c> y en la metadata) y guarda la versión de los Términos que aceptó. Un link <c>pending</c> del
+/// mismo plan, paquete, monto y versión de los Términos creado en los últimos <c>GraceDays</c> días se reutiliza; uno
+/// más viejo se abandona (5.7). El job diario no crea links. Si Pey no responde, el cargo queda <c>Failed</c>: nadie
+/// conoce la URL del link, así que nadie lo puede pagar, y al reintentar se crea otro.
 /// </summary>
 internal sealed class SubscriptionCheckout(
     AppDbContext db,
@@ -24,7 +26,7 @@ internal sealed class SubscriptionCheckout(
     ILogger<SubscriptionCheckout> logger) : ISubscriptionCheckout
 {
     internal const string NotStartedMessage =
-        "Podrás pagar Pro cuando tu cuenta bancaria esté activa. Primero tendrás tu prueba gratis.";
+        "Tu prueba de Pro empieza con tu primer cobro. Después podrás elegir tu plan.";
 
     internal const string DisabledMessage = "Tu cuenta está dada de baja. Escríbenos si quieres reactivarla.";
 
@@ -36,13 +38,8 @@ internal sealed class SubscriptionCheckout(
 
     internal const string GenericFailure = "No pudimos generar el link de pago. Intenta de nuevo en unos minutos.";
 
-    /// <summary>Ruta de la confirmación (regreso de Pey tras pagar).</summary>
-    public static string PaymentPath(int chargeId) => $"/app/plan/pago/{chargeId.ToString(CultureInfo.InvariantCulture)}";
-
-    /// <summary>Ruta de «Mi plan» (regreso de Pey si cancela).</summary>
-    public const string PlanPath = "/app/plan";
-
-    public async Task<SubscriptionOffersResult> GetOffersAsync(int merchantId, CancellationToken cancellationToken = default)
+    public async Task<SubscriptionOffersResult> GetOffersAsync(
+        int merchantId, SubscriptionPlan? plan = null, CancellationToken cancellationToken = default)
     {
         var context = await LoadAsync(merchantId, cancellationToken);
         if (context.Subscription is null || context.MerchantStatus == MerchantStatus.Disabled)
@@ -50,53 +47,78 @@ internal sealed class SubscriptionCheckout(
             return new SubscriptionOffersResult(false, [], context.Subscription?.IsFounder ?? false, context.FounderSlotsLeft);
         }
 
-        var offers = SubscriptionOffers.For(
-            context.Subscription, context.Settings, clock.GetUtcNow(), context.FounderSlotAvailable, context.WelcomeDiscount);
+        var now = clock.GetUtcNow();
+        SubscriptionPlan[] plans = plan is { } one ? [one] : Enum.GetValues<SubscriptionPlan>();
+        var offers = plans
+            .SelectMany(p => SubscriptionOffers.For(
+                context.Subscription, p, context.Settings, now, context.FounderSlotAvailable, context.WelcomeDiscount))
+            .ToList();
         var discount = offers.Select(o => o.Quote.DiscountAmount).Where(d => d > 0).DefaultIfEmpty().Max();
         return new SubscriptionOffersResult(true, offers, context.Subscription.IsFounder, context.FounderSlotsLeft,
             discount > 0 ? discount : null);
+    }
+
+    public async Task<CheckoutOrderResult> GetOrderAsync(
+        int merchantId, SubscriptionPlan plan, SubscriptionPackage package, CancellationToken cancellationToken = default)
+    {
+        EnsureDefined(plan, package);
+        var context = await LoadAsync(merchantId, cancellationToken);
+        var isFounder = context.Subscription?.IsFounder ?? false;
+        if (NotAllowedMessageFor(context) is { } message)
+        {
+            return new CheckoutOrderResult(null, message, isFounder, context.FounderSlotsLeft);
+        }
+
+        var order = SubscriptionOrder.For(context.Subscription!, plan, package, context.Settings, clock.GetUtcNow(),
+            context.FounderSlotAvailable, context.WelcomeDiscount);
+        return new CheckoutOrderResult(order, null, isFounder, context.FounderSlotsLeft);
     }
 
     public async Task<CheckoutResult> StartAsync(StartCheckoutCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(command.BaseUrl);
-        if (!Enum.IsDefined(command.Package))
-        {
-            throw new ArgumentOutOfRangeException(nameof(command), command.Package, "Paquete desconocido.");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(command.TermsVersion);
+        EnsureDefined(command.Plan, command.Package);
 
         var context = await LoadAsync(command.MerchantId, cancellationToken);
-        if (context.MerchantStatus == MerchantStatus.Disabled)
+        if (NotAllowedMessageFor(context) is { } message)
         {
-            return new CheckoutResult.NotAllowed(DisabledMessage);
+            return new CheckoutResult.NotAllowed(message);
         }
 
-        if (context.Subscription is not { } subscription)
-        {
-            return new CheckoutResult.NotAllowed(NotStartedMessage);
-        }
-
+        var subscription = context.Subscription!;
         var now = clock.GetUtcNow();
         var status = subscription.StatusAt(now, context.Settings.GraceDays);
         var (quote, isFounderPrice) = subscription.QuoteFor(
-            command.Package, context.Settings, status, context.FounderSlotAvailable, context.WelcomeDiscount);
+            command.Plan, command.Package, context.Settings, status, context.FounderSlotAvailable, context.WelcomeDiscount);
+
+        // Se vuelve a cotizar: si cambió un precio, se acabaron los lugares de fundador o ya se usó el descuento, el
+        // vendedor revisa el total antes de pagar (el mismo patrón que el carrito).
+        if (quote.Amount != command.ExpectedTotal)
+        {
+            logger.LogInformation("Vendedor {MerchantId}: el pedido {Plan} {Package} cambió de {Expected} a {Amount}; no se crea el link",
+                command.MerchantId, command.Plan, command.Package, command.ExpectedTotal, quote.Amount);
+            return new CheckoutResult.PriceChanged(quote.Amount);
+        }
 
         var reusableSince = SubscriptionCharge.ReusableSince(now, context.Settings.GraceDays);
         var reusable = await db.SubscriptionCharges.IgnoreQueryFilters()
             .Where(c => c.MerchantId == command.MerchantId
                 && c.Status == SubscriptionChargeStatus.Pending
+                && c.Plan == quote.Plan
                 && c.Package == quote.Package
                 && c.Amount == quote.Amount
+                && c.TermsVersion == command.TermsVersion
                 && c.PeyPaymentLinkId != null
                 && c.Url != null
                 && c.CreatedAt >= reusableSince)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
-        if (reusable is not null && reusable.CanBeReusedFor(quote, now, context.Settings.GraceDays))
+        if (reusable is not null && reusable.CanBeReusedFor(quote, now, context.Settings.GraceDays, command.TermsVersion))
         {
-            logger.LogInformation("Vendedor {MerchantId} reutiliza el link {PaymentLinkId} del cargo {ChargeId} ({Package}, {Amount})",
-                command.MerchantId, reusable.PeyPaymentLinkId, reusable.Id, reusable.Package, reusable.Amount);
+            logger.LogInformation("Vendedor {MerchantId} reutiliza el link {PaymentLinkId} del cargo {ChargeId} ({Plan}, {Package}, {Amount})",
+                command.MerchantId, reusable.PeyPaymentLinkId, reusable.Id, reusable.Plan, reusable.Package, reusable.Amount);
             return new CheckoutResult.Redirect(reusable.Id, new Uri(reusable.Url!), Reused: true);
         }
 
@@ -106,7 +128,8 @@ internal sealed class SubscriptionCheckout(
             return new CheckoutResult.HttpsRequired();
         }
 
-        var charge = SubscriptionCharge.Create(command.MerchantId, quote, isFounderPrice, SubscriptionChargeOrigin.Merchant, now);
+        var charge = SubscriptionCharge.Create(
+            command.MerchantId, quote, isFounderPrice, SubscriptionChargeOrigin.Merchant, now, command.TermsVersion);
         db.SubscriptionCharges.Add(charge);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -117,8 +140,9 @@ internal sealed class SubscriptionCheckout(
             // Sin el token de la petición: si el vendedor cierra la página a medio envío, el cargo no queda a medias.
             link = await gateway.CreatePaymentLinkAsync(new CreatePaymentLinkRequest(
                 charge.Amount,
-                new Uri(baseUrl + PaymentPath(charge.Id)),
-                new Uri(baseUrl + PlanPath),
+                new Uri(baseUrl + SubscriptionPaths.Payment(charge.Id)),
+                // «Regresar» de Pey vuelve al resumen del mismo pedido, como el carrito de una tienda.
+                new Uri(baseUrl + SubscriptionPaths.Summary(charge.Plan, charge.Package)),
                 HasTip: false,
                 ClientReferenceId: charge.ClientReferenceId,
                 Metadata: MetadataFor(charge)), CancellationToken.None);
@@ -152,8 +176,9 @@ internal sealed class SubscriptionCheckout(
         charge.AttachLink(link.Id, link.Url.AbsoluteUri);
         await db.SaveChangesAsync(CancellationToken.None); // el link ya existe en Pey: no se abandona el guardado
 
-        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Origin}, {Package}, {Amount}, fundador {IsFounderPrice}) con el link {PaymentLinkId}",
-            command.MerchantId, charge.Id, charge.Origin, charge.Package, charge.Amount, charge.IsFounderPrice, link.Id);
+        logger.LogInformation("Vendedor {MerchantId} creó el cargo {ChargeId} ({Origin}, {Plan}, {Package}, {Amount}, fundador {IsFounderPrice}, términos {TermsVersion}) con el link {PaymentLinkId}",
+            command.MerchantId, charge.Id, charge.Origin, charge.Plan, charge.Package, charge.Amount, charge.IsFounderPrice,
+            charge.TermsVersion, link.Id);
         return new CheckoutResult.Redirect(charge.Id, link.Url, Reused: false);
     }
 
@@ -163,6 +188,31 @@ internal sealed class SubscriptionCheckout(
         [SubscriptionChargeMetadata.MerchantIdKey] = charge.MerchantId.ToString(CultureInfo.InvariantCulture),
         [SubscriptionChargeMetadata.SubscriptionChargeIdKey] = charge.Id.ToString(CultureInfo.InvariantCulture),
     };
+
+    private static void EnsureDefined(SubscriptionPlan plan, SubscriptionPackage package)
+    {
+        if (!Enum.IsDefined(plan))
+        {
+            throw new ArgumentOutOfRangeException(nameof(plan), plan, "Plan desconocido.");
+        }
+
+        if (!Enum.IsDefined(package))
+        {
+            throw new ArgumentOutOfRangeException(nameof(package), package, "Paquete desconocido.");
+        }
+
+        // 3 y 6 meses ya no se venden (2026-11-27): ni resumen ni cargo, aunque llegue un POST a mano.
+        if (!package.IsOffered())
+        {
+            throw new ArgumentOutOfRangeException(nameof(package), package, "Paquete que ya no se ofrece.");
+        }
+    }
+
+    /// <summary>Dado de baja o sin prueba todavía (solo paga quien ya tiene suscripción).</summary>
+    private static string? NotAllowedMessageFor(CheckoutContext context) =>
+        context.MerchantStatus == MerchantStatus.Disabled ? DisabledMessage
+        : context.Subscription is null ? NotStartedMessage
+        : null;
 
     private async Task<CheckoutResult> FailAsync(SubscriptionCharge charge, string reason, string message)
     {

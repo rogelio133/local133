@@ -85,7 +85,7 @@ public static class ProductMessages
     public const string NotAllowed = "Tu cuenta está dada de baja: no puedes modificar tus productos.";
 
     public const string PlanRequired =
-        "Con el plan gratuito tu catálogo es de solo lectura. Con Pro puedes agregar, editar y cobrar tus productos.";
+        "Con tu plan, tu catálogo es de solo lectura. Con Pro puedes agregar, editar y cobrar tus productos.";
 }
 
 /// <summary>Resultado de guardar un producto.</summary>
@@ -106,7 +106,7 @@ public abstract record SaveProductResult
     /// <summary>El vendedor no puede modificar su catálogo (dado de baja).</summary>
     public sealed record NotAllowed : SaveProductResult;
 
-    /// <summary>El plan gratuito deja el catálogo en solo lectura.</summary>
+    /// <summary>El plan (Básico o vencido) deja el catálogo en solo lectura.</summary>
     public sealed record PlanRequired : SaveProductResult;
 }
 

@@ -85,10 +85,11 @@ public static class DependencyInjection
         services.AddScoped<IPublicCatalogSettings, PublicCatalogSettings>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.
         services.AddScoped<IPlanAccess, PlanAccess>();
-        // Límites del gratuito (5.5): conteo de cobros del mes y umbrales tras cada pago.
-        services.AddScoped<IChargeUsage, ChargeUsage>();
+        // Prueba de Pro al primer cobro pagado (5.13): la llaman PaymentRecorder y el respaldo de suscripciones-diario.
+        services.AddScoped<ITrialStarter, TrialStarter>();
+        // Uso justo (5.14): tras cada pago se revisa si el vendedor cruzó los cobros concretados del mes.
         services.AddScoped<IChargeLimitAlerts, ChargeLimitAlerts>();
-        // 5.4: avisos en el sitio y correos. Por ahora, solo el log.
+        // Por ahora, solo el log (el tablero del admin lo calcula con su propia consulta).
         services.TryAddSingleton<IChargeLimitNotifier, LoggingChargeLimitNotifier>();
         // Pago de la suscripción con link de Pey (5.6): checkout, abono (webhook y conciliación) y correo.
         services.AddScoped<ISubscriptionCheckout, SubscriptionCheckout>();

@@ -12,14 +12,18 @@ using Microsoft.Extensions.Logging;
 namespace Local133.Infrastructure.Subscriptions;
 
 /// <summary>Lo que pasó con un referido que calificó (para avisarle a quien invitó después del commit).</summary>
-/// <param name="ProUntil">Fin de Pro de quien invitó después del premio (solo con <see cref="ReferralRewardDecision.Grant"/>).</param>
+/// <param name="ProUntil">Vigente hasta (de cualquier plan) de quien invitó después del premio (solo con <see cref="ReferralRewardDecision.Grant"/>).</param>
+/// <param name="Plan">Plan de los días del premio: el del final de su cadena (§8; la prueba es Pro).</param>
+/// <param name="Reactivated">Su plan estaba vencido y el premio lo reactivó: vuelve a cobrar desde ese momento.</param>
 internal sealed record ReferralQualification(
     int ReferralId,
     int ReferrerMerchantId,
     int ReferredMerchantId,
     ReferralRewardDecision Decision,
     ReferralSkipReason? Reason,
-    DateTimeOffset? ProUntil);
+    DateTimeOffset? ProUntil,
+    SubscriptionPlan Plan = SubscriptionPlan.Pro,
+    bool Reactivated = false);
 
 /// <summary>
 /// Premios de referidos (5.8, §6 del diseño). No guarda: agrega los cambios al contexto, que guarda quien llama dentro
@@ -57,10 +61,14 @@ internal static class ReferralRewarder
             .Include(s => s.Periods)
             .SingleOrDefaultAsync(s => s.MerchantId == referrerId, cancellationToken);
         var rewards = await RewardsInWindowAsync(db, referrerId, now, cancellationToken);
+        // Antes del premio: el plan con el que se encadena y si estaba vencido (el premio lo reactiva).
+        var plan = subscription?.ChainEndPlan ?? SubscriptionPlan.Pro;
+        var wasExpired = subscription?.StatusAt(now, settings.GraceDays).Tier == PlanTier.Expired;
 
         var (decision, reason) = Apply(referral, referrerStatus, subscription, rewards, now, settings);
+        var granted = decision == ReferralRewardDecision.Grant;
         return new ReferralQualification(referral.Id, referrerId, referredMerchantId, decision, reason,
-            decision == ReferralRewardDecision.Grant ? subscription!.ProUntil : null);
+            granted ? subscription!.ProUntil : null, plan, granted && wasExpired);
     }
 
     /// <summary>
@@ -104,8 +112,9 @@ internal static class ReferralRewarder
         switch (decision)
         {
             case ReferralRewardDecision.Grant:
+                // El premio es del plan del final de su cadena, donde se encadena (§8; la prueba es de Pro).
                 subscription!.AddDaysPeriod(
-                    SubscriptionPeriodKind.ReferralReward, settings.ReferralRewardDays, now, settings.GraceDays, referral.Id);
+                    SubscriptionPeriodKind.ReferralReward, subscription.ChainEndPlan, settings.ReferralRewardDays, now, settings.GraceDays, referral.Id);
                 referral.MarkRewarded(now);
                 break;
             case ReferralRewardDecision.Skip:
@@ -150,6 +159,8 @@ internal sealed class ReferralRewardNotifier(
                 Merchant.GreetingNameFor(referrer.OwnerName, referrer.BusinessName),
                 Merchant.GreetingNameFor(referred.OwnerName, referred.BusinessName),
                 settings,
+                qualification.Plan,
+                qualification.Reactivated,
                 qualification.ProUntil is { } until ? MexicoTime.DateOf(until.AddTicks(-1)) : null);
             var type = qualification.Decision switch
             {

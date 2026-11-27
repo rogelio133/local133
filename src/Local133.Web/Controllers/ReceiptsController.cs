@@ -18,7 +18,7 @@ namespace Local133.Web.Controllers;
 /// requiere sesión y nunca muestra el celular, la CLABE ni ids de Pey.
 /// <para>
 /// Marca (5.10), según el plan del vendedor <b>al abrir la liga</b>: con Pro lleva el logo del negocio (servido por
-/// <c>/recibo/{token}/logo</c>); en el gratuito dice «Cobrado con Local133», con liga a la portada y el código de
+/// <c>/recibo/{token}/logo</c>); en Básico y vencido dice «Cobrado con Local133», con liga a la portada y el código de
 /// invitación del vendedor.
 /// </para>
 /// </summary>
@@ -108,7 +108,7 @@ public class ReceiptsController(
             return NotFound();
         }
 
-        // Corta: si el vendedor baja al gratuito, el logo deja de servirse pronto.
+        // Corta: si el vendedor pasa a Básico o vence, el logo deja de servirse pronto.
         Response.Headers.CacheControl = "private, max-age=86400";
         return File(stream, MerchantImageRules.LogoContentType);
     }
@@ -160,7 +160,7 @@ public sealed record ReceiptViewModel(
     public string? LogoUrl { get; init; }
 
     /// <summary>
-    /// Portada con el código de invitación del vendedor para «Cobrado con Local133» (gratuito), o <c>null</c> en Pro.
+    /// Portada con el código de invitación del vendedor para «Cobrado con Local133» (Básico y vencido), o <c>null</c> en Pro.
     /// </summary>
     public string? PoweredByUrl { get; init; }
 
