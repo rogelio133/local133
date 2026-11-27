@@ -60,6 +60,9 @@ public static class PublicCatalogMessages
 
     public const string PlanRequired = "Publicar tu catálogo es parte de Pro.";
 
+    /// <summary>En el onboarding (5.13): todavía no empieza su prueba.</summary>
+    public const string TrialRequired = "Se activa con tu prueba, que empieza con tu primer cobro.";
+
     public const string BusinessNameRequired = "Primero escribe el nombre de tu negocio en «Mi información».";
 
     public const string NotAllowed = "Tu cuenta está dada de baja: no puedes cambiar tu catálogo.";

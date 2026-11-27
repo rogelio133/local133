@@ -359,6 +359,12 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
 - El orden sigue las dependencias: el dominio primero y la portada al final.
 
 ### 5.12 Planes y vigencia v2
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.13 a la 5.18.* — [bitácora](../log_plan/fase-5.12-planes-y-vigencia-v2.md)
+
+Cambios frente a lo de aquí:
+- Las columnas `Free*` y las banderas `CanShareReceipt`, `HasFullHistory` y `HasMonthlyChargeLimit` se quedan hasta la 5.14. El vencido conserva los límites del gratuito.
+- `ConvertBasicToPro` se conecta al abono en la 5.15.
+
 - **`Domain/Subscriptions`**:
   - `SubscriptionPlan`, `PlanTier` nuevo y `PlanStatus.Plan`;
   - la gracia según el plan pagado;
@@ -382,6 +388,12 @@ La migración trata a cada vendedor según su estado en ese momento. Usa la mism
   - la matriz de funciones.
 
 ### 5.13 Prueba al primer cobro
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 y la 5.14 a la 5.18.* — [bitácora](../log_plan/fase-5.13-prueba-al-primer-cobro.md)
+
+Cambios frente a lo de aquí:
+- Los textos de la portada («Tu prueba empieza con tu primer cobro…») se quedan para la 5.18, con el resto de la portada.
+- Un vendedor dado de baja no recibe la prueba; uno suspendido sí, si le pagan un cobro generado antes.
+
 - El disparador en `PaymentRecorder` y el respaldo en `suscripciones-diario` (§4).
 - Se quita el inicio de la prueba de `BankAccountStatusSync` y `BankAccountRegistration`.
 - En el onboarding, el catálogo en línea no se publica (`IPublicCatalogSettings` ⇒ `PlanRequired`, con el texto «Se activa con tu prueba»).

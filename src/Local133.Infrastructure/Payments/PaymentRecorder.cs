@@ -13,13 +13,15 @@ namespace Local133.Infrastructure.Payments;
 
 /// <summary>
 /// Pago CoDi recibido (QR o notificación push) ⇒ <see cref="Payment"/> + venta pagada, en un
-/// solo guardado; luego avisa al vendedor en tiempo real. Idempotente por <c>transactionId</c> (índice único). Sin
-/// dependencia de la sesión: lo usan los webhooks y la conciliación (2.9).
+/// solo guardado; luego empieza la prueba de Pro si es su primer cobro (5.13) y avisa al vendedor en tiempo real.
+/// Idempotente por <c>transactionId</c> (índice único). Sin dependencia de la sesión: lo usan los webhooks y la
+/// conciliación (2.9).
 /// </summary>
 internal sealed class PaymentRecorder(
     AppDbContext db,
     ISaleNotifier notifier,
     IChargeLimitAlerts limitAlerts,
+    ITrialStarter trialStarter,
     TimeProvider clock,
     ILogger<PaymentRecorder> logger) : IPaymentRecorder
 {
@@ -101,6 +103,22 @@ internal sealed class PaymentRecorder(
         {
             logger.LogWarning("El pago {PeyTransactionId} ({Amount}) no coincide con el monto de la venta {SaleId} ({SaleAmount})",
                 payment.PeyTransactionId, payment.Amount, sale.Id, sale.Amount);
+        }
+
+        if (previousStatus != SaleStatus.Paid)
+        {
+            // Primer cobro pagado ⇒ empieza la prueba de Pro, desde el PaidAt del pago (una conciliación tardía no le
+            // quita minutos). Antes del aviso en tiempo real, para que Inicio ya la muestre. Nunca tumba el pago: si
+            // falla, la empieza el respaldo de suscripciones-diario.
+            try
+            {
+                await trialStarter.StartAsync(sale.MerchantId, payment.PaidAt, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "No se pudo empezar la prueba del vendedor {MerchantId} tras el pago de la venta {SaleId}; la empezará el job diario",
+                    sale.MerchantId, sale.Id);
+            }
         }
 
         try

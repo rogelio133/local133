@@ -16,8 +16,9 @@ namespace Local133.Infrastructure.Jobs;
 /// Job diario de la suscripción (Hangfire, 9:00 en México, 5.7): por cada vendedor con un vencimiento cerca, manda el
 /// recordatorio que le toca según <see cref="SubscriptionReminders"/>; el día 1 manda el resumen mensual. <b>No crea
 /// links de Pey</b>: el correo lleva a «Mi plan» y el link nace cuando el vendedor elige un paquete (si no renueva, no
-/// se generó un link en vano). Es idempotente: el aviso es único por <c>DedupKey</c>. La baja al gratuito es un
-/// cálculo: el job solo avisa, no cambia ningún estatus.
+/// se generó un link en vano). Es idempotente: el aviso es único por <c>DedupKey</c>. El vencimiento es un cálculo: el
+/// job solo avisa, no cambia ningún estatus. Antes, de respaldo (5.13), empieza la prueba de los vendedores activos que
+/// ya cobraron y no la tienen (el disparador de <c>PaymentRecorder</c> falló), con el <c>PaidAt</c> de su primer pago.
 /// </summary>
 public sealed class SubscriptionDailyJob(
     AppDbContext db,
@@ -37,6 +38,7 @@ public sealed class SubscriptionDailyJob(
     public async Task<SubscriptionDailyRunResult> RunAsync(CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
+        var trialsStarted = await StartMissingTrialsAsync(cancellationToken);
         var settings = await db.SystemSettings.AsNoTracking().SingleAsync(s => s.Id == SystemSettings.SingletonId, cancellationToken);
 
         // Prefiltro en SQL: vence en los próximos días (aviso del anual) o venció hace poco (gracia y baja). Las reglas
@@ -83,8 +85,54 @@ public sealed class SubscriptionDailyJob(
             }
         }
 
-        logger.LogInformation("Suscripciones: {Checked} vendedores revisados, {Notified} avisos", merchantIds.Count, notified);
-        return new SubscriptionDailyRunResult(merchantIds.Count, notified, summarySent);
+        logger.LogInformation("Suscripciones: {Checked} vendedores revisados, {Notified} avisos, {TrialsStarted} pruebas de respaldo",
+            merchantIds.Count, notified, trialsStarted);
+        return new SubscriptionDailyRunResult(merchantIds.Count, notified, summarySent, trialsStarted);
+    }
+
+    /// <summary>
+    /// Respaldo de la prueba al primer cobro (5.13): vendedores <c>Active</c> con algún pago y sin suscripción. Un scope
+    /// por vendedor; una falla no detiene a los demás.
+    /// </summary>
+    /// <returns>Pruebas que se empezaron.</returns>
+    private async Task<int> StartMissingTrialsAsync(CancellationToken cancellationToken)
+    {
+        var missing = await db.Merchants.IgnoreQueryFilters().AsNoTracking()
+            .Where(m => m.Status == MerchantStatus.Active
+                && !db.Subscriptions.IgnoreQueryFilters().Any(s => s.MerchantId == m.Id))
+            .Select(m => new
+            {
+                m.Id,
+                FirstPaidAt = db.Payments.IgnoreQueryFilters().Where(p => p.MerchantId == m.Id).Min(p => (DateTimeOffset?)p.PaidAt),
+            })
+            .Where(m => m.FirstPaidAt != null)
+            .OrderBy(m => m.Id)
+            .Take(MaxMerchantsPerRun)
+            .ToListAsync(cancellationToken);
+
+        var started = 0;
+        foreach (var merchant in missing)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await using var scope = scopes.CreateAsyncScope();
+            try
+            {
+                var subscription = await scope.ServiceProvider.GetRequiredService<ITrialStarter>()
+                    .StartAsync(merchant.Id, merchant.FirstPaidAt!.Value, cancellationToken);
+                if (subscription is not null)
+                {
+                    started++;
+                    logger.LogWarning("Suscripciones: la prueba del vendedor {MerchantId} la empezó el respaldo, desde su primer pago ({FirstPaidAt:o})",
+                        merchant.Id, merchant.FirstPaidAt);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Suscripciones: no se pudo empezar la prueba del vendedor {MerchantId}; se sigue con el siguiente", merchant.Id);
+            }
+        }
+
+        return started;
     }
 
     /// <returns><c>true</c> si se creó un aviso nuevo.</returns>
@@ -124,4 +172,5 @@ public sealed class SubscriptionDailyJob(
 /// <param name="Checked">Vendedores con un vencimiento cerca que se revisaron.</param>
 /// <param name="Notified">Avisos nuevos (los repetidos no cuentan).</param>
 /// <param name="MonthlySummarySent">Se llamó al resumen mensual (día 1).</param>
-public sealed record SubscriptionDailyRunResult(int Checked, int Notified, bool MonthlySummarySent);
+/// <param name="TrialsStarted">Pruebas que empezó el respaldo (5.13): vendedores que cobraron y no la tenían.</param>
+public sealed record SubscriptionDailyRunResult(int Checked, int Notified, bool MonthlySummarySent, int TrialsStarted = 0);

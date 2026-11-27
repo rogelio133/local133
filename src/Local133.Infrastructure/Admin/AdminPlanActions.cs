@@ -262,7 +262,7 @@ internal sealed class AdminPlanActions(
             var subscription = await SubscriptionAsync(merchantId, cancellationToken);
             if (subscription is null)
             {
-                return new AdminPlanResult.Rejected("Su prueba todavía no empieza: los premios pendientes se le darán solos al activarse su cuenta.");
+                return new AdminPlanResult.Rejected("Su prueba todavía no empieza: los premios pendientes se le darán solos al empezarla, con su primer cobro.");
             }
 
             var pending = await db.Referrals.IgnoreQueryFilters()

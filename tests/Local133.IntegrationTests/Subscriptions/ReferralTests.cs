@@ -1,9 +1,7 @@
 using System.Net;
-using Local133.Application.BankAccounts;
 using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Notifications;
-using Local133.Domain.Pey;
 using Local133.Domain.Subscriptions;
 using Local133.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -190,20 +188,10 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
     }
 
     [Fact]
-    public async Task Quien_invita_en_revision_recibe_sus_dias_al_activarse_despues_de_la_prueba()
+    public async Task Quien_invita_sin_prueba_recibe_sus_dias_con_su_primer_cobro_despues_de_la_prueba()
     {
-        await CreateMerchantAsync(OtherEmail);
-        var peyId = await WithDbAsync(async db =>
-        {
-            var merchant = await MerchantOfAsync(db, OtherEmail);
-            merchant.Status = MerchantStatus.BankAccountInReview;
-            var account = Local133.Domain.BankAccounts.BankAccount.Submit(
-                merchant.Id, "Ramón Orraca Lascurain", TestClabe, "Puesto", PeyEntity.Person,
-                "01PEYREFERRER", PeyCodiStatus.Processing, DateTimeOffset.UtcNow);
-            db.BankAccounts.Add(account);
-            await db.SaveChangesAsync();
-            return account.PeyBankAccountId;
-        });
+        // Quien invita ya tiene su cuenta activa, pero no ha cobrado: no tiene suscripción (5.13).
+        var referrerClient = await ActiveMerchantAsync(OtherEmail);
         var client = await TrialMerchantAsync(Email);
         await LinkReferralAsync(OtherEmail, Email);
         var charge = await CreateChargeAsync(client);
@@ -213,11 +201,11 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var pending = await LoadReferralAsync();
         Assert.True(pending.IsPendingReward);
         Assert.Equal(NotificationType.ReferralRewardPending, Assert.Single(await NotificationsAsync(OtherEmail)).Type);
+        Assert.Contains("data-invite-onboarding", await GetHtmlAsync(referrerClient, InviteUrl));
 
-        using (var scope = Factory.Services.CreateScope())
-        {
-            await scope.ServiceProvider.GetRequiredService<IBankAccountStatusSync>().ApplyWebhookAsync(peyId, PeyCodiStatus.Active);
-        }
+        // Su primer cobro pagado empieza su prueba y le da el premio, encadenado después.
+        var sale = await ChargeAsync(referrerClient);
+        await PostWebhookAsync(QrPaymentBodyFor(sale));
 
         var referral = await LoadReferralAsync();
         Assert.NotNull(referral.RewardedAt);
@@ -225,8 +213,10 @@ public class ReferralTests(Local133WebFactory factory) : SubscriptionPaymentTest
         var trial = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.Trial);
         var reward = Assert.Single(subscription.Periods, p => p.Kind == SubscriptionPeriodKind.ReferralReward);
         Assert.Equal(trial.EndsAt, reward.StartsAt);
+        Assert.Equal(SubscriptionPlan.Pro, reward.Plan);
         Assert.Equal(referral.Id, reward.ReferralId);
         Assert.Equal(reward.EndsAt, subscription.ProUntil);
+        Assert.DoesNotContain("data-invite-onboarding", await GetHtmlAsync(referrerClient, InviteUrl));
     }
 
     // --- Invita y gana --------------------------------------------------------------------------------------------------

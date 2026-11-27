@@ -16,7 +16,8 @@ public abstract partial class WebTestBase
         SeedPlanAsync(email, periods.Select(p => (p.Kind, SubscriptionPlan.Pro, p.Start, p.End)).ToArray());
 
     /// <summary>
-    /// Suscripción del vendedor con los periodos indicados y el plan de cada uno, sin las reglas de encadenamiento.
+    /// Suscripción del vendedor con los periodos indicados y el plan de cada uno, sin las reglas de encadenamiento. Si ya
+    /// tenía una (p. ej. la prueba que empezó un cobro pagado, 5.13), la reemplaza.
     /// </summary>
     protected async Task SeedPlanAsync(
         string email,
@@ -26,6 +27,8 @@ public abstract partial class WebTestBase
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync();
         var merchantId = await db.Merchants.Where(m => m.UserId == userId).Select(m => m.Id).SingleAsync();
+        await db.SubscriptionPeriods.IgnoreQueryFilters().Where(p => p.MerchantId == merchantId).ExecuteDeleteAsync();
+        await db.Subscriptions.IgnoreQueryFilters().Where(s => s.MerchantId == merchantId).ExecuteDeleteAsync();
         var last = periods.MaxBy(p => p.End);
         db.Subscriptions.Add(new Subscription
         {

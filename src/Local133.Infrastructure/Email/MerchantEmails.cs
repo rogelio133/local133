@@ -191,7 +191,7 @@ public static class MerchantEmails
 
     /// <summary>
     /// Aviso y correo a quien invitó cuando su referido paga por primera vez (5.8): ganó sus días, los recibe al
-    /// activarse su cuenta o no hubo premio (tope de 12 en 12 meses o cuenta dada de baja).
+    /// empezar su prueba (con su primer cobro) o no hubo premio (tope de 12 en 12 meses o cuenta dada de baja).
     /// </summary>
     /// <param name="referredName">Primer nombre del referido; <c>null</c> ⇒ «Tu invitado».</param>
     /// <param name="lastProDay">Último día de Pro después del premio (solo si se otorgó).</param>
@@ -218,7 +218,7 @@ public static class MerchantEmails
 
             case ReferralRewardDecision.Pending:
                 title = $"Ganaste {days} de Pro";
-                body = $"{who} pagó su plan con tu código. Tus {days} se suman en cuanto tu cuenta bancaria esté activa, después de tu prueba.";
+                body = $"{who} pagó su plan con tu código. Tus {days} se suman al terminar tu prueba, que empieza con tu primer cobro.";
                 subject = $"Ganaste {days} de Pro · Local133";
                 paragraphs.Add(body);
                 break;
@@ -327,6 +327,10 @@ public static class MerchantEmails
 
     private static string LongDate(DateOnly day) => day.ToString("d 'de' MMMM 'de' yyyy", Mexico);
 
+    /// <summary>«Haz tu primer cobro: ese día empiezan tus 15 días de Pro.» (5.13).</summary>
+    public static string FirstChargeTrialText(int trialDays) =>
+        $"Haz tu primer cobro: ese día empiezan tus {trialDays.ToString(Mexico)} días de Pro.";
+
     public const string BankAccountActiveSubject = "Tu cuenta ya está activa: ya puedes cobrar · Local133";
 
     /// <summary>Ruta del botón: la pantalla de cobro (sin sesión, el sitio manda al login y regresa).</summary>
@@ -335,20 +339,31 @@ public static class MerchantEmails
     /// <param name="greetingName">Con quién saludar (<c>Merchant.GreetingNameFor</c>); <c>null</c> ⇒ «¡Hola!».</param>
     /// <param name="maskedClabe">CLABE enmascarada (<c>Clabe.Mask</c>); nunca la completa.</param>
     /// <param name="siteBaseUrl">Base absoluta del sitio.</param>
-    public static string BankAccountActiveBody(string? greetingName, string maskedClabe, string siteBaseUrl)
+    /// <param name="trialDays">Días de la prueba de Pro, que empieza con el primer cobro (5.13); <c>null</c> si ya la tuvo.</param>
+    public static string BankAccountActiveBody(string? greetingName, string maskedClabe, string siteBaseUrl, int? trialDays = null)
     {
         var site = siteBaseUrl.Trim().TrimEnd('/');
         var greeting = Greeting(greetingName);
+        var days = trialDays is > 0 ? trialDays.Value : 0;
+        var trial = days > 0 ? FirstChargeTrialText(days) : null;
+        var paragraphs = new List<string>
+        {
+            greeting,
+            $"Tu cuenta bancaria {maskedClabe} ya está activa en CoDi.",
+            "Desde hoy puedes cobrar con QR o enviar el cobro al celular de tu cliente. El dinero llega directo a tu cuenta.",
+        };
+        if (trial is not null)
+        {
+            paragraphs.Add(trial);
+        }
+
         return EmailLayout.Render(new EmailContent(
             BankAccountActiveSubject,
-            Preheader: "Tu CLABE quedó lista en CoDi. Entra y haz tu primer cobro.",
+            Preheader: trial is null
+                ? "Tu CLABE quedó lista en CoDi. Entra y haz tu primer cobro."
+                : $"Tu CLABE quedó lista en CoDi. Con tu primer cobro empiezan tus {days.ToString(Mexico)} días de Pro.",
             Title: "¡Ya puedes cobrar!",
-            Paragraphs:
-            [
-                greeting,
-                $"Tu cuenta bancaria {maskedClabe} ya está activa en CoDi.",
-                "Desde hoy puedes cobrar con QR o enviar el cobro al celular de tu cliente. El dinero llega directo a tu cuenta.",
-            ],
+            Paragraphs: paragraphs,
             ActionText: "Empezar a cobrar",
             ActionUrl: site + ChargePath,
             Footer: "Recibiste este correo porque registraste tu negocio en Local133."),

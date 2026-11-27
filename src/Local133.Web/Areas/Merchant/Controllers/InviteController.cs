@@ -63,7 +63,8 @@ public class InviteController(AppDbContext db, IOptions<PublicSiteOptions> site,
             rewardsInWindow,
             daysByReferral.Values.Sum(),
             merchant.Status == MerchantStatus.Disabled,
-            merchant.Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview,
+            // Sin suscripción: su prueba (y con ella sus premios) empieza con su primer cobro (5.13).
+            !await db.Subscriptions.AnyAsync(s => s.MerchantId == merchant.Id, cancellationToken),
             referrals.Select(r => ReferralRow.From(
                 r,
                 names.GetValueOrDefault(r.ReferredMerchantId),

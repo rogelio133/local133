@@ -14,6 +14,12 @@
                 <div class="card-body">
                     <h2 class="h5 card-title"><i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i> Ya puedes cobrar</h2>
                     <p class="card-text text-body-secondary">Tu cuenta está activa. Genera un QR CoDi y el dinero llega directo a tu cuenta bancaria.</p>
+                    @if (Model.FirstChargeTrialText is { } firstChargeTrial)
+                    {
+                        <p class="card-text small" data-trial-first-charge>
+                            <i class="bi bi-stars text-primary me-1" aria-hidden="true"></i>@firstChargeTrial
+                        </p>
+                    }
                     <a class="btn btn-primary btn-lg w-100" href="~/app/cobrar"><i class="bi bi-qr-code me-1" aria-hidden="true"></i> Cobrar</a>
                 </div>
             </div>

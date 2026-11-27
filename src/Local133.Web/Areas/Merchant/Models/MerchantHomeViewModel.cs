@@ -6,7 +6,7 @@ namespace Local133.Web.Areas.Merchant.Models;
 public sealed record MerchantHomeViewModel(
     string DisplayName, MerchantStatus Status, IReadOnlyList<OnboardingStepViewModel> Steps, string? BankAccountRejection = null,
     DaySummaryViewModel? Today = null, PlanSummaryViewModel? Plan = null, int TrialDays = 0,
-    ChargeUsageViewModel? Usage = null, bool ProfileIncomplete = false)
+    ChargeUsageViewModel? Usage = null, bool ProfileIncomplete = false, bool TrialStartsOnFirstCharge = false)
 {
     /// <summary>Paso opcional de Inicio (4.1): falta el nombre del negocio o el teléfono en «Mi información».</summary>
     public const string ProfileStepTitle = "Completa tu información";
@@ -33,8 +33,16 @@ public sealed record MerchantHomeViewModel(
 
     public bool IsOnboarding => Status is MerchantStatus.PendingBankAccount or MerchantStatus.BankAccountInReview;
 
-    /// <summary>Aviso del último paso del checklist: la prueba empieza al activarse la cuenta.</summary>
-    public string? TrialNotice => TrialDays > 0 ? $"Al activarse empiezan tus {TrialDays} días de prueba de Pro, sin costo." : null;
+    /// <summary>Aviso del último paso del checklist: la prueba empieza con el primer cobro (5.13).</summary>
+    public string? TrialNotice => TrialDays > 0 ? $"Haz tu primer cobro: ese día empiezan tus {TrialDays} días de Pro." : null;
+
+    /// <summary>
+    /// Vendedor activo que aún no cobra (<c>TrialStartsOnFirstCharge</c>, plan en <c>Onboarding</c>): la tarjeta «Ya
+    /// puedes cobrar» le recuerda que su prueba empieza con su primer cobro.
+    /// </summary>
+    public string? FirstChargeTrialText => TrialStartsOnFirstCharge && Status == MerchantStatus.Active && TrialDays > 0
+        ? $"Tu prueba de {TrialDays} días de Pro empieza con tu primer cobro."
+        : null;
 
     /// <summary>Número (base 1) del paso en curso.</summary>
     public int CurrentStepNumber => Steps.Select((s, i) => (s, i)).First(x => x.s.State == OnboardingStepState.Current).i + 1;

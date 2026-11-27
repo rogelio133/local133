@@ -237,7 +237,9 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - migración con la transición de los vendedores existentes.
 
     ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.13 a la 5.18; las columnas y banderas del gratuito se quedan hasta la 5.14)* — [bitácora](log_plan/fase-5.12-planes-y-vigencia-v2.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#512-planes-y-vigencia-v2)
-13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
+13. **Prueba al primer cobro**: 15 días de Pro desde el primer pago, disparada por `PaymentRecorder`, con respaldo en el job diario. Antes de la prueba no se publica el catálogo en línea.
+
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 y la 5.14 a la 5.18)* — [bitácora](log_plan/fase-5.13-prueba-al-primer-cobro.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#513-prueba-al-primer-cobro)
 14. **Acceso por plan y vencido**:
     - el vencido no genera cobros (se valida en el servidor) y ve el banner y la tarjeta para elegir plan;
     - Básico no tiene carrito, catálogo editable, Excel ni catálogo en línea;
@@ -286,6 +288,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [2.6](log_plan/fase-2.6-cobro-por-celular.md): cobro real por push a un celular con CoDi activo y su webhook.
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
+- [5.13](log_plan/fase-5.13-prueba-al-primer-cobro.md): el primer cobro real de $0.01 empieza la prueba de 15 días de Pro (punto 1 de la verificación de extremo a extremo de los planes Básico y Pro).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
 **Confirmar con soporte de Pey** (ver también §6):

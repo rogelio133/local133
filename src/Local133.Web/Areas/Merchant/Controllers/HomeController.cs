@@ -3,6 +3,7 @@ using Local133.Application.Subscriptions;
 using Local133.Domain.Common;
 using Local133.Domain.Merchants;
 using Local133.Domain.Pey;
+using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Areas.Merchant.Services;
@@ -50,6 +51,8 @@ public class HomeController(AppDbContext db, IPlanAccess plans, IChargeUsage usa
         {
             Usage = usageModel,
             ProfileIncomplete = merchant.CanEditProfile && !merchant.HasCompleteProfile(phone),
+            // Activo sin suscripción: su prueba empieza con su primer cobro pagado (5.13).
+            TrialStartsOnFirstCharge = plan.Tier == PlanTier.Onboarding,
         });
     }
 

@@ -29,9 +29,10 @@ public sealed record EmailContent(
 /// <para>Reglas de correo, no de página web: tablas con estilos en línea, ancho máximo de 600 px, logo en PNG con URL
 /// absoluta (Gmail, Outlook y Yahoo no muestran SVG ni <c>data:</c> URIs) y fuentes con respaldo (Gmail y Outlook
 /// ignoran las fuentes web; el logo ya trae «Local133» en Bungee como imagen).</para>
+/// <para>Sin fuentes web: Resend marca como sospechoso cualquier recurso fuera del dominio de envío (Google Fonts
+/// incluido). Bungee y Atkinson solo se ven si el cliente las tiene instaladas; si no, Arial Black / Arial.</para>
 /// <para>El botón debe ser la <b>primera</b> liga (<c>href</c>) del documento: <c>FileEmailSender</c> la escribe en el
-/// log y las pruebas la leen así. Por eso las fuentes se cargan con <c>@import</c> y no con <c>&lt;link href&gt;</c>, y el
-/// logo no lleva liga.</para>
+/// log y las pruebas la leen así. Por eso el logo no lleva liga.</para>
 /// </remarks>
 public static class EmailLayout
 {
@@ -89,7 +90,6 @@ public static class EmailLayout
             <meta name="supported-color-schemes" content="light">
             <title>{{E(content.Subject)}}</title>
             <style>
-            @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bungee&display=swap');
             body { margin: 0; padding: 0; }
             @media (max-width: 620px) {
               .email-pad { padding: 24px 20px !important; }

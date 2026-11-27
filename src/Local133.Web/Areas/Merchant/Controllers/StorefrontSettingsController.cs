@@ -3,6 +3,7 @@ using Local133.Application.Merchants;
 using Local133.Application.Subscriptions;
 using Local133.Domain.Merchants;
 using Local133.Domain.Sales;
+using Local133.Domain.Subscriptions;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Hosting;
@@ -66,7 +67,10 @@ public class StorefrontSettingsController(
                     ModelState.AddModelError("Input.Slug", PublicCatalogMessages.InvalidSlug);
                     break;
                 case PublishCatalogResult.PlanRequired:
-                    ModelState.AddModelError(string.Empty, PublicCatalogMessages.PlanRequired);
+                    var tier = (await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Tier;
+                    ModelState.AddModelError(string.Empty, tier == PlanTier.Onboarding
+                        ? PublicCatalogMessages.TrialRequired
+                        : PublicCatalogMessages.PlanRequired);
                     break;
                 case PublishCatalogResult.BusinessNameRequired:
                     ModelState.AddModelError(string.Empty, PublicCatalogMessages.BusinessNameRequired);
@@ -142,7 +146,10 @@ public class StorefrontSettingsController(
             ProductCount = productCount,
             ProRequired = canPublish ? null : new ProRequiredViewModel(
                 "Comparte tu catálogo con una liga",
-                "Con Pro tus clientes ven tus productos, precios y fotos en una página, y te piden por WhatsApp.",
+                // En el onboarding (5.13) se publica en cuanto empiece su prueba, con su primer cobro.
+                plan.Tier == PlanTier.Onboarding
+                    ? $"Se activa con tu prueba: tus {plan.TrialDays} días de Pro empiezan con tu primer cobro. Tus clientes verán tus productos, precios y fotos en una página, y te pedirán por WhatsApp."
+                    : "Con Pro tus clientes ven tus productos, precios y fotos en una página, y te piden por WhatsApp.",
                 ProductListViewModel.WaitingCatalogText(productCount),
                 "bi-shop"),
             ShareMessage = url is not null && businessName is not null

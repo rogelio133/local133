@@ -96,12 +96,13 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
     // ---- Plan (5.3) ----
 
     [Fact]
-    public async Task En_el_onboarding_avisa_que_la_prueba_empieza_al_activarse_y_no_muestra_plan()
+    public async Task En_el_onboarding_avisa_que_la_prueba_empieza_con_el_primer_cobro_y_no_muestra_plan()
     {
         var html = await HomeAsync(Email, MerchantStatus.BankAccountInReview);
 
         Assert.Contains("data-trial-notice", html);
-        Assert.Contains("Al activarse empiezan tus 15 días de prueba de Pro", html);
+        Assert.Contains("Haz tu primer cobro: ese día empiezan tus 15 días de Pro.", html);
+        Assert.DoesNotContain("data-trial-first-charge", html);
         Assert.DoesNotContain("data-plan-tier", html);
     }
 
@@ -115,6 +116,7 @@ public class MerchantHomeTests(Local133WebFactory factory) : WebTestBase(factory
         Assert.Contains("Prueba: te quedan 23 días", html);
         Assert.Contains("Tienes todo Pro hasta el", html);
         Assert.DoesNotContain("data-trial-notice", html);
+        Assert.DoesNotContain("data-trial-first-charge", html);
     }
 
     [Fact]

@@ -113,6 +113,23 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     }
 
     [Fact]
+    public async Task Antes_del_primer_cobro_no_se_publica_y_dice_que_se_activa_con_la_prueba()
+    {
+        // Activo sin suscripción: su prueba empieza con su primer cobro (5.13).
+        var client = await ActiveMerchantAsync(Email);
+
+        var settings = WebUtility.HtmlDecode(await GetHtmlAsync(client, SettingsUrl));
+        Assert.Contains("data-pro-required", settings);
+        Assert.Contains("Se activa con tu prueba: tus 15 días de Pro empiezan con tu primer cobro.", settings);
+        Assert.DoesNotContain("data-storefront-form", settings);
+
+        var response = await PublishAsync(client, "tacos-don-ramon");
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(PublicCatalogMessages.TrialRequired, WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync()));
+        Assert.Null((await WithDbAsync(db => MerchantOfAsync(db, Email))).PublicSlug);
+    }
+
+    [Fact]
     public async Task En_el_gratuito_no_se_publica_y_la_liga_dice_no_disponible()
     {
         var client = await ActiveMerchantAsync(Email);

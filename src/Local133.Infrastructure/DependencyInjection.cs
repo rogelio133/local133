@@ -85,6 +85,8 @@ public static class DependencyInjection
         services.AddScoped<IPublicCatalogSettings, PublicCatalogSettings>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.
         services.AddScoped<IPlanAccess, PlanAccess>();
+        // Prueba de Pro al primer cobro pagado (5.13): la llaman PaymentRecorder y el respaldo de suscripciones-diario.
+        services.AddScoped<ITrialStarter, TrialStarter>();
         // Límites del gratuito (5.5): conteo de cobros del mes y umbrales tras cada pago.
         services.AddScoped<IChargeUsage, ChargeUsage>();
         services.AddScoped<IChargeLimitAlerts, ChargeLimitAlerts>();

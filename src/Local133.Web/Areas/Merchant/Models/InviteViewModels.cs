@@ -11,7 +11,7 @@ namespace Local133.Web.Areas.Merchant.Models;
 /// <param name="RewardsInWindow">Premios ganados en los últimos 12 meses (para el tope).</param>
 /// <param name="DaysEarned">Días de Pro ganados en total con referidos.</param>
 /// <param name="IsDisabled">Cuenta dada de baja: ya no gana premios.</param>
-/// <param name="IsOnboarding">Su cuenta bancaria aún no está activa: los premios esperan a su prueba.</param>
+/// <param name="IsOnboarding">Aún no tiene suscripción (no ha cobrado): los premios esperan a su prueba.</param>
 public sealed record InviteViewModel(
     string Code,
     string Url,

@@ -94,7 +94,7 @@ public partial class CustomerPlanTests(Local133WebFactory factory) : Subscriptio
         var html = await GetHtmlAsync(await AdminAsync(), PlanTab(id));
 
         Assert.DoesNotContain("data-grant-days-form", html);
-        Assert.Contains("La prueba de Pro empieza cuando su cuenta bancaria quede activa", html);
+        Assert.Contains("La prueba de Pro empieza con su primer cobro pagado", html);
     }
 
     // --- Regalar días ------------------------------------------------------------------------------------------------
