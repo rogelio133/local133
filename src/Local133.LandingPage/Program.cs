@@ -2,11 +2,25 @@ using Local133.LandingPage.Hosting;
 using Local133.LandingPage.Services;
 using Local133.Web.Hosting;
 using Local133.Web.PublicPages;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
+
+// Detrás del front-end de App Service (lo mismo que ASPNETCORE_FORWARDEDHEADERS_ENABLED=true, pero en código para no
+// depender de un App Setting): el esquema original (https) para UseHttpsRedirection y HSTS, y la IP del cliente para el
+// límite por IP del recibo y del catálogo. Sin redes conocidas, porque App Service no expone la IP del front-end; con
+// ForwardLimit = 1 solo se toma el último valor de X-Forwarded-For, el que agrega el front-end, así que lo que el
+// cliente escriba antes en ese encabezado no cuenta. El sitio solo es accesible a través de ese front-end.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Palabras que rotan en el título (Home:RotatingWords, mismas reglas que Local133.Web) y destino del botón.
 builder.Services.Configure<HomeHeroOptions>(builder.Configuration.GetSection(HomeHeroOptions.SectionName));
@@ -44,11 +58,13 @@ if (builder.Configuration.GetValue("Sass:Watch", defaultValue: true))
 
 var app = builder.Build();
 
+// Primero: la redirección a HTTPS, HSTS y el límite por IP deben ver el esquema y la IP originales.
+app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/error");
     app.UseHsts();
-    // Detrás del proxy de App Service requiere ASPNETCORE_FORWARDEDHEADERS_ENABLED=true (ver azure.md).
     app.UseHttpsRedirection();
 }
 

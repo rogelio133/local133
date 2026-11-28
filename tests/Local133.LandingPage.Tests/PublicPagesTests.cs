@@ -351,6 +351,28 @@ public sealed class PublicPagesTests : IDisposable
     }
 
     [Fact]
+    public async Task El_limite_es_por_la_IP_que_reporta_el_front_end_de_App_Service()
+    {
+        portal.Respond(PublicPagesApi.Receipt(Token), Receipt());
+        using var site = CreateFactory(("RateLimiting:ReceiptPermitLimit", "1"));
+        var client = Client(site);
+
+        Task<HttpResponseMessage> FromAsync(string forwardedFor)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"/recibo/{Token}");
+            request.Headers.Add("X-Forwarded-For", forwardedFor);
+            return client.SendAsync(request);
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await FromAsync("203.0.113.10")).StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await FromAsync("203.0.113.10")).StatusCode);
+        // Otro cliente tiene su propio límite.
+        Assert.Equal(HttpStatusCode.OK, (await FromAsync("203.0.113.20")).StatusCode);
+        // Solo cuenta el último valor (el que agrega el front-end): inventar uno antes no da un límite nuevo.
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await FromAsync("198.51.100.99, 203.0.113.20")).StatusCode);
+    }
+
+    [Fact]
     public void Las_rutas_de_la_API_escapan_y_omiten_lo_vacio()
     {
         Assert.Equal("/api/public/recibos/abc", PublicPagesApi.Receipt("abc"));

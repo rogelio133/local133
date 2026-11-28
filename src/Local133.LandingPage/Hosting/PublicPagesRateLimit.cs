@@ -34,9 +34,8 @@ public static class PublicPagesRateLimit
     private const int SegmentsPerWindow = 6;
 
     /// <summary>
-    /// Registra las dos políticas. La IP es <c>RemoteIpAddress</c>: detrás del front-end de App Service hace falta
-    /// <c>ASPNETCORE_FORWARDEDHEADERS_ENABLED=true</c> (ya se exige para HTTPS) para que sea la del cliente y no la del
-    /// proxy; si no, todos los visitantes compartirían un solo límite.
+    /// Registra las dos políticas. La IP es <c>RemoteIpAddress</c>, que <c>UseForwardedHeaders</c> (Program.cs) cambia por
+    /// la del cliente que reporta el front-end de App Service; sin eso, todos los visitantes compartirían un límite.
     /// </summary>
     public static IServiceCollection AddPublicPagesRateLimit(this IServiceCollection services, IConfiguration configuration)
     {
