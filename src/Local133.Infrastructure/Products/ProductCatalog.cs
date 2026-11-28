@@ -53,6 +53,19 @@ internal sealed class ProductCatalog(
             }
         }
 
+        // La categoría se resuelve antes de tocar nada; la nueva se guarda en la misma transacción que el producto.
+        var category = await ResolveCategoryAsync(merchant.Id, command, cancellationToken);
+        switch (category)
+        {
+            case CategoryChoice.Foreign:
+                return new SaveProductResult.NotFound();
+            case CategoryChoice.Rejected rejected:
+                return new SaveProductResult.Invalid(new Dictionary<string, string[]>
+                {
+                    [nameof(SaveProductCommand.NewCategoryName)] = [rejected.Message],
+                }.AsReadOnly());
+        }
+
         // La foto se procesa primero: si no es una imagen válida no se cambia nada.
         ProcessedProductPhoto? photo = null;
         if (command.Photo is not null)
@@ -80,6 +93,14 @@ internal sealed class ProductCatalog(
         {
             product.Update(command.Name!, command.Description, command.Price, now);
         }
+
+        var chosen = ((CategoryChoice.Chosen)category).Category;
+        if (chosen is { Id: 0 })
+        {
+            db.ProductCategories.Add(chosen);
+        }
+
+        product.SetCategory(chosen, now);
 
         string? newPhotoKey = null;
         string? previousPhotoKey = null;
@@ -143,6 +164,46 @@ internal sealed class ProductCatalog(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Producto {ProductId} del vendedor {MerchantId} dado de baja", product.Id, merchant.Id);
         return new DeleteProductResult.Deleted();
+    }
+
+    /// <summary>Categoría que pidió el comando (nueva, reutilizada por nombre, existente o ninguna).</summary>
+    private abstract record CategoryChoice
+    {
+        public sealed record Chosen(ProductCategory? Category) : CategoryChoice;
+
+        /// <summary>La categoría no es del vendedor (o ya no existe).</summary>
+        public sealed record Foreign : CategoryChoice;
+
+        /// <summary>No se puede crear la nueva (tope de categorías).</summary>
+        public sealed record Rejected(string Message) : CategoryChoice;
+    }
+
+    private async Task<CategoryChoice> ResolveCategoryAsync(int merchantId, SaveProductCommand command, CancellationToken cancellationToken)
+    {
+        if (ProductCategory.Normalize(command.NewCategoryName) is { } name)
+        {
+            // Un nombre que ya existe (sin importar mayúsculas) reutiliza esa categoría: no hay repetidas.
+            if (await ProductCategoryStore.FindByNameAsync(db, merchantId, name, cancellationToken) is { } existing)
+            {
+                return new CategoryChoice.Chosen(existing);
+            }
+
+            if (await ProductCategoryStore.Of(db, merchantId).CountAsync(cancellationToken) >= ProductCategory.MaxPerMerchant)
+            {
+                return new CategoryChoice.Rejected(ProductCategoryMessages.LimitReached);
+            }
+
+            var sortOrder = await ProductCategoryStore.NextSortOrderAsync(db, merchantId, cancellationToken);
+            return new CategoryChoice.Chosen(ProductCategory.Create(merchantId, name, sortOrder, clock.GetUtcNow()));
+        }
+
+        if (command.CategoryId is not { } categoryId)
+        {
+            return new CategoryChoice.Chosen(null);
+        }
+
+        var category = await ProductCategoryStore.Of(db, merchantId).SingleOrDefaultAsync(c => c.Id == categoryId, cancellationToken);
+        return category is null ? new CategoryChoice.Foreign() : new CategoryChoice.Chosen(category);
     }
 
     /// <summary>Básico y vencido dejan el catálogo en solo lectura (dado de baja ya se revisó antes: el estatus manda).</summary>

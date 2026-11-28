@@ -11,6 +11,12 @@ public static class SubscriptionChargeMetadata
     public const string MerchantIdKey = "merchantId";
     public const string SubscriptionChargeIdKey = "subscriptionChargeId";
 
+    /// <summary>
+    /// Concepto del pedido (<c>SubscriptionCharge.PaymentLinkConcept</c>, ajustes 2026-11-27). Pey no acepta concepto en
+    /// el link; no sirve para conciliar.
+    /// </summary>
+    public const string ConceptKey = "concept";
+
     /// <summary><c>kind</c> de un link de la suscripción.</summary>
     public const string SubscriptionKind = "subscription";
 }

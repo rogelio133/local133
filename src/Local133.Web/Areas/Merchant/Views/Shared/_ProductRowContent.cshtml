@@ -1,6 +1,6 @@
 @using Local133.Web.Areas.Merchant.Models
 @model ProductListItem
-@* Miniatura, nombre y precio de una fila de la lista (dentro de un enlace o, en solo lectura, de un div). *@
+@* Miniatura, nombre, precio y categoría (solo sin filtro) de una fila de la lista (dentro de un enlace o, en solo lectura, de un div). *@
 @if (Model.ThumbnailUrl is not null)
 {
     <img class="product-thumb rounded object-fit-cover" src="@Model.ThumbnailUrl" alt="" width="56" height="56" loading="lazy" />
@@ -13,5 +13,8 @@ else
 }
 <span class="flex-grow-1 product-info">
     <span class="d-block fw-semibold text-truncate" data-product-name>@Model.Name</span>
-    <span class="d-block text-body-secondary" data-product-price>@Model.PriceText</span>
+    <span class="d-block text-body-secondary text-truncate"><span data-product-price>@Model.PriceText</span>@if (Model.CategoryName is not null)
+        {
+            <text> · </text><span class="small" data-product-category>@Model.CategoryName</span>
+        }</span>
 </span>

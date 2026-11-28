@@ -187,6 +187,7 @@ internal sealed class SubscriptionCheckout(
         [SubscriptionChargeMetadata.KindKey] = SubscriptionChargeMetadata.SubscriptionKind,
         [SubscriptionChargeMetadata.MerchantIdKey] = charge.MerchantId.ToString(CultureInfo.InvariantCulture),
         [SubscriptionChargeMetadata.SubscriptionChargeIdKey] = charge.Id.ToString(CultureInfo.InvariantCulture),
+        [SubscriptionChargeMetadata.ConceptKey] = charge.PaymentLinkConcept,
     };
 
     private static void EnsureDefined(SubscriptionPlan plan, SubscriptionPackage package)

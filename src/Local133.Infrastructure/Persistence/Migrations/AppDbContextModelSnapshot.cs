@@ -346,6 +346,9 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -381,11 +384,49 @@ namespace Local133.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("MerchantId", "IsDeleted", "Name");
 
                     b.ToTable("Products", null, t =>
                         {
                             t.HasCheckConstraint("CK_Products_Price", "[Price] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Local133.Domain.Products.ProductCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("MerchantId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .UseCollation("Latin1_General_100_CI_AS");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MerchantId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("MerchantId", "SortOrder");
+
+                    b.ToTable("ProductCategories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductCategories_SortOrder", "[SortOrder] >= 0");
                         });
                 });
 
@@ -1328,6 +1369,22 @@ namespace Local133.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Local133.Domain.Products.Product", b =>
+                {
+                    b.HasOne("Local133.Domain.Products.ProductCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Local133.Domain.Merchants.Merchant", null)
+                        .WithMany()
+                        .HasForeignKey("MerchantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Local133.Domain.Products.ProductCategory", b =>
                 {
                     b.HasOne("Local133.Domain.Merchants.Merchant", null)
                         .WithMany()

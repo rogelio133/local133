@@ -1,7 +1,7 @@
 namespace Local133.LandingPage.Tests;
 
 /// <summary>
-/// Logo, íconos y <c>rotating-word.js</c> de la portada son copias de <c>Local133.Web/wwwroot</c> (los static web
+/// Logo, íconos, Bootstrap Icons y <c>rotating-word.js</c> de la portada son copias de <c>Local133.Web/wwwroot</c> (los static web
 /// assets no sirven archivos enlazados). El logo y los íconos los escribe <c>tools/brand-assets.ps1</c> en las dos apps;
 /// si se cambia otro original, hay que copiarlo también a la portada.
 /// </summary>
@@ -18,6 +18,10 @@ public class SharedAssetsTests
     [InlineData("img/local133-logo-160.png")]
     [InlineData("img/local133-logo-320.png")]
     [InlineData("img/local133-logo-480.png")]
+    // Íconos del recibo y del catálogo públicos (2026-11-27); en el portal los pone LibMan.
+    [InlineData("lib/bootstrap-icons/font/bootstrap-icons.min.css")]
+    [InlineData("lib/bootstrap-icons/font/fonts/bootstrap-icons.woff2")]
+    [InlineData("lib/bootstrap-icons/font/fonts/bootstrap-icons.woff")]
     public void La_copia_de_la_portada_es_igual_a_la_de_Local133_Web(string path)
     {
         var root = RepositoryRoot();

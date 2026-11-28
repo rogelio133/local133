@@ -33,6 +33,18 @@ public abstract partial class WebTestBase(Local133WebFactory factory) : IAsyncLi
         BaseAddress = new Uri("https://localhost"),
     });
 
+    /// <summary>
+    /// Cliente como el servidor de la portada: con la llave de <c>/api/public</c> (2026-11-27). Sin
+    /// <paramref name="client"/> crea uno nuevo (<see cref="CreateClient"/>).
+    /// </summary>
+    protected HttpClient LandingClient(HttpClient? client = null)
+    {
+        client ??= CreateClient();
+        client.DefaultRequestHeaders.Remove(Local133.Web.PublicPages.PublicPagesApi.KeyHeader);
+        client.DefaultRequestHeaders.Add(Local133.Web.PublicPages.PublicPagesApi.KeyHeader, Local133WebFactory.PublicApiKey);
+        return client;
+    }
+
     /// <summary>GET del formulario (para el token antiforgery y su cookie) y POST con los campos dados.</summary>
     protected static async Task<HttpResponseMessage> PostFormAsync(
         HttpClient client, string pageUrl, IDictionary<string, string> fields, string? postUrl = null)

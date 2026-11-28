@@ -35,6 +35,11 @@ public partial class Product : Entity
     /// <summary>Llave base de la foto; <c>null</c> = sin foto. Cambia (guid nuevo) cada vez que se reemplaza.</summary>
     public string? PhotoKey { get; set; }
 
+    /// <summary>Categoría del vendedor; <c>null</c> = sin categoría (también al borrar la categoría).</summary>
+    public int? CategoryId { get; set; }
+
+    public ProductCategory? Category { get; set; }
+
     public bool IsDeleted { get; set; }
 
     public DateTimeOffset? DeletedAt { get; set; }
@@ -96,6 +101,27 @@ public partial class Product : Entity
 
     /// <summary>Mismos límites que el monto de una venta: de $0.01 a $999,999.99, en centavos.</summary>
     public static bool IsValidPrice(decimal price) => Sale.IsValidAmount(price);
+
+    /// <summary>
+    /// Pone la categoría (o ninguna). La categoría debe ser del mismo vendedor; puede ser nueva (aún sin id): EF Core
+    /// llena el <see cref="CategoryId"/> al guardar.
+    /// </summary>
+    public void SetCategory(ProductCategory? category, DateTimeOffset now)
+    {
+        if (category is not null && category.MerchantId != MerchantId)
+        {
+            throw new ArgumentException("La categoría es de otro vendedor.", nameof(category));
+        }
+
+        EnsureNotDeleted();
+        var changed = category is null ? CategoryId is not null : category.Id == 0 || category.Id != CategoryId;
+        Category = category;
+        CategoryId = category is { Id: > 0 } ? category.Id : null;
+        if (changed)
+        {
+            UpdatedAt = now;
+        }
+    }
 
     /// <summary>Pone una foto nueva; devuelve la llave de la anterior (para borrar sus archivos) o <c>null</c>.</summary>
     public string? ReplacePhoto(string photoKey, DateTimeOffset now)

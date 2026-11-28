@@ -149,6 +149,7 @@ public class MyPlanTests(Local133WebFactory factory) : SubscriptionPaymentTestBa
         Assert.Equal(SubscriptionChargeMetadata.SubscriptionKind, request.Metadata![SubscriptionChargeMetadata.KindKey]);
         Assert.Equal(merchantId.ToString(CultureInfo.InvariantCulture), request.Metadata[SubscriptionChargeMetadata.MerchantIdKey]);
         Assert.Equal(charge.Id.ToString(CultureInfo.InvariantCulture), request.Metadata[SubscriptionChargeMetadata.SubscriptionChargeIdKey]);
+        Assert.Equal("Local133 plan Pro 12 meses", request.Metadata[SubscriptionChargeMetadata.ConceptKey]);
 
         Assert.Equal(merchantId, charge.MerchantId);
         Assert.Equal(SubscriptionPackage.Annual, charge.Package);

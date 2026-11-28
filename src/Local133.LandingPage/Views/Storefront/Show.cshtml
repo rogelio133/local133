@@ -1,0 +1,179 @@
+@using Local133.Web.PublicPages
+@model StorefrontPageViewModel
+@{
+    var store = Model.Storefront;
+    ViewData["Title"] = store.BusinessName;
+    ViewData["Description"] = $"Catálogo de {store.BusinessName}: productos y precios. Pide por WhatsApp.";
+    ViewData["BodyClass"] = "storefront-page";
+    var total = store.TotalCount;
+}
+@section Head {
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+}
+@* Catálogo público (2026-11-27: en la portada, con la barra rosa del logo y sin pie). La vista previa del vendedor
+   sigue en el portal (Local133.Web/Views/Storefront/Show.cshtml): si cambia el marcado aquí, revisar allá. *@
+<partial name="_StoreBar" />
+<main class="storefront-main">
+    <div class="storefront-container" data-storefront>
+        <div class="card mb-3 overflow-hidden">
+            @if (store.CoverUrl is not null)
+            {
+                <img class="storefront-cover" src="@store.CoverUrl" alt="Foto de @store.BusinessName" data-storefront-cover />
+            }
+            <div class="card-body d-flex align-items-center gap-3">
+                @if (store.LogoUrl is not null)
+                {
+                    <img class="storefront-logo rounded border" src="@store.LogoUrl" alt="Logo de @store.BusinessName" data-storefront-logo />
+                }
+                <div class="flex-grow-1 storefront-product-info">
+                    <h1 class="h4 mb-1 text-break" data-storefront-name>@store.BusinessName</h1>
+                    @if (Model.AddressLines.Count > 0)
+                    {
+                        <p class="small text-body-secondary mb-0 text-break" data-storefront-address>
+                            <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
+                            @for (var i = 0; i < Model.AddressLines.Count; i++)
+                            {
+                                @if (i > 0)
+                                {
+                                    <br />
+                                }
+                                @Model.AddressLines[i]
+                            }
+                        </p>
+                    }
+                </div>
+            </div>
+            @if (store.WhatsAppUrl is not null)
+            {
+                <div class="card-body border-top d-grid">
+                    <a class="btn btn-success" href="@store.WhatsAppUrl" target="_blank" rel="noopener noreferrer" data-storefront-whatsapp>
+                        <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Pedir por WhatsApp
+                    </a>
+                </div>
+            }
+        </div>
+
+        <form class="mb-3" method="get" action="@Model.ListPath" role="search" data-storefront-search>
+            <label class="visually-hidden" for="storefront-q">Buscar productos</label>
+            <div class="input-group">
+                <input class="form-control" type="search" id="storefront-q" name="q" value="@store.Query"
+                       maxlength="@Local133.Web.PublicPages.PublicStorefront.QueryMaxLength" placeholder="Buscar productos" autocomplete="off" />
+                <button class="btn btn-outline-primary" type="submit" aria-label="Buscar">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                </button>
+            </div>
+        </form>
+
+        <p class="small text-body-secondary mb-2" data-storefront-count>
+            @if (store.Query is null)
+            {
+                @(total == 1 ? "1 producto" : $"{total:N0} productos")
+            }
+            else
+            {
+                @(total == 1 ? "1 resultado" : $"{total:N0} resultados") @:para «@store.Query» ·
+                <a href="@Model.ListPath" data-storefront-clear>Ver todos</a>
+            }
+        </p>
+
+        @if (store.Products.Count == 0)
+        {
+            <div class="card mb-3" data-storefront-empty>
+                <div class="card-body text-center text-body-secondary">
+                    @if (store.Query is null)
+                    {
+                        @:Este negocio todavía no tiene productos en su catálogo.
+                    }
+                    else
+                    {
+                        @:No encontramos productos con «@store.Query».
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Agrupado por categoría (ajustes 2026-11-26): un encabezado cada vez que cambia, también al inicio de cada
+               página si la categoría continúa; los productos sin categoría van al final, en «Otros». *@
+            @foreach (var group in StorefrontGroups.Of(store.Products, store.Grouped, p => p.Category))
+            {
+                @if (group.Heading is not null)
+                {
+                    <h2 class="storefront-category text-break" data-storefront-category>@group.Heading</h2>
+                }
+                <ul class="list-group mb-3" data-storefront-products>
+                    @foreach (var product in group.Items)
+                    {
+                        <li class="list-group-item d-flex align-items-start gap-3" data-storefront-product>
+                            @if (product.ThumbnailUrl is not null)
+                            {
+                                <img class="storefront-product-img rounded" src="@product.ThumbnailUrl" alt="" width="72" height="72" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="storefront-product-placeholder rounded bg-body-secondary d-flex align-items-center justify-content-center" aria-hidden="true">
+                                    <i class="bi bi-image text-body-secondary fs-4"></i>
+                                </span>
+                            }
+                            <div class="flex-grow-1 storefront-product-info">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <span class="fw-semibold text-break">@product.Name</span>
+                                    <span class="fw-semibold text-nowrap" data-storefront-price>@product.PriceText</span>
+                                </div>
+                                @if (product.Description is not null)
+                                {
+                                    <p class="small text-body-secondary mb-0 text-break">@product.Description</p>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (store.TotalPages > 1)
+            {
+                @* Igual que _Pager del portal: «Anterior · Página X de Y · Siguiente», sin fila de números. *@
+                <nav class="pager mb-3" aria-label="Páginas del catálogo" data-pager>
+                    <ul class="pager-list list-unstyled d-flex align-items-center justify-content-between gap-2 mb-0">
+                        <li>
+                            @if (Model.HasPrevious)
+                            {
+                                <a class="btn btn-outline-primary rounded-pill pager-btn" href="@Model.UrlFor(store.Page - 1)" rel="prev" data-pager-previous>
+                                    <i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="btn btn-outline-primary rounded-pill pager-btn disabled" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</span>
+                            }
+                        </li>
+                        <li class="pager-status fw-semibold text-center" aria-current="page" data-pager-status>
+                            Página @store.Page de @store.TotalPages
+                        </li>
+                        <li>
+                            @if (Model.HasNext)
+                            {
+                                <a class="btn btn-outline-primary rounded-pill pager-btn" href="@Model.UrlFor(store.Page + 1)" rel="next" data-pager-next>
+                                    Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="btn btn-outline-primary rounded-pill pager-btn disabled" aria-disabled="true">Siguiente <i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+                            }
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+
+        <p class="small text-body-secondary text-center mt-4 mb-0">
+            Los precios los fija el negocio. Pide y paga directo con ellos.
+        </p>
+        <p class="small text-center mb-0" data-storefront-made-with>
+            <a class="link-body-emphasis text-decoration-none" href="@Model.MadeWithUrl" target="_blank" rel="noopener">
+                Catálogo hecho con <strong>Local133</strong>
+            </a>
+        </p>
+    </div>
+</main>

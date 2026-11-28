@@ -102,29 +102,6 @@ public partial class PwaTests(Local133WebFactory factory) : SaleFlowTestBase(fac
         await AssertHasPwaAsync(client, await GetHtmlAsync(client, "/admin/clientes"));
     }
 
-    [Fact]
-    public async Task El_recibo_no_trae_el_manifest_ni_registra_el_service_worker()
-    {
-        var merchant = await ActiveMerchantAsync(Email);
-        var sale = await ChargeAsync(merchant);
-        await PostWebhookAsync(QrPaymentBodyFor(sale));
-
-        // Ni sin sesión (el cliente) ni con la del vendedor.
-        AssertHasNoPwa(await GetHtmlAsync(CreateClient(), $"/recibo/{sale.ReceiptToken}"));
-        AssertHasNoPwa(await GetHtmlAsync(merchant, $"/recibo/{sale.ReceiptToken}"));
-    }
-
-    [Fact]
-    public async Task La_tienda_no_trae_el_manifest()
-    {
-        await ActiveMerchantAsync(Email);
-        await SeedTrialAsync(Email);
-        await CreateProductAsync(Email, "Taco al pastor", 25m);
-        await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
-
-        AssertHasNoPwa(await GetHtmlAsync(CreateClient(), "/tienda/tacos-don-ramon"));
-    }
-
     private static async Task AssertHasPwaAsync(HttpClient client, string html)
     {
         var head = html[..html.IndexOf("</head>", StringComparison.Ordinal)];

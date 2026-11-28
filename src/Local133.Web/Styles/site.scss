@@ -712,6 +712,96 @@ body {
   word-break: break-all;
 }
 
+// --- Categorías de productos (ajustes 2026-11-26, punto 14) --------
+// Chips del filtro (Productos y carrito): una fila con scroll horizontal propio, para que la página nunca lo tenga. El
+// margen negativo con relleno deja ver el anillo de foco del primero y el último.
+.category-chips {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  margin-inline: -0.25rem;
+  padding: 0.25rem;
+}
+
+.category-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.9rem;
+  border: 1px solid $primary;
+  border-radius: 50rem;
+  color: $primary;
+  background-color: var(--bs-body-bg);
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  text-decoration: none;
+
+  &:hover {
+    background-color: $rosa-papel;
+  }
+
+  &:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba($primary, 0.35);
+  }
+
+  &.is-active {
+    color: $white;
+    background-color: $primary;
+  }
+}
+
+// Fila de la pantalla «Categorías»: asa, nombre (se recorta con «…») y botones de 44 px para el pulgar.
+.category-info {
+  min-width: 0;
+}
+
+.category-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  min-height: 2.75rem;
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  cursor: grab;
+  touch-action: none; // el dedo arrastra la fila en lugar de mover la página
+}
+
+.category-action {
+  --bs-btn-padding-x: 0;
+  --bs-btn-padding-y: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-row-ghost {
+  opacity: 0.4;
+  background-color: $rosa-papel;
+}
+
+.category-row-chosen {
+  cursor: grabbing;
+}
+
+// Encabezado de cada categoría en el catálogo (vista previa; la portada tiene su copia).
+.storefront-category {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
 // --- «Más» con tarjetas (ajustes 2026-11-26) ---------------------
 // Componente propio con las proporciones de .step-card de la portada: fondo rosa papel con borde rosa grueso, solo las
 // esquinas superior derecha e inferior izquierda redondeadas, título grande centrado y un ícono tenue en la esquina, del

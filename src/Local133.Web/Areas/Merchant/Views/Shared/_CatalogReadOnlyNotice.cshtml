@@ -1,0 +1,32 @@
+@using Local133.Web.Areas.Merchant.Models
+@model CatalogReadOnlyNoticeViewModel
+@* Aviso de catálogo de solo lectura: dado de baja, Básico (_ProRequired) o vencido (5.14). Lo usan Productos y
+   Categorías. *@
+@if (Model.Reason == CatalogReadOnlyReason.Disabled)
+{
+    <div class="alert alert-secondary" role="status" data-products-readonly>
+        Tu cuenta está dada de baja: puedes consultar tus productos, pero no modificarlos.
+    </div>
+}
+else if (Model.Reason == CatalogReadOnlyReason.Basic)
+{
+    <div class="mb-3" data-products-readonly data-products-readonly-plan="basic">
+        <partial name="_ProRequired" model='new ProRequiredViewModel(
+            "Tu catálogo es de solo lectura",
+            "Con Básico consultas tus productos. Con Pro los agregas, los editas y cobras con ellos.",
+            Model.WaitingText,
+            "bi-box-seam")' />
+    </div>
+}
+else if (Model.Reason == CatalogReadOnlyReason.Expired)
+{
+    @* Plan vencido (5.14): el catálogo se queda; se consulta hasta que elija un plan. *@
+    <div class="alert alert-danger d-flex flex-column flex-sm-row align-items-sm-center gap-2" role="status"
+         data-products-readonly data-products-readonly-plan="expired">
+        <span class="flex-grow-1">
+            <span class="d-block fw-bold">Tu plan venció</span>
+            <span class="d-block small">Tus productos siguen aquí, en solo lectura. Elige un plan para volver a cobrar; con Pro también los editas.</span>
+        </span>
+        <a class="btn btn-primary text-nowrap" href="@Url.Content("~" + PlanUrls.ChoosePlan)" data-plan-expired-choose>Elegir plan</a>
+    </div>
+}

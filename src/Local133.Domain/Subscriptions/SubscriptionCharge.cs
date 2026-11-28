@@ -81,6 +81,16 @@ public class SubscriptionCharge : Entity
 
     public string ClientReferenceId => ClientReferenceFor(Id);
 
+    /// <summary>Concepto del link de pago (ajustes 2026-11-27): <see cref="PaymentLinkConceptFor"/> de este cargo.</summary>
+    public string PaymentLinkConcept => PaymentLinkConceptFor(Plan, Months);
+
+    /// <summary>
+    /// «Local133 plan Pro 1 mes», «Local133 plan Básico 12 meses». Pey no acepta concepto en el link: va en su metadata
+    /// (<c>concept</c>).
+    /// </summary>
+    public static string PaymentLinkConceptFor(SubscriptionPlan plan, int months) =>
+        $"Local133 plan {plan.Label()} {months} {(months == 1 ? "mes" : "meses")}";
+
     /// <summary>
     /// Se puede reutilizar el link: pendiente, con link, del mismo plan, paquete y monto, con la misma versión de los
     /// Términos aceptada (5.15) y creado hace a lo más <paramref name="maxAgeDays"/> días (los días de gracia, 5.7). Uno

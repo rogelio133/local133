@@ -67,6 +67,7 @@
                                    placeholder="Buscar producto" aria-label="Buscar productos por nombre" autocomplete="off" enterkeyhint="search" />
                             <button type="submit" class="btn btn-outline-primary" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
                         </div>
+                        <input type="hidden" name="@CategoryFilters.QueryKey" value="@catalog.CategoryFilter" disabled="@(catalog.CategoryFilter is null)" data-category-query />
                     </form>
 
                     <div data-product-results aria-live="polite">

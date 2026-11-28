@@ -8,12 +8,18 @@ using Local133.Domain.Pey;
 using Local133.Domain.Sales;
 using Local133.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Local133.IntegrationTests.Sales;
 
 /// <summary>Paso 2.8 (+ 3.3): historial de ventas, resumen del día, detalle con productos y pagos, y ligas del recibo.</summary>
 public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
 {
+    /// <summary>Liga del recibo en la portada (App:LandingUrl, 2026-11-27).</summary>
+    private string ReceiptUrlOf(Sale sale) =>
+        Factory.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Local133.Web.Hosting.PublicSiteOptions>>()
+            .Value.ReceiptUrlFor(sale.ReceiptToken);
+
     private const string Url = "/app/ventas";
 
     // --- Historial --------------------------------------------------------------------------------------------------
@@ -257,10 +263,10 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         Assert.DoesNotContain("Comisión", html);
         // Recibo para compartir.
         Assert.Contains("data-sale-receipt", html);
-        Assert.Contains($"data-receipt-url=\"https://localhost/recibo/{sale.ReceiptToken}\"", html);
+        Assert.Contains($"data-receipt-url=\"{ReceiptUrlOf(sale)}\"", html);
         Assert.Contains("href=\"https://wa.me/?text=", html);
-        Assert.Contains(Uri.EscapeDataString($"https://localhost/recibo/{sale.ReceiptToken}"), html);
-        Assert.Contains($"href=\"/recibo/{sale.ReceiptToken}\"", html);
+        Assert.Contains(Uri.EscapeDataString($"{ReceiptUrlOf(sale)}"), html);
+        Assert.Contains($"href=\"{ReceiptUrlOf(sale)}\" target=\"_blank\" rel=\"noopener\" data-receipt-view", html);
         Assert.Contains("/js/receipt-share", html);
         Assert.Matches(new Regex("class=\"nav-link active\" href=\"/app/ventas\""), html);
     }
@@ -300,7 +306,7 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         var redirect = await client.GetAsync($"/app/ventas/{sale.Id}/whatsapp");
         Assert.Equal(HttpStatusCode.Redirect, redirect.StatusCode);
         Assert.StartsWith("https://wa.me/525512345678?text=", redirect.Headers.Location!.AbsoluteUri);
-        Assert.Contains(Uri.EscapeDataString($"https://localhost/recibo/{sale.ReceiptToken}"), redirect.Headers.Location!.AbsoluteUri);
+        Assert.Contains(Uri.EscapeDataString($"{ReceiptUrlOf(sale)}"), redirect.Headers.Location!.AbsoluteUri);
         Assert.True(redirect.Headers.CacheControl?.NoStore);
 
         // Escritorio: receipt-share.js cambia los botones a la app (whatsapp://) y ofrece WhatsApp Web.
@@ -365,7 +371,7 @@ public class SalesHistoryTests(Local133WebFactory factory) : SaleFlowTestBase(fa
         await PostWebhookAsync(QrPaymentBodyFor(sale));
         var paid = await GetHtmlAsync(client, SaleUrl(sale.Id));
         Assert.Contains("class=\"mx-auto mb-3 sale-receipt\" data-paid-only", paid);
-        Assert.Contains($"data-receipt-url=\"https://localhost/recibo/{sale.ReceiptToken}\"", paid);
+        Assert.Contains($"data-receipt-url=\"{ReceiptUrlOf(sale)}\"", paid);
         Assert.Contains($"href=\"/app/ventas/{sale.Id}\" data-sale-detail-link", paid);
     }
 

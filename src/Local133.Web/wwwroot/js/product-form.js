@@ -183,4 +183,35 @@
     });
 
     window.addEventListener('pagehide', releasePreview);
+
+    // 5. Categoría: el nombre de la nueva solo se ve (y se envía) con «+ Nueva categoría…». Sin JS se ven los dos.
+    var categorySelect = form.querySelector('[data-category-select]');
+    var newCategory = form.querySelector('[data-new-category]');
+    if (categorySelect && newCategory) {
+        var newCategoryInput = newCategory.querySelector('[data-new-category-name]');
+        var newCategoryLabel = newCategory.querySelector('[data-new-category-label]');
+        var NEW_VALUE = 'nueva';
+
+        newCategoryLabel.textContent = newCategoryLabel.getAttribute('data-js-text');
+
+        // Si el servidor regresó un nombre o un error en ese campo, se queda la opción «nueva».
+        var hasError = !!newCategory.querySelector('.field-validation-error');
+        if (newCategoryInput.value.trim() !== '' || hasError) {
+            categorySelect.value = NEW_VALUE;
+        }
+
+        var syncCategory = function (focus) {
+            var isNew = categorySelect.value === NEW_VALUE;
+            newCategory.classList.toggle('d-none', !isNew);
+            newCategoryInput.disabled = !isNew;
+            if (isNew && focus) {
+                newCategoryInput.focus();
+            }
+        };
+
+        categorySelect.addEventListener('change', function () {
+            syncCategory(true);
+        });
+        syncCategory(false);
+    }
 })();

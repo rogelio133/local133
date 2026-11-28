@@ -172,7 +172,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
                     p.TrackingKey))
                 .ToList(),
             sale.HasReceipt
-                ? receiptLinks.ShareFor(Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, amountText,
+                ? receiptLinks.ShareFor(sale.ReceiptToken, merchant.BusinessName, sale.Folio, amountText,
                     sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id))
                 : null);
         return View(model);
@@ -198,7 +198,7 @@ public class SalesController(AppDbContext db, IPlanAccess plans, ReceiptLinks re
         // En todos los planes, también vencido (5.14): el recibo es de una venta que ya existe.
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var message = ReceiptLinks.Message(
-            merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount), receiptLinks.UrlFor(Request, sale.ReceiptToken));
+            merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount), receiptLinks.UrlFor(sale.ReceiptToken));
         Response.Headers.CacheControl = "no-store";
         Response.Headers["Referrer-Policy"] = "no-referrer";
         return Redirect(ReceiptLinks.WhatsAppUrlFor(destination, message, sale.PhoneNumber));

@@ -134,7 +134,7 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
   |---|---|
   | `Landing__AppUrl` | Destino del botón «Empieza a cobrar». `appsettings.json` ya trae `https://app.local133.com.mx` |
   | `Home__RotatingWords__0`… | Opcional: sobrescribe por índice las palabras que rotan (mismas reglas que el portal; `""` acorta la lista) |
-  | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | `true`: la portada no configura forwarded headers en código; sin esto `UseHttpsRedirection` no ve el `https` del front-end de App Service y redirige en ciclo |
+  | `ASPNETCORE_FORWARDEDHEADERS_ENABLED` | ~~`true`~~ Ya no hace falta desde el 2026-11-27: `Program.cs` de la portada configura los forwarded headers en código (ver «Ajustes 2026-11-27 — Llave de la API pública…»). Si existe, es redundante e inofensivo |
 - Activar «HTTPS Only» en el App Service de la portada.
 
 ### Mantenimiento 2026-11-18 — Correo de cuenta activa y layout de correos
@@ -276,6 +276,11 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Ajustes 2026-11-26 — Bloque 5: menú del admin
 - Punto 13 (menú del admin): sin cambios para Azure. Solo vista, CSS y `wwwroot/js/admin-menu.js`; el estado del menú (oculto o visible) se guarda en el navegador (`localStorage`), no en el servidor.
 
+### Ajustes 2026-11-26 — Bloque 6: categorías de productos
+- **Migración `ProductCategories`** (corre sola al arrancar con `DatabaseMigrationSetup`): tabla `ProductCategories` (nombre con intercalación explícita `Latin1_General_100_CI_AS`, válida en Azure SQL sin importar la intercalación de la base) y columna `Products.CategoryId` nula con FK `ON DELETE SET NULL`. Solo agrega: los productos existentes quedan sin categoría y el catálogo se sigue viendo por nombre hasta que el vendedor use categorías.
+- **Portal y portada juntos**: el contrato de `/api/public/tiendas/{slug}` gana `grouped` y `category` (opcionales). Una portada vieja con un portal nuevo ignora los campos (catálogo sin encabezados); una portada nueva con un portal viejo los recibe vacíos. Ningún orden de publicación rompe, pero los encabezados solo salen con los dos publicados.
+- SortableJS va en `wwwroot/lib/sortablejs` (versionado, sin CDN en ejecución). Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
+
 ### Fase 5.12 — Planes y vigencia v2 (Básico y Pro)
 - **Se publica junto con la 5.13 a la 5.18** (rama aparte): publicar solo la 5.12 dejaría a los vendedores del gratuito con una transición de Básico sin el checkout para pagarlo.
 - **Migración `BasicAndProPlans`** (corre al arrancar, como las demás):
@@ -315,6 +320,17 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - El job es el mismo (`suscripciones-diario`, 9:00 México) y sigue sin crear links de Pey. Los botones de los recordatorios llevan al checkout (`{App__PublicBaseUrl}/app/plan/checkout…`), así que `App__PublicBaseUrl` debe ser la URL pública con HTTPS, como ya se exige.
 - Sin recursos, App Settings, secretos ni webhooks nuevos.
 
+### Ajustes 2026-11-27 — Recibo y catálogo en la portada; concepto del link de la suscripción
+- **Recibo** (`/recibo/{token}`) y **catálogo** (`/tienda/{slug}`) públicos ahora los sirve el App Service de la **portada** (`Local133.LandingPage`). La portada sigue **sin base de datos ni Blob**: pide los datos al portal por HTTPS (`GET {Landing__AppUrl}/api/public/recibos/{token}` y `/api/public/tiendas/{slug}`).
+  - App Settings de la portada: `Landing__AppUrl` = URL pública del portal (`https://app.local133.com.mx`). La portada debe poder salir a internet hacia el portal (sin restricciones de red de salida que lo impidan).
+  - App Settings del portal: `App__LandingUrl` = URL pública de la portada (`https://local133.com.mx`); con ella se arman las ligas del recibo (WhatsApp, «Ver recibo») y del catálogo («Catálogo en línea»). `App__PublicBaseUrl` sigue siendo la URL pública del portal: con ella salen las URLs absolutas de las imágenes (logo del recibo, foto, logo y miniaturas del catálogo), que se siguen sirviendo desde el portal y el Blob.
+  - Las rutas viejas del portal (`/recibo/{token}`, `/tienda/{slug}`) responden **301** a la portada: publicar la portada **antes o junto** con el portal, o las ligas ya compartidas redirigirán a una página que aún no existe.
+  - `/api/public/*` es anónima y de solo lectura (expone lo mismo que las páginas públicas). Si se pone un WAF o restricciones de acceso al portal, dejar pasar esas rutas.
+- **Link de pago de la suscripción**: la metadata lleva una llave nueva `concept` («Local133 plan Pro 12 meses»). Sin migración, recursos, secretos, jobs ni webhooks nuevos.
+
+### Ajustes 2026-11-27 — Llave de la API pública y límite por IP en la portada
+- **Secreto nuevo `PublicApi__Key`**, con **el mismo valor** en el App Service del portal y en el de la portada (App Settings o referencia a Key Vault; generar uno aleatorio de al menos 32 caracteres, p. ej. `openssl rand -base64 32`). La portada lo manda en `X-Local133-Key` a `/api/public`; el portal responde 401 sin él y **500 si al portal le falta** (la API no queda abierta por olvido). Configurarlo en los dos antes o junto con la publicación; si no, el recibo y el catálogo públicos dirán «No pudimos cargar…». Para rotarlo: cambiar el valor en los dos sitios (unos segundos de 503 mientras reinician).
+- **Límite por IP en la portada** (sin recursos nuevos): `RateLimiting__ReceiptPermitLimit` (30), `RateLimiting__StorefrontPermitLimit` (60) y `RateLimiting__WindowSeconds` (60) tienen valores por defecto en `appsettings.json`; solo se configuran para cambiarlos. La IP del cliente sale de `X-Forwarded-For` (último valor, el del front-end de App Service): la portada configura los forwarded headers en `Program.cs`, así que ya **no** se necesita el App Setting `ASPNETCORE_FORWARDEDHEADERS_ENABLED` (si está, es redundante: el encabezado ya procesado no se vuelve a aplicar). El contador vive en memoria de cada instancia: con escalado a varias instancias el límite efectivo se multiplica (aceptable; un límite compartido requeriría Redis o Front Door).
 ### Fase 5.17 — Admin
 - **Se publica junto con la 5.12 a la 5.16 y la 5.18.**
 - Sin cambios para Azure: sin migración (los precios de Básico y el `Plan` de periodos y cargos ya los creó `BasicAndProPlans`), recursos, App Settings, secretos, jobs ni webhooks nuevos.

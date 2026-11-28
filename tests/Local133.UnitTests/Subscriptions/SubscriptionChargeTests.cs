@@ -27,6 +27,20 @@ public class SubscriptionChargeTests
     }
 
     [Theory]
+    [InlineData(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, "Local133 plan Pro 1 mes")]
+    [InlineData(SubscriptionPlan.Pro, SubscriptionPackage.Annual, "Local133 plan Pro 12 meses")]
+    [InlineData(SubscriptionPlan.Basic, SubscriptionPackage.OneMonth, "Local133 plan Básico 1 mes")]
+    [InlineData(SubscriptionPlan.Basic, SubscriptionPackage.Annual, "Local133 plan Básico 12 meses")]
+    public void El_concepto_del_link_lleva_el_plan_y_los_meses(SubscriptionPlan plan, SubscriptionPackage package, string expected)
+    {
+        var quote = SubscriptionPricing.Quote(plan, package, Settings);
+
+        var charge = SubscriptionCharge.Create(7, quote, isFounderPrice: false, SubscriptionChargeOrigin.Merchant, Mx(2026, 11, 20, 10));
+
+        Assert.Equal(expected, charge.PaymentLinkConcept);
+    }
+
+    [Theory]
     [InlineData("sub-42", true, 42)]
     [InlineData(" sub-7 ", true, 7)]
     [InlineData("sub-0", false, 0)]

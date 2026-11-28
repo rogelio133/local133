@@ -86,6 +86,38 @@
                     <textarea asp-for="Input.Description" rows="3" maxlength="@Product.DescriptionMaxLength" class="form-control"
                               placeholder="Ej. Tortilla de maíz con piña y cilantro" data-product-description></textarea>
                     <span asp-validation-for="Input.Description" class="d-block text-danger small mt-1"></span>
+
+                    @* Sin JS se ven los dos campos («o crea una nueva»); product-form.js muestra el nombre solo con
+                       «+ Nueva categoría…» y, si no, lo deshabilita para que no se envíe. *@
+                    <label asp-for="Input.Category" class="form-label text-body-secondary mt-3"></label>
+                    <select asp-for="Input.Category" class="form-select" data-category-select>
+                        <option value="">Sin categoría</option>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <option value="@category.Value">@category.Name</option>
+                        }
+                        @if (Model.CanCreateCategory)
+                        {
+                            <option value="@ProductInput.NewCategoryValue">+ Nueva categoría…</option>
+                        }
+                    </select>
+                    @if (Model.CanCreateCategory)
+                    {
+                        <div class="mt-2" data-new-category>
+                            <label asp-for="Input.NewCategoryName" class="form-label small text-body-secondary" data-new-category-label
+                                   data-js-text="Nombre de la categoría nueva">O crea una categoría nueva</label>
+                            <input asp-for="Input.NewCategoryName" type="text" autocomplete="off" autocapitalize="sentences"
+                                   maxlength="@ProductCategory.NameMaxLength" class="form-control" placeholder="Ej. Bebidas"
+                                   data-val-trim data-val-required="@ProductCategoryMessages.NewNameRequired" data-new-category-name />
+                            <span asp-validation-for="Input.NewCategoryName" class="d-block text-danger small mt-1"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-text" data-category-limit>Ya tienes @ProductCategory.MaxPerMerchant categorías, el máximo.</div>
+                        @* Un formulario abierto antes de llegar al tope pudo pedir una nueva: el error se ve aquí. *@
+                        <span asp-validation-for="Input.NewCategoryName" class="d-block text-danger small mt-1"></span>
+                    }
                 </div>
             </div>
 

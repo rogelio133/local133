@@ -15,6 +15,11 @@ public sealed record ProductPhotoUpload(Stream Content, long Length);
 /// </summary>
 /// <param name="Photo">Foto nueva (reemplaza la actual); <c>null</c> = sin cambio.</param>
 /// <param name="RemovePhoto">Quitar la foto actual (se ignora si viene <paramref name="Photo"/>).</param>
+/// <param name="CategoryId">Categoría existente del vendedor; <c>null</c> = sin categoría. Una ajena ⇒ <see cref="SaveProductResult.NotFound"/>.</param>
+/// <param name="NewCategoryName">
+/// Categoría nueva, creada en la misma transacción que el producto (si ya hay una con ese nombre, sin importar
+/// mayúsculas, se reutiliza). Tiene prioridad sobre <paramref name="CategoryId"/>.
+/// </param>
 public sealed record SaveProductCommand(
     string UserId,
     int? ProductId,
@@ -22,7 +27,9 @@ public sealed record SaveProductCommand(
     string? Description,
     decimal Price,
     ProductPhotoUpload? Photo = null,
-    bool RemovePhoto = false);
+    bool RemovePhoto = false,
+    int? CategoryId = null,
+    string? NewCategoryName = null);
 
 /// <summary>Baja lógica de un producto del vendedor.</summary>
 public sealed record DeleteProductCommand(string UserId, int ProductId);
@@ -44,6 +51,10 @@ public sealed class SaveProductCommandValidator : AbstractValidator<SaveProductC
             .GreaterThanOrEqualTo(Sale.MinAmount).WithMessage(ProductMessages.PriceTooLow)
             .LessThanOrEqualTo(Sale.MaxAmount).WithMessage(ProductMessages.PriceTooHigh)
             .Must(p => decimal.Round(p, PeyLimits.AmountDecimals) == p).WithMessage(ProductMessages.PriceTooManyDecimals);
+        When(c => !string.IsNullOrWhiteSpace(c.NewCategoryName), () =>
+            RuleFor(c => c.NewCategoryName)
+                .Must(n => ProductCategoryMessages.NameError(n) is null)
+                .WithMessage(c => ProductCategoryMessages.NameError(c.NewCategoryName)!));
         When(c => c.Photo is not null, () =>
             RuleFor(c => c.Photo!.Length)
                 .Cascade(CascadeMode.Stop)
@@ -97,10 +108,13 @@ public abstract record SaveProductResult
 
     public sealed record Saved(int ProductId) : SaveProductResult;
 
-    /// <summary>Datos inválidos; llave = propiedad del comando (<c>Name</c>, <c>Description</c>, <c>Price</c>, <c>Photo</c>).</summary>
+    /// <summary>
+    /// Datos inválidos; llave = propiedad del comando (<c>Name</c>, <c>Description</c>, <c>Price</c>, <c>Photo</c>,
+    /// <c>NewCategoryName</c>).
+    /// </summary>
     public sealed record Invalid(IReadOnlyDictionary<string, string[]> Errors) : SaveProductResult;
 
-    /// <summary>No existe, es de otro vendedor o está dado de baja.</summary>
+    /// <summary>El producto (o la categoría elegida) no existe, es de otro vendedor o está dado de baja.</summary>
     public sealed record NotFound : SaveProductResult;
 
     /// <summary>El vendedor no puede modificar su catálogo (dado de baja).</summary>

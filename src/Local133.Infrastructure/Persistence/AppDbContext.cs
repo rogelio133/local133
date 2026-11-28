@@ -41,6 +41,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
     /// <summary>Catálogo del vendedor; la baja lógica no va en el filtro global (consultar con <c>!IsDeleted</c>).</summary>
     public DbSet<Product> Products => Set<Product>();
 
+    /// <summary>Categorías del catálogo del vendedor (ajustes 2026-11-26).</summary>
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+
     /// <summary>Suscripción del vendedor (una por vendedor; nace con la prueba).</summary>
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
 
@@ -82,6 +85,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ITenantContext
         modelBuilder.Entity<SaleItem>().HasQueryFilter(i => !IsMerchantScoped || i.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Payment>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Product>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
+        modelBuilder.Entity<ProductCategory>().HasQueryFilter(c => !IsMerchantScoped || c.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<Subscription>().HasQueryFilter(s => !IsMerchantScoped || s.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionPeriod>().HasQueryFilter(p => !IsMerchantScoped || p.MerchantId == CurrentMerchantId);
         modelBuilder.Entity<SubscriptionCharge>().HasQueryFilter(c => !IsMerchantScoped || c.MerchantId == CurrentMerchantId);
