@@ -489,6 +489,15 @@ Cambios frente a lo de aquí:
   - el anuncio, una sola vez por vendedor.
 
 ### 5.17 Admin
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.16 y la 5.18.* — [bitácora](../log_plan/fase-5.17-admin.md)
+
+Cambios frente a lo de aquí:
+- Básico < Pro también aplica a los precios de fundador (confirmado por el usuario). Para la verificación de extremo a extremo de §16 no se pueden poner los dos en $0.01: Básico $0.01 y Pro $0.02.
+- Regalar Pro con Básico por delante no convierte el Básico: se encadena al final, como los premios.
+- Las subidas de Básico a Pro se cuentan por los periodos `Conversion` creados en 30 días.
+- `AuditAction.ProDaysGranted` y `NotificationType.ProDaysGranted` conservan el nombre (se guardan como texto); solo cambian los textos.
+- `InTerms` suma los 4 precios de Básico (15 campos).
+
 - **Parámetros**:
   - los campos nuevos en `SettingsInput`;
   - `SystemSettingsRules`: fundador ≤ normal en cada plan, Básico < Pro en el mensual y en el anual, y los campos `InTerms` actualizados.
@@ -503,6 +512,14 @@ Cambios frente a lo de aquí:
 - **Pruebas**: `SettingsTests` con las reglas nuevas, `CustomersTests`, `CustomerPlanTests` (regalar días de Básico) y `DashboardTests`.
 
 ### 5.18 Portada y textos legales
+✅ *Hecho el 2026-11-27, sin publicar: sale junto con la 5.12 a la 5.17.* — [bitácora](../log_plan/fase-5.18-portada-y-textos-legales.md)
+
+Cambios frente a lo de aquí:
+- Las tarjetas son «Prueba Pro», Básico y Pro (con «Recomendado»); cada una de pago trae el mensual y el anual, porque ya no hay tarjetas separadas por duración.
+- El Aviso de privacidad sí cambió de texto (ya no habla del gratuito ni del límite de cobros, y menciona la versión de los Términos del pedido), así que también sube a la `2026-11-27`.
+- Los Términos suman una sección «Cambio de plan» y quitan «Límites del plan gratuito»; las anclas de las demás se quedan.
+- `SystemSettingsRules.InTerms` no cambió: ya tenía los 15 campos desde la 5.17.
+
 - **Portada**:
   - `_Pricing.cshtml` con tres tarjetas: «Prueba Pro 15 días», Básico y Pro, con los precios de §2 y la tabla de funciones;
   - el hero («15 días de Pro gratis»), «Cómo funciona», el cierre y las preguntas frecuentes, con 15 días, la prueba al primer cobro y sin el gratuito. Por ejemplo, «¿Qué pasa al terminar mis 15 días?» pasa a decir «eliges Básico o Pro; si no pagas, no podrás generar cobros nuevos, pero tu información se queda»;

@@ -23,11 +23,11 @@ public abstract class AdminTestBase(Local133WebFactory factory) : SubscriptionPa
     /// <summary>Cargo de la suscripción insertado directo; con <paramref name="paidAt"/> queda pagado (a mano si se indica).</summary>
     protected Task<SubscriptionCharge> InsertChargeAsync(
         string email, decimal amount, DateTimeOffset createdAt, DateTimeOffset? paidAt = null, bool manual = false,
-        SubscriptionChargeStatus status = SubscriptionChargeStatus.Pending) => WithDbAsync(async db =>
+        SubscriptionChargeStatus status = SubscriptionChargeStatus.Pending, SubscriptionPlan plan = SubscriptionPlan.Pro) => WithDbAsync(async db =>
     {
         var merchant = await MerchantOfAsync(db, email);
         var charge = SubscriptionCharge.Create(
-            merchant.Id, new SubscriptionQuote(SubscriptionPlan.Pro, SubscriptionPackage.OneMonth, 1, amount, 0m, null, amount), false,
+            merchant.Id, new SubscriptionQuote(plan, SubscriptionPackage.OneMonth, 1, amount, 0m, null, amount), false,
             SubscriptionChargeOrigin.Merchant, createdAt);
         charge.AttachLink($"plink_{Guid.NewGuid():N}"[..20], "https://pey.mx/link");
         charge.Status = status;

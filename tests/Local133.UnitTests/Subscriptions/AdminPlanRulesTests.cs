@@ -166,6 +166,8 @@ public class AdminPlanRulesTests
     [Theory]
     [InlineData(nameof(SystemSettings.ProMonthlyPrice))]
     [InlineData(nameof(SystemSettings.ProFounderMonthlyPrice))]
+    [InlineData(nameof(SystemSettings.BasicMonthlyPrice))]
+    [InlineData(nameof(SystemSettings.BasicFounderAnnualPrice))]
     [InlineData(nameof(SystemSettings.FounderSlots))]
     [InlineData(nameof(SystemSettings.TrialDays))]
     [InlineData(nameof(SystemSettings.GraceDays))]
@@ -178,8 +180,10 @@ public class AdminPlanRulesTests
         var assigned = 0;
         switch (field)
         {
-            case nameof(SystemSettings.ProMonthlyPrice): settings.ProMonthlyPrice = 199.999m; settings.ProFounderMonthlyPrice = 1m; break;
+            case nameof(SystemSettings.ProMonthlyPrice): settings.ProMonthlyPrice = 199.999m; break;
             case nameof(SystemSettings.ProFounderMonthlyPrice): settings.ProFounderMonthlyPrice = 250m; break;
+            case nameof(SystemSettings.BasicMonthlyPrice): settings.BasicMonthlyPrice = 199m; break;
+            case nameof(SystemSettings.BasicFounderAnnualPrice): settings.BasicFounderAnnualPrice = 1000m; break;
             case nameof(SystemSettings.FounderSlots): settings.FounderSlots = 10; assigned = 11; break;
             case nameof(SystemSettings.TrialDays): settings.TrialDays = 0; break;
             case nameof(SystemSettings.GraceDays): settings.GraceDays = 31; break;
@@ -199,8 +203,12 @@ public class AdminPlanRulesTests
     {
         var settings = new SystemSettings
         {
-            ProMonthlyPrice = 0.01m,
-            ProFounderMonthlyPrice = 0.01m,
+            BasicMonthlyPrice = 0.01m,
+            BasicFounderMonthlyPrice = 0.01m,
+            ProMonthlyPrice = 0.02m,
+            ProFounderMonthlyPrice = 0.02m,
+            BasicAnnualPrice = 99_999.98m,
+            BasicFounderAnnualPrice = 99_999.98m,
             ProAnnualPrice = 99_999.99m,
             ProFounderAnnualPrice = 99_999.99m,
             FounderSlots = 3,
@@ -213,21 +221,60 @@ public class AdminPlanRulesTests
         Assert.Empty(SystemSettingsRules.Validate(settings, assignedFounders: 3));
     }
 
+    [Theory]
+    [InlineData(99, 99, 69, 149, nameof(SystemSettings.BasicMonthlyPrice))]
+    [InlineData(99, 199, 149, 149, nameof(SystemSettings.BasicFounderMonthlyPrice))]
+    [InlineData(99, 199, 160, 149, nameof(SystemSettings.BasicFounderMonthlyPrice))]
+    public void Basico_cuesta_menos_que_Pro_tambien_de_fundador(
+        int basic, int pro, int basicFounder, int proFounder, string field)
+    {
+        var settings = new SystemSettings
+        {
+            BasicMonthlyPrice = basic,
+            ProMonthlyPrice = pro,
+            BasicFounderMonthlyPrice = basicFounder,
+            ProFounderMonthlyPrice = proFounder,
+        };
+
+        var errors = SystemSettingsRules.Validate(settings, assignedFounders: 0);
+
+        Assert.Contains(errors, e => e.Field == field && e.Message == "Básico debe costar menos que Pro.");
+    }
+
+    [Fact]
+    public void El_anual_de_Basico_tambien_cuesta_menos_que_el_de_Pro()
+    {
+        var settings = new SystemSettings { BasicAnnualPrice = 1990m, BasicFounderAnnualPrice = 1490m };
+
+        var errors = SystemSettingsRules.Validate(settings, assignedFounders: 0);
+
+        Assert.Equal(
+            [nameof(SystemSettings.BasicAnnualPrice), nameof(SystemSettings.BasicFounderAnnualPrice)],
+            errors.Select(e => e.Field).Order());
+    }
+
     [Fact]
     public void Los_cambios_listan_solo_lo_que_cambio_y_cuales_estan_en_los_terminos()
     {
         var before = new SystemSettings();
         var after = new SystemSettings();
         SystemSettingsRules.CopyValues(before, after);
+        after.BasicFounderAnnualPrice = 650m;
         after.ProMonthlyPrice = 249m;
         after.VatRate = 0.08m;
 
         var changes = SystemSettingsRules.Changes(before, after);
 
         Assert.Equal(
-            [new SettingsChange(nameof(SystemSettings.ProMonthlyPrice), "199", "249"), new SettingsChange(nameof(SystemSettings.VatRate), "0.16", "0.08")],
+            [
+                new SettingsChange(nameof(SystemSettings.BasicFounderAnnualPrice), "690", "650"),
+                new SettingsChange(nameof(SystemSettings.ProMonthlyPrice), "199", "249"),
+                new SettingsChange(nameof(SystemSettings.VatRate), "0.16", "0.08"),
+            ],
             changes);
         Assert.Contains(nameof(SystemSettings.ProMonthlyPrice), SystemSettingsRules.InTerms);
+        Assert.Contains(nameof(SystemSettings.BasicMonthlyPrice), SystemSettingsRules.InTerms);
+        Assert.Equal(15, SystemSettingsRules.InTerms.Count);
         Assert.DoesNotContain(nameof(SystemSettings.VatRate), SystemSettingsRules.InTerms);
         Assert.All(SystemSettingsRules.Fields, f => SystemSettingsRules.ValueOf(before, f));
     }

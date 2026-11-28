@@ -31,9 +31,15 @@ internal sealed class AdminPlanActions(
     private static readonly CultureInfo Mexico = CultureInfo.GetCultureInfo("es-MX");
 
     public async Task<AdminPlanResult> GrantDaysAsync(
-        int merchantId, int days, string note, bool notify, AdminActor actor, CancellationToken cancellationToken = default)
+        int merchantId, SubscriptionPlan plan, int days, string note, bool notify, AdminActor actor,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(actor);
+        if (!Enum.IsDefined(plan))
+        {
+            return new AdminPlanResult.Rejected("Elige el plan de los días: Básico o Pro.");
+        }
+
         if (days is < 1 or > AdminPlanLimits.MaxGrantDays)
         {
             return new AdminPlanResult.Rejected($"Regala entre 1 y {AdminPlanLimits.MaxGrantDays} días.");
@@ -64,16 +70,17 @@ internal sealed class AdminPlanActions(
 
             var graceDays = await GraceDaysAsync(cancellationToken);
             var before = subscription.ProUntil;
-            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, subscription.ChainEndPlan, days, now, graceDays);
+            period = subscription.AddDaysPeriod(SubscriptionPeriodKind.AdminGrant, plan, days, now, graceDays);
             proUntil = subscription.ProUntil;
             await db.SaveChangesAsync(cancellationToken); // id del periodo para la bitácora y el aviso
 
             db.AuditLogs.Add(AuditLog.Create(
                 actor.UserId, actor.Email, AuditAction.ProDaysGranted, merchantId,
-                $"Regaló {DaysText(days)} de Pro ({Date(period.StartsAt)} al {LastDay(period.EndsAt)}){(notify ? ", con aviso al vendedor" : ", sin aviso")}.",
+                $"Regaló {DaysText(days)} de {plan.Label()} ({Date(period.StartsAt)} al {LastDay(period.EndsAt)}){(notify ? ", con aviso al vendedor" : ", sin aviso")}.",
                 note,
                 Json(new
                 {
+                    plan = plan.ToString(),
                     days,
                     periodId = period.Id,
                     period.StartsAt,
@@ -87,15 +94,16 @@ internal sealed class AdminPlanActions(
             await transaction.CommitAsync(cancellationToken);
         }
 
-        logger.LogInformation("Admin {ActorUserId} regaló {Days} días de Pro al vendedor {MerchantId} (periodo {PeriodId})",
-            actor.UserId, days, merchantId, period.Id);
+        logger.LogInformation("Admin {ActorUserId} regaló {Days} días de {Plan} al vendedor {MerchantId} (periodo {PeriodId})",
+            actor.UserId, days, plan, merchantId, period.Id);
 
         if (notify)
         {
-            await NotifyGrantAsync(merchant, period, days, proUntil);
+            await NotifyGrantAsync(merchant, period, plan, days, now);
         }
 
-        return new AdminPlanResult.Done($"Listo: se regalaron {DaysText(days)}. Tiene Pro hasta el {LastDay(proUntil)}.");
+        return new AdminPlanResult.Done(
+            $"Listo: se regalaron {DaysText(days)} de {plan.Label()}, del {Date(period.StartsAt)} al {LastDay(period.EndsAt)}. Vigente hasta el {LastDay(proUntil)}.");
     }
 
     public async Task<AdminPlanResult> CreditChargeAsync(
@@ -294,12 +302,14 @@ internal sealed class AdminPlanActions(
         return new AdminPlanResult.Done(message);
     }
 
-    private async Task NotifyGrantAsync(MerchantNames merchant, SubscriptionPeriod period, int days, DateTimeOffset proUntil)
+    private async Task NotifyGrantAsync(
+        MerchantNames merchant, SubscriptionPeriod period, SubscriptionPlan plan, int days, DateTimeOffset now)
     {
         try
         {
-            var message = MerchantEmails.ProDaysGranted(
-                Merchant.GreetingNameFor(merchant.OwnerName, merchant.BusinessName), days, MexicoTime.DateOf(proUntil.AddTicks(-1)));
+            var message = MerchantEmails.DaysGranted(
+                Merchant.GreetingNameFor(merchant.OwnerName, merchant.BusinessName), plan, days,
+                MexicoTime.DateOf(period.StartsAt), MexicoTime.DateOf(period.EndsAt.AddTicks(-1)), MexicoTime.Today(now));
             await notifications.NotifyAsync(new NotificationRequest(
                 merchant.Id, NotificationType.ProDaysGranted, message.Title, message.Body, MerchantEmails.PlanPath,
                 $"grant:{period.Id.ToString(CultureInfo.InvariantCulture)}", message.Email), CancellationToken.None);

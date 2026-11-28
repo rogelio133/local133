@@ -313,15 +313,22 @@ public static class MerchantEmails
     }
 
     /// <summary>
-    /// Aviso y correo cuando el admin le regala días de Pro (6.2). El motivo que escribió el admin no va aquí.
+    /// Aviso y correo cuando el admin le regala días de un plan (6.2; con plan desde la 5.17). El motivo que escribió el
+    /// admin no va aquí. Los días se encadenan al final: si empiezan después de hoy, el texto dice cuándo.
     /// </summary>
-    /// <param name="lastProDay">Último día con Pro después del regalo (en México).</param>
-    public static SubscriptionReminderMessage ProDaysGranted(string? greetingName, int days, DateOnly lastProDay)
+    /// <param name="firstDay">Primer día del regalo (en México).</param>
+    /// <param name="lastDay">Último día del regalo, que es el último vigente (en México).</param>
+    /// <param name="today">Hoy (en México).</param>
+    public static SubscriptionReminderMessage DaysGranted(
+        string? greetingName, SubscriptionPlan plan, int days, DateOnly firstDay, DateOnly lastDay, DateOnly today)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(days);
         var daysText = days == 1 ? "1 día" : $"{days.ToString(Mexico)} días";
-        var title = $"Te regalamos {daysText} de Pro";
-        var body = $"Ahora tienes Pro hasta el {LongDate(lastProDay)}.";
+        var name = plan.Label();
+        var title = $"Te regalamos {daysText} de {name}";
+        var body = firstDay > today
+            ? $"Tus días de {name} van del {LongDate(firstDay)} al {LongDate(lastDay)}."
+            : $"Ahora tienes {name} hasta el {LongDate(lastDay)}.";
         return new SubscriptionReminderMessage(
             title,
             body,
@@ -329,7 +336,7 @@ public static class MerchantEmails
                 $"{title} · Local133",
                 body,
                 title,
-                [Greeting(greetingName), $"Te regalamos {daysText} de Pro. {body}", "Gracias por cobrar con Local133."],
+                [Greeting(greetingName), $"Te regalamos {daysText} de {name}. {body}", "Gracias por cobrar con Local133."],
                 "Ver mi plan",
                 PlanPath,
                 ReminderFooter));

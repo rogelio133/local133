@@ -64,7 +64,19 @@
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-            <div class="card mb-3">
+            <div class="card mb-3" data-settings-prices="Basic">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Precios de Básico (IVA incluido)</h2>
+                    <div class="row g-3">
+                        @{ Field(nameof(SystemSettings.BasicMonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.BasicAnnualPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.BasicFounderMonthlyPrice), prefix: "$", decimals: true); }
+                        @{ Field(nameof(SystemSettings.BasicFounderAnnualPrice), prefix: "$", decimals: true); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3" data-settings-prices="Pro">
                 <div class="card-body">
                     <h2 class="h6 card-title">Precios de Pro (IVA incluido)</h2>
                     <div class="row g-3">
@@ -72,6 +84,14 @@
                         @{ Field(nameof(SystemSettings.ProAnnualPrice), prefix: "$", decimals: true); }
                         @{ Field(nameof(SystemSettings.ProFounderMonthlyPrice), prefix: "$", decimals: true); }
                         @{ Field(nameof(SystemSettings.ProFounderAnnualPrice), prefix: "$", decimals: true); }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h2 class="h6 card-title">Fundadores (entre los dos planes)</h2>
+                    <div class="row g-3">
                         @{ Field(nameof(SystemSettings.FounderSlots)); }
                     </div>
                     <p class="small text-body-secondary mt-2 mb-0" data-assigned-founders>Lugares de fundador asignados: @Model.AssignedFounders.</p>

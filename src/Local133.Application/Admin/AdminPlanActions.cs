@@ -1,5 +1,6 @@
 using Local133.Domain.Audit;
 using Local133.Domain.Settings;
+using Local133.Domain.Subscriptions;
 
 namespace Local133.Application.Admin;
 
@@ -21,10 +22,14 @@ public sealed record AdminActor(string UserId, string Email);
 /// </summary>
 public interface IAdminPlanActions
 {
-    /// <summary>Regala días de Pro (periodo <c>AdminGrant</c>, encadenado como cualquier periodo).</summary>
+    /// <summary>
+    /// Regala días de un plan (periodo <c>AdminGrant</c>, encadenado al final como cualquier periodo). Regalar Pro con
+    /// Básico por delante no convierte el Básico: los días de Pro empiezan al terminar la cadena.
+    /// </summary>
+    /// <param name="plan">Plan de los días (la pantalla propone el del final de la cadena).</param>
     /// <param name="notify">Aviso en el sitio y correo al vendedor. El motivo nunca le llega.</param>
     Task<AdminPlanResult> GrantDaysAsync(
-        int merchantId, int days, string note, bool notify, AdminActor actor, CancellationToken cancellationToken = default);
+        int merchantId, SubscriptionPlan plan, int days, string note, bool notify, AdminActor actor, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Abona a mano un cargo que ya existe y no está pagado: cuenta igual que un pago confirmado por Pey (periodo,

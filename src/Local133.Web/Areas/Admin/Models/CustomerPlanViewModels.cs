@@ -23,7 +23,12 @@ public static class CustomerPlanUrls
 /// <summary>Formulario «Regalar días».</summary>
 public sealed class GrantDaysInput
 {
-    [Display(Name = "Días de Pro")]
+    /// <summary>Plan de los días. La pantalla lo trae en el del final de la cadena (§8 del diseño).</summary>
+    [Display(Name = "Plan de los días")]
+    [Required(ErrorMessage = "Elige el plan.")]
+    public SubscriptionPlan? Plan { get; set; }
+
+    [Display(Name = "Días")]
     [Required(ErrorMessage = "Escribe cuántos días.")]
     [Range(1, AdminPlanLimits.MaxGrantDays, ErrorMessage = "Regala entre 1 y 365 días.")]
     public int? Days { get; set; }
@@ -47,10 +52,10 @@ public sealed class PlanNoteInput
     public string? Note { get; set; }
 }
 
-/// <summary>Un periodo de Pro en la pestaña Plan.</summary>
-/// <param name="LastDayText">Último día con Pro del periodo (fin excluido menos un instante).</param>
+/// <summary>Un periodo del plan en la pestaña Plan.</summary>
+/// <param name="LastDayText">Último día del periodo (fin excluido menos un instante).</param>
 public sealed record PlanPeriodRow(
-    int Id, SubscriptionPeriodKind Kind, string StartsText, string LastDayText, int Days, bool IsCurrent, bool IsFuture,
+    int Id, SubscriptionPeriodKind Kind, SubscriptionPlan Plan, string StartsText, string LastDayText, int Days, bool IsCurrent, bool IsFuture,
     int? ChargeId, int? ReferralId);
 
 /// <summary>Una transacción que Pey reportó en el link de un cargo.</summary>
@@ -61,6 +66,7 @@ public sealed record PlanPaymentRow(
 public sealed record PlanChargeRow(
     int Id,
     string CreatedText,
+    SubscriptionPlan Plan,
     SubscriptionPackage Package,
     string ListPriceText,
     string? DiscountText,
@@ -125,9 +131,19 @@ public sealed class CustomerPlanViewModel
 
     public int? FounderNumber { get; init; }
 
+    /// <summary>«Después Básico hasta el 9 de enero»: el plan que sigue al actual, si es otro.</summary>
+    public string? NextPlanText { get; init; }
+
+    public SubscriptionPlan? LastPlan { get; init; }
+
     public SubscriptionPackage? LastPackage { get; init; }
 
     public string? LockedAnnualPriceText { get; init; }
+
+    public SubscriptionPlan? LockedAnnualPlan { get; init; }
+
+    /// <summary>Plan del último periodo de la cadena (<c>Subscription.ChainEndPlan</c>): el del regalo por defecto.</summary>
+    public SubscriptionPlan ChainEndPlan { get; init; } = SubscriptionPlan.Pro;
 
     /// <summary>Tiene suscripción (la prueba empezó): se le pueden regalar días.</summary>
     public bool HasSubscription { get; init; }
@@ -149,7 +165,7 @@ public sealed class CustomerPlanViewModel
 
     public IReadOnlyList<AuditRow> Audit { get; init; } = [];
 
-    /// <summary>«Avisar al vendedor» va marcada por defecto.</summary>
+    /// <summary>«Avisar al vendedor» va marcada por defecto; el plan lo pone la consulta (<see cref="ChainEndPlan"/>).</summary>
     public GrantDaysInput Grant { get; set; } = new() { Notify = true };
 
     public PlanNoteInput Confirm { get; set; } = new();
@@ -175,6 +191,20 @@ public static class PlanLabels
         SubscriptionPeriodKind.Paid => "text-bg-primary",
         SubscriptionPeriodKind.ReferralReward => "text-bg-success",
         _ => "text-bg-warning",
+    };
+
+    public static string PlanBadge(SubscriptionPlan plan) => plan switch
+    {
+        SubscriptionPlan.Basic => "text-bg-success",
+        _ => "text-bg-primary",
+    };
+
+    /// <summary>Origen de un periodo sin cargo ni referido.</summary>
+    public static string? PeriodOrigin(SubscriptionPeriodKind kind) => kind switch
+    {
+        SubscriptionPeriodKind.Conversion => "Básico convertido",
+        SubscriptionPeriodKind.Transition => "Cambio de planes 2026-12",
+        _ => null,
     };
 
     public static string ChargeStatus(SubscriptionChargeStatus status) => status switch

@@ -184,6 +184,8 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, Time
             .ToListAsync(cancellationToken);
 
         var referredBy = referrals.SingleOrDefault(r => r.ReferredMerchantId == id);
+        // Mismo criterio que Subscription.ChainEndPlan: el plan del periodo que termina al último.
+        var chainEndPlan = periods.OrderBy(p => p.EndsAt).ThenBy(p => p.CreatedAt).LastOrDefault()?.Plan ?? SubscriptionPlan.Pro;
         return new CustomerPlanViewModel
         {
             Header = header,
@@ -195,12 +197,20 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, Time
             GraceUntilText = status.LastGraceDay is { } lastGrace ? SaleFormats.Date(lastGrace, today) : null,
             IsFounder = subscription?.IsFounder ?? false,
             FounderNumber = subscription?.FounderNumber,
+            NextPlanText = status.NextPlan is { } next && status.NextPlanLastDay is { } nextLast
+                ? $"Después {next.Label()} hasta el {SaleFormats.Date(nextLast, today)}"
+                : null,
+            LastPlan = subscription?.LastPlan,
             LastPackage = subscription?.LastPackage,
             LockedAnnualPriceText = subscription?.LockedAnnualPrice is { } locked ? SaleQrViewModel.FormatAmount(locked) : null,
+            LockedAnnualPlan = subscription?.LockedAnnualPlan,
+            ChainEndPlan = chainEndPlan,
+            Grant = new GrantDaysInput { Notify = true, Plan = chainEndPlan },
             HasSubscription = subscription is not null,
             Periods = periods.Select(p => new PlanPeriodRow(
                     p.Id,
                     p.Kind,
+                    p.Plan,
                     SaleFormats.Date(MexicoTime.DateOf(p.StartsAt), today),
                     SaleFormats.Date(LastDay(p.EndsAt), today),
                     (int)Math.Round((p.EndsAt - p.StartsAt).TotalDays),
@@ -212,6 +222,7 @@ public sealed class CustomerDetailQuery(AppDbContext db, IPlanAccess plans, Time
             Charges = charges.Select(c => new PlanChargeRow(
                     c.Id,
                     SaleFormats.DateTime(c.CreatedAt, today),
+                    c.Plan,
                     c.Package,
                     SaleQrViewModel.FormatAmount(c.ListPrice),
                     c.DiscountAmount > 0 ? SaleQrViewModel.FormatAmount(c.DiscountAmount) : null,

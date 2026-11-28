@@ -60,6 +60,9 @@ Windows tiene Smart App Control activo y a veces bloquea las DLL propias recién
 - Si una DLL queda bloqueada: reintentar más tarde, o modificar el código de ese proyecto y recompilar (hash nuevo). **No** usar `Deterministic=false`: genera hashes nuevos en cada build y empeora el problema.
 - **No desactivar Smart App Control**: no se puede reactivar sin reinstalar Windows. Si algo no se puede ejecutar, dejarlo anotado como verificación pendiente.
 
+## Visual Studio corriendo el proyecto
+Si al compilar o probar las DLL de `src/*/bin` están bloqueadas por Visual Studio (`MSB3021`/`MSB3027`, «The file is locked by: Microsoft Visual Studio…») o el puerto 5231 ya está ocupado por el sitio que corre desde Visual Studio, **pedirle al usuario que lo detenga** antes de compilar, correr las pruebas o la revisión con Playwright. No matar el proceso ni compilar en otra carpeta para rodearlo.
+
 ## Reglas de arquitectura (no negociables)
 - **La plataforma nunca toca el dinero del vendedor**: Pey deposita a la CLABE del vendedor (no hay split). El ingreso de la plataforma es la **suscripción** (Básico / Pro, sin plan gratuito: al vencer no se generan cobros), que se paga aparte con **link de pago de Pey** (no acepta `bankAccountId`: cae en la cuenta de la plataforma) y se concilia por el webhook `payment_link.status_updated`. Diseño en `actualizaciones/suscripciones_2026_11_18.md` y, para los planes, `actualizaciones/planes_basico_pro_2026_11_26.md`. No hay comisión por venta (se retiró en la 5.1).
 - **Una API key y un webhook** para todos los vendedores; cada cobro elige destino con `bankAccountId`, **obligatorio** en `CreateCodiQrRequest` y `CreateCodiPushNotificationRequest` (lo valida `PeyRequestGuard`): ningún QR ni push cae en la cuenta de la plataforma.

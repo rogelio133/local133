@@ -1,7 +1,7 @@
 @using Local133.Domain.Legal
 @model SiteChromeViewModel
 @{
-    ViewData["Description"] = "Términos y condiciones de Local133: planes, prueba gratis, límites del plan gratuito, precios, pago, Invita y gana y cancelación.";
+    ViewData["Description"] = "Términos y condiciones de Local133: planes Básico y Pro, prueba gratis, precios, pago, cambio de plan, vencimiento, Invita y gana y cancelación.";
     ViewData["Title"] = "Términos y condiciones";
     // Los números van escritos (es un documento versionado): LegalPagesTests los compara con SystemSettings.Default*.
     // Si cambia un número, un precio o una regla, subir LegalDocuments.CurrentTermsVersion.
@@ -25,10 +25,10 @@
             <li><a href="#cuenta">Registro y cuenta</a></li>
             <li><a href="#planes">Planes</a></li>
             <li><a href="#prueba">Prueba gratis</a></li>
-            <li><a href="#limites">Límites del plan gratuito</a></li>
-            <li><a href="#uso-justo">Uso justo del plan Pro</a></li>
+            <li><a href="#uso-justo">Uso justo</a></li>
             <li><a href="#pago">Precios y pago</a></li>
-            <li><a href="#vencimiento">Vencimiento, gracia y baja al plan gratuito</a></li>
+            <li><a href="#cambio-de-plan">Cambio de plan</a></li>
+            <li><a href="#vencimiento">Vencimiento y gracia</a></li>
             <li><a href="#fundador">Precio de fundador</a></li>
             <li><a href="#anual">Precio congelado del plan anual</a></li>
             <li><a href="#invita">Invita y gana</a></li>
@@ -51,100 +51,121 @@
         estar a tu nombre o al de tu negocio; su activación depende de la validación del sistema CoDi de Banxico y puede
         tardar hasta 5 días hábiles.</p>
     <p>Cada cuenta bancaria (CLABE) solo puede estar registrada en una cuenta de Local133. No está permitido abrir varias
-        cuentas para aprovechar de nuevo el plan gratuito, la prueba o los premios por invitación.</p>
+        cuentas para aprovechar de nuevo la prueba, los descuentos o los premios por invitación.</p>
 
     <h2 id="planes" class="h5 mt-4">3. Planes</h2>
-    <p>Local133 se paga con una suscripción, no con un cargo por venta. Hay dos planes:</p>
+    <p>Local133 se paga con una suscripción, no con un cargo por venta. Hay dos planes de pago:</p>
     <ul>
-        <li><strong>Plan gratuito</strong>: cobro por monto con QR o al celular, dentro de los límites de la sección 5,
-            catálogo de productos de solo lectura, recibo con liga para copiar e historial reciente.</li>
-        <li><strong>Plan Pro</strong>: todo lo anterior sin límite de cobros (con el uso justo de la sección 6), catálogo
-            editable, cobro con productos, recibo para compartir por WhatsApp con tu logo, historial completo con
-            búsqueda, exportación a Excel, corte de caja diario y catálogo en línea con liga.</li>
+        <li><strong>Plan Básico</strong>: cobro por monto con QR o al celular sin límite de cobros (con el uso justo de la
+            sección 5), historial completo con búsqueda, corte de caja diario, recibo para compartir por WhatsApp con la
+            leyenda «Cobrado con Local133» y catálogo de productos de solo lectura.</li>
+        <li><strong>Plan Pro</strong>: todo lo de Básico, más catálogo editable, cobro con productos (carrito), catálogo en
+            línea con liga, recibo con tu logo y exportación del historial a Excel.</li>
     </ul>
-    <p>Las funciones marcadas como «Próximamente» en la plataforma todavía no existen: no forman parte de lo que pagas
-        ni tienen fecha comprometida.</p>
+    <p>La prueba gratis (sección 4) incluye todo lo de Pro. Las funciones marcadas como «Próximamente» en la plataforma
+        todavía no existen: no forman parte de lo que pagas ni tienen fecha comprometida.</p>
 
     <h2 id="prueba" class="h5 mt-4">4. Prueba gratis</h2>
-    <p>Cuando tu cuenta bancaria queda activa recibes <strong>30 días de prueba</strong> del plan Pro sin costo, una sola
-        vez por vendedor. La prueba empieza al activarse la cuenta, así que la espera de la validación bancaria no le quita
-        días. Al terminar, si no pagaste, tu cuenta pasa al plan gratuito.</p>
-
-    <h2 id="limites" class="h5 mt-4">5. Límites del plan gratuito</h2>
     <ul>
-        <li>Hasta <strong>100 cobros concretados por mes</strong> calendario, contados desde el día 1 en hora del centro
-            de México. Al llegar al límite no puedes generar cobros nuevos hasta el día 1 del mes siguiente o hasta que
-            pagues Pro.</li>
-        <li>Un tope de <strong>300 cobros generados</strong> al mes, se paguen o no.</li>
-        <li>Un cobro que ya generaste se puede pagar y se registra aunque llegues al límite.</li>
-        <li>El historial muestra los últimos 30 días. Las ventas anteriores se ocultan, no se borran, y vuelven a verse
-            con Pro.</li>
-        <li>El catálogo de productos se conserva completo, pero no se puede agregar, editar ni cobrar con él.</li>
+        <li>Recibes <strong>15 días de prueba</strong> del plan Pro sin costo, una sola vez por vendedor.</li>
+        <li>La prueba empieza con tu <strong>primer cobro</strong> pagado, a la hora en que se confirma el pago. Así, la
+            espera de la validación bancaria no le quita días.</li>
+        <li>Mientras no tengas tu primer cobro puedes usar las funciones de Pro, salvo publicar tu catálogo en línea.</li>
+        <li>Si pagas Pro durante la prueba, empieza cuando termine la prueba. Si pagas Básico, sigues con la prueba de Pro y
+            Básico empieza al terminarla.</li>
+        <li>Al terminar la prueba, si no pagaste un plan, tu plan vence (sección 8).</li>
     </ul>
 
-    <h2 id="uso-justo" class="h5 mt-4">6. Uso justo del plan Pro</h2>
-    <p>El plan Pro no limita los cobros, pero está pensado para un negocio. Si pasas de <strong>5,000 cobros concretados
-        al mes</strong> podemos contactarte para revisar tu caso. Pasar ese número no bloquea tus cobros.</p>
+    <h2 id="uso-justo" class="h5 mt-4">5. Uso justo</h2>
+    <p>Los planes Básico y Pro no limitan los cobros, pero están pensados para un negocio. Si pasas de <strong>5,000
+        cobros concretados al mes</strong> podemos contactarte para revisar tu caso. Pasar ese número no bloquea tus
+        cobros.</p>
 
-    <h2 id="pago" class="h5 mt-4">7. Precios y pago</h2>
+    <h2 id="pago" class="h5 mt-4">6. Precios y pago</h2>
     <ul>
-        <li>El plan Pro cuesta <strong>$199 al mes</strong> o <strong>$1,990 al año</strong>, con IVA incluido. También
-            hay paquetes de 3 y 6 meses. Los precios vigentes se muestran en «Mi plan» antes de pagar.</li>
+        <li>El plan Básico cuesta <strong>$99 al mes</strong> o <strong>$990 al año</strong>, y el plan Pro cuesta
+            <strong>$199 al mes</strong> o <strong>$1,990 al año</strong>, con IVA incluido. Se venden paquetes de 1 mes y
+            anuales. Los precios vigentes se muestran en «Mi plan» antes de pagar.</li>
+        <li>Cada pago es un pedido. Antes de pagar ves el resumen del pedido con el plan, el periodo y el total, y aceptas
+            estos Términos. La versión que aceptaste queda guardada en el pedido.</li>
         <li>Se paga por adelantado con un link de pago del proveedor de pagos, con CoDi o con tarjeta. Si pagas con
             tarjeta, el proveedor puede cobrarte una comisión, que te muestra antes de pagar.</li>
         <li><strong>No hay cargos automáticos</strong>: cada pago lo haces tú desde «Mi plan».</li>
         <li>El pago cuenta cuando el proveedor nos lo confirma, no al regresar de su página.</li>
-        <li>Si pagas durante la prueba o con Pro vigente, lo que pagues empieza cuando termine lo que ya tienes: no
-            pierdes días.</li>
+        <li>Si pagas con tu plan vigente, lo que pagues empieza cuando termine lo que ya tienes: no pierdes días. Si pagas
+            Pro y tienes días de Básico, aplica la sección 7.</li>
         <li>Un link pagado se abona aunque sea de días anteriores. Si pagas dos veces, abonamos los dos periodos.</li>
         <li>Un pago por menos del monto del link no se abona solo: lo revisamos y te contactamos.</li>
-        <li>Podemos cambiar los precios; un cambio no afecta lo que ya pagaste, solo los pagos siguientes.</li>
-        <li>Por ahora la plataforma no emite facturas. Si necesitas una, pídela a <mark>[correo de contacto]</mark>.</li>
+        <li>Podemos cambiar los precios; un cambio no afecta lo que ya pagaste, solo los pedidos siguientes.</li>
+        <li>Cada pedido pagado tiene un comprobante, que no es una factura. Por ahora la plataforma no emite facturas. Si
+            necesitas una, pídela a <mark>[correo de contacto]</mark>.</li>
     </ul>
 
-    <h2 id="vencimiento" class="h5 mt-4">8. Vencimiento, gracia y baja al plan gratuito</h2>
+    <h2 id="cambio-de-plan" class="h5 mt-4">7. Cambio de plan</h2>
+    <ul>
+        <li><strong>Subir de Básico a Pro</strong>: el cambio es inmediato al confirmarse el pago. El tiempo de Básico que
+            te quedaba se convierte en tiempo de Pro, en proporción al precio mensual de cada plan (el de fundador, si lo
+            eres), y el periodo que pagaste empieza cuando termina ese tiempo. Por ejemplo, con precios de $99 y $199, 20
+            días de Básico se vuelven casi 10 días de Pro (20 × 99 ÷ 199).</li>
+        <li><strong>Bajar de Pro a Básico</strong>: Básico empieza cuando termina lo que pagaste de Pro.</li>
+        <li>Cambiar de plan no genera devoluciones de dinero.</li>
+    </ul>
+
+    <h2 id="vencimiento" class="h5 mt-4">8. Vencimiento y gracia</h2>
     <p>Te avisamos por correo y en la plataforma antes de que termine tu prueba o tu periodo pagado. Después de un periodo
-        pagado tienes <strong>5 días de gracia</strong> con Pro para renovar; lo que pagues en la gracia cuenta desde el día
-        en que venció. La prueba y los días regalados no tienen gracia.</p>
-    <p>Si no renuevas, tu cuenta pasa sola al <strong>plan gratuito</strong>: puedes seguir cobrando dentro de sus límites,
-        sin suspensión ni adeudo, y conservas tu catálogo, tu historial y tus datos. Cuando vuelvas a pagar, Pro cuenta
-        desde el día del pago.</p>
+        pagado tienes <strong>5 días de gracia</strong> con las funciones del plan que pagaste para renovar; lo que pagues
+        en la gracia cuenta desde el día en que venció. La prueba, los días regalados, los premios y el tiempo convertido al
+        subir de plan no tienen gracia.</p>
+    <p>Si no renuevas, <strong>tu plan vence</strong>:</p>
+    <ul>
+        <li>no puedes generar cobros nuevos;</li>
+        <li>sí puedes entrar a tu cuenta, ver tu historial, compartir los recibos de tus ventas anteriores, invitar a otros
+            vendedores y pagar un plan;</li>
+        <li>conservas tu catálogo, tu historial y tus datos;</li>
+        <li>un cobro que generaste antes de vencer se registra aunque tu cliente lo pague después.</li>
+    </ul>
+    <p>El vencimiento no suspende tu cuenta ni genera adeudo. Cuando vuelvas a pagar, tu plan cuenta desde el día del
+        pago.</p>
 
     <h2 id="fundador" class="h5 mt-4">9. Precio de fundador</h2>
-    <p>Los <strong>primeros 100 vendedores</strong> cuyo pago de Pro se confirme pagan <strong>$149 al mes</strong> o
-        <strong>$1,490 al año</strong> (y lo proporcional en los paquetes de 3 y 6 meses), de por vida, aunque dejen de pagar
-        un tiempo, mientras su cuenta no se dé de baja. El lugar se asigna al confirmarse el pago: si para entonces ya no
-        quedan lugares, el pago se abona igual, pero los pagos siguientes son a precio normal. El precio de fundador no se
-        transfiere a otra cuenta.</p>
+    <p>Los <strong>primeros 100 vendedores</strong> cuyo primer pago de cualquier plan se confirme pagan, de por vida, el
+        plan Básico a <strong>$69 al mes</strong> o <strong>$690 al año</strong>, y el plan Pro a <strong>$149 al
+        mes</strong> o <strong>$1,490 al año</strong>, aunque dejen de pagar un tiempo, mientras su cuenta no se dé de
+        baja. Si cambias de plan, pagas el precio de fundador del plan nuevo. El lugar se asigna al confirmarse el pago: si
+        para entonces ya no quedan lugares, el pago se abona igual, pero los pagos siguientes son a precio normal. El precio
+        de fundador no se transfiere a otra cuenta.</p>
 
     <h2 id="anual" class="h5 mt-4">10. Precio congelado del plan anual</h2>
-    <p>Si renuevas el plan anual antes de que termine tu gracia, pagas lo mismo que en tu último anual, aunque el precio
-        haya subido. Si tu cuenta pasa al plan gratuito, el siguiente anual se paga al precio vigente.</p>
+    <p>Si renuevas el anual del <strong>mismo plan</strong> antes de que termine tu gracia, pagas lo mismo que en tu último
+        anual de ese plan, aunque el precio haya subido. Si cambias de plan o tu plan vence, el siguiente anual se paga al
+        precio vigente.</p>
 
     <h2 id="invita" class="h5 mt-4">11. Invita y gana</h2>
     <ul>
         <li>Cada vendedor tiene un código de invitación y una liga para compartirlo. La liga guarda el código en tu
             navegador por 30 días. El código solo se captura al registrarse y no se puede agregar ni cambiar después.</li>
-        <li>Quien se registra con un código recibe <strong>30 % de descuento</strong> sobre el precio de un mes en su primer
-            pago de Pro, en el paquete que elija.</li>
-        <li>Quien invita gana <strong>10 días de Pro</strong> cuando su invitado paga Pro por primera vez, con un máximo de
-            <strong>12 premios en 12 meses</strong>. Los invitados que pasen del tope se registran sin premio. Si quien
-            invita todavía no tiene su cuenta bancaria activa, el premio se le da cuando empiece su prueba.</li>
-        <li>Los vendedores del plan gratuito también pueden invitar y ganar días.</li>
+        <li>Quien se registra con un código recibe <strong>30 % de descuento</strong> sobre el precio de un mes del plan
+            que elija (Básico o Pro), en su primer pago y en el paquete que elija.</li>
+        <li>Quien invita gana <strong>10 días del plan que tenga</strong> (el de su último periodo; si está en la prueba,
+            de Pro) cuando su invitado hace su primer pago, con un máximo de <strong>12 premios en 12 meses</strong>. Los
+            invitados que pasen del tope se registran sin premio. Si quien invita todavía no empieza su prueba, el premio se
+            le da cuando empiece.</li>
+        <li>Un vendedor con el plan vencido también puede invitar y ganar días; con ellos vuelve a cobrar.</li>
         <li>Los premios no tienen valor en efectivo. Invitarte a ti mismo o abrir cuentas falsas anula los premios y puede
             suspender las cuentas involucradas.</li>
     </ul>
 
     <h2 id="catalogo" class="h5 mt-4">12. Catálogo en línea y recibos</h2>
-    <p>Eres responsable de los productos, precios, fotos y textos que cargas. Si publicas tu catálogo en línea, cualquiera
-        con la liga puede ver el nombre de tu negocio, tu logo, la foto de tu local, tus productos y el celular de tu cuenta
-        (para pedirte por WhatsApp). Puedes despublicarlo cuando quieras, y deja de mostrarse si tu cuenta no tiene Pro.</p>
-    <p>Cada venta pagada tiene un recibo con una liga que puede ver cualquiera que la tenga. En el plan gratuito el recibo
-        dice «Cobrado con Local133» e incluye tu código de invitación.</p>
+    <p>Eres responsable de los productos, precios, fotos y textos que cargas. El catálogo en línea es del plan Pro y de la
+        prueba. Si lo publicas, cualquiera con la liga puede ver el nombre de tu negocio, tu logo, la foto de tu local, tus
+        productos y el celular de tu cuenta (para pedirte por WhatsApp). Puedes despublicarlo cuando quieras, y deja de
+        mostrarse si tu cuenta no tiene Pro.</p>
+    <p>Cada venta pagada tiene un recibo con una liga que puede ver cualquiera que la tenga. Con Pro el recibo lleva tu
+        logo; con Básico, o con el plan vencido, dice «Cobrado con Local133» e incluye tu código de invitación.</p>
 
     <h2 id="cancelacion" class="h5 mt-4">13. Cancelación, reembolsos y baja de la cuenta</h2>
-    <p>Puedes dejar de pagar cuando quieras: al terminar lo pagado y la gracia, tu cuenta pasa al plan gratuito. <strong>Los
-        periodos pagados no se reembolsan</strong>, ni completos ni en parte.</p>
+    <p>Puedes dejar de pagar cuando quieras: al terminar lo pagado y la gracia, tu plan vence. <strong>Los periodos
+        pagados no se reembolsan</strong>, ni completos ni en parte, tampoco al cambiar de plan.</p>
     <p>Para dar de baja tu cuenta escríbenos a <mark>[correo de contacto]</mark>. Si una cuenta pasa 2 años sin actividad,
         te avisamos por correo y la eliminamos, como explica el <a href="~/aviso-de-privacidad">Aviso de privacidad</a>.</p>
 
@@ -152,7 +173,7 @@
     <p>No puedes usar la plataforma para actividades ilícitas, para cobrar bienes o servicios prohibidos ni para operaciones
         a nombre de terceros sin su autorización. Podemos suspender cuentas que incumplan estos términos, y también cuando
         la cuenta bancaria es rechazada, mientras se corrige. La falta de pago de la suscripción no suspende tu cuenta: solo
-        la pasa al plan gratuito.</p>
+        deja de permitir cobros nuevos.</p>
 
     <h2 id="responsabilidad" class="h5 mt-4">15. Responsabilidad</h2>
     <p>Los pagos se procesan por el sistema CoDi y el proveedor de pagos; Local133 no es responsable de interrupciones de

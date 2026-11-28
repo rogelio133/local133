@@ -10,7 +10,14 @@ Notas de implementación que estaban en `CLAUDE.md` (movidas sin cambios el 2026
   - «Iniciar sesión» usa `HomeController.PortalUrl` y nunca lleva el código;
   - `/terminos` y `/aviso-de-privacidad` son de la portada (`LegalController`, ligas locales) y nunca llevan el código.
 - **Palabras**: `Home:RotatingWords` alimenta el hero, el cierre (caja de ancho fijo con `data-longest`) y «Hecho para» (`MadeForLabels.Plural`).
-- **Precios**: escritos a mano en `_Pricing.cshtml`, porque la portada no tiene base. `LandingPageTests` los compara con `SystemSettings.Default*` (por eso las pruebas referencian `Local133.Domain`). «Quedan N lugares» de fundador y la columna Contacto están pendientes.
+- **Precios** (5.18):
+  - escritos a mano en `_Pricing.cshtml`, porque la portada no tiene base. `LandingPageTests` los compara con `SystemSettings.Default*` (por eso las pruebas referencian `Local133.Domain`);
+  - tres tarjetas: «Prueba Pro» ($0 por 15 días), Básico y Pro (destacada, «Recomendado»). Las de pago muestran el mensual, «o $X al año» (`.plan-annual`) y «12 meses por el precio de 10: equivale a $X al mes»;
+  - debajo, la tabla «Compara los planes» (`.plan-compare`). Repite a mano `MyPlanViewModel.FeaturesFor` del portal: si cambia una función, se cambian las dos. En la vista, `null` es ✓ y «—» es «No», con texto `visually-hidden`;
+  - la franja de fundador da los 4 precios (Básico y Pro) y la nota ya no menciona 3 ni 6 meses;
+  - `LandingPageTests.Ya_no_menciona_el_gratuito_ni_los_paquetes_retirados` falla si vuelve «gratuito», «3 meses», «6 meses» o «30 días»;
+  - «Quedan N lugares» de fundador y la columna Contacto están pendientes.
+- **Prueba** (5.18): 15 días que empiezan con el primer cobro, en el encabezado («Prueba 15 días gratis»), el hero, «Cómo funciona», precios, preguntas y cierre. Las pruebas usan `SystemSettings.DefaultTrialDays`.
 - **Estilos**:
   - fuentes propias de la portada: Baloo 2 + Nunito Sans. `Styles/_landing-variables.scss` las reasigna después de `_custom` y antes de Bootstrap;
   - los componentes son clases propias en `Styles/_landing-*.scss`, celular primero; menú en la barra desde `lg`;

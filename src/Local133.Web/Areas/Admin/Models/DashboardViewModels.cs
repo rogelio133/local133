@@ -7,13 +7,25 @@ namespace Local133.Web.Areas.Admin.Models;
 /// <summary>GMV de un periodo: lo cobrado por los vendedores (suma de pagos) y las ventas distintas que lo cobraron.</summary>
 public sealed record GmvFigure(decimal Amount, int Sales);
 
-/// <summary>Ingresos por suscripción de un periodo: cargos abonados (también a mano), con el IVA desglosado.</summary>
-public sealed record RevenueFigure(decimal Amount, decimal Base, decimal Vat, int Charges, int CreditedManually);
+/// <summary>Ingresos de un plan en un periodo: lo abonado y cuántos cargos.</summary>
+public sealed record PlanRevenue(decimal Amount, int Charges);
+
+/// <summary>
+/// Ingresos por suscripción de un periodo: cargos abonados (también a mano), con el IVA desglosado y por plan
+/// (<see cref="ByPlan"/> trae los dos planes, en ceros si no hubo cargos).
+/// </summary>
+public sealed record RevenueFigure(
+    decimal Amount, decimal Base, decimal Vat, int Charges, int CreditedManually,
+    IReadOnlyDictionary<SubscriptionPlan, PlanRevenue> ByPlan)
+{
+    /// <summary>Los planes en el orden de la pantalla.</summary>
+    public static readonly IReadOnlyList<SubscriptionPlan> Plans = [SubscriptionPlan.Basic, SubscriptionPlan.Pro];
+}
 
 /// <summary>Un mes de la tabla del tablero.</summary>
 public sealed record DashboardMonthRow(DateOnly Month, string Label, GmvFigure Gmv, RevenueFigure Revenue);
 
-/// <summary>Vendedor que pasó el uso justo de Pro este mes.</summary>
+/// <summary>Vendedor que pasó el uso justo este mes (Básico o Pro).</summary>
 public sealed record FairUseRow(int MerchantId, string Name, string? BusinessName, int PaidCount);
 
 /// <summary>Tablero del admin (/admin, 6.4).</summary>
@@ -48,6 +60,12 @@ public sealed class DashboardViewModel
     public required TrialConversion Conversion { get; init; }
 
     public required TrialConversion RecentConversion { get; init; }
+
+    /// <summary>
+    /// Vendedores que subieron de Básico a Pro en los últimos <see cref="RecentTrialDays"/> días: los que tienen un
+    /// periodo <c>Conversion</c> creado en ese lapso (solo lo crea el abono de un Pro con Básico por delante).
+    /// </summary>
+    public required int RecentUpgrades { get; init; }
 
     public required int FoundersAssigned { get; init; }
 

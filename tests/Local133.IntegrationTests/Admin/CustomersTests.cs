@@ -98,22 +98,36 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
         var graceDays = await WithDbAsync(db => db.SystemSettings.Where(s => s.Id == SystemSettings.SingletonId).Select(s => s.GraceDays).SingleAsync());
         var trialStart = now.AddDays(-35);
         var trialEnd = now.AddDays(-5);
-        var merchants = new Dictionary<string, (SubscriptionPeriodKind, DateTimeOffset, DateTimeOffset)[]?>
+        const SubscriptionPlan Pro = SubscriptionPlan.Pro;
+        const SubscriptionPlan Basic = SubscriptionPlan.Basic;
+        var merchants = new Dictionary<string, (SubscriptionPeriodKind, SubscriptionPlan, DateTimeOffset, DateTimeOffset)[]?>
         {
             ["onboarding@prueba.mx"] = null,
-            ["prueba@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-7), now.AddDays(23))],
+            ["prueba@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-7), now.AddDays(23))],
             // Prueba con un premio encadenado: sigue en prueba hasta que el premio empiece.
-            ["premio@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-7), now.AddDays(23)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(23), now.AddDays(33))],
-            // Prueba con un pago ya abonado por delante: ya es Pro.
-            ["pagado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-7), now.AddDays(23)), (SubscriptionPeriodKind.Paid, now.AddDays(23), now.AddDays(53))],
-            ["pro@prueba.mx"] = [(SubscriptionPeriodKind.Trial, trialStart, trialEnd), (SubscriptionPeriodKind.Paid, trialEnd, now.AddDays(25))],
-            ["regalo@prueba.mx"] = [(SubscriptionPeriodKind.Trial, trialStart, trialEnd), (SubscriptionPeriodKind.AdminGrant, trialEnd, now.AddDays(2))],
-            ["gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-62), now.AddDays(-32)), (SubscriptionPeriodKind.Paid, now.AddDays(-32), now.AddHours(-1))],
-            ["fin-gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-80), now.AddDays(-50)), (SubscriptionPeriodKind.Paid, now.AddDays(-50), now.AddDays(-graceDays).AddHours(-1))],
-            ["vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10))],
+            ["premio@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-7), now.AddDays(23)), (SubscriptionPeriodKind.ReferralReward, Pro, now.AddDays(23), now.AddDays(33))],
+            // Prueba con un pago de Pro ya abonado por delante: ya es Pro.
+            ["pagado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-7), now.AddDays(23)), (SubscriptionPeriodKind.Paid, Pro, now.AddDays(23), now.AddDays(53))],
+            // Prueba con Básico pagado por delante: sigue en prueba (la prueba da más que Básico).
+            ["prueba-basico@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-7), now.AddDays(8)), (SubscriptionPeriodKind.Paid, Basic, now.AddDays(8), now.AddDays(38))],
+            ["pro@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.Paid, Pro, trialEnd, now.AddDays(25))],
+            ["regalo@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.AdminGrant, Pro, trialEnd, now.AddDays(2))],
+            ["basico@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.Paid, Basic, trialEnd, now.AddDays(25))],
+            // Transición de la migración (§10): Básico de 15 días.
+            ["transicion@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.Transition, Basic, now.AddDays(-2), now.AddDays(13))],
+            // Pro de conversión en curso con Básico pagado después: es Pro.
+            ["conversion@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.Paid, Basic, trialEnd, now.AddDays(-1)), (SubscriptionPeriodKind.Conversion, Pro, now.AddDays(-1), now.AddDays(4)), (SubscriptionPeriodKind.Paid, Basic, now.AddDays(4), now.AddDays(34))],
+            // Pro en curso con Básico encadenado: sigue en Pro.
+            ["pro-luego-basico@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, trialStart, trialEnd), (SubscriptionPeriodKind.Paid, Pro, trialEnd, now.AddDays(3)), (SubscriptionPeriodKind.Paid, Basic, now.AddDays(3), now.AddDays(33))],
+            ["gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-62), now.AddDays(-32)), (SubscriptionPeriodKind.Paid, Pro, now.AddDays(-32), now.AddHours(-1))],
+            ["gracia-basico@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-62), now.AddDays(-32)), (SubscriptionPeriodKind.Paid, Basic, now.AddDays(-32), now.AddDays(-1))],
+            ["fin-gracia@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-80), now.AddDays(-50)), (SubscriptionPeriodKind.Paid, Pro, now.AddDays(-50), now.AddDays(-graceDays).AddHours(-1))],
+            ["vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-40), now.AddDays(-10))],
+            // La transición vence sin gracia.
+            ["transicion-vencida@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-40), now.AddDays(-20)), (SubscriptionPeriodKind.Transition, Basic, now.AddDays(-16), now.AddDays(-1))],
             // Premio anulado en curso (6.2): se cortó y el regalo que seguía se recorrió hasta el corte, sin hueco.
-            ["premio-cortado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-40), now.AddDays(-10)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-10), now.AddHours(-1)), (SubscriptionPeriodKind.AdminGrant, now.AddHours(-1), now.AddDays(4))],
-            ["premio-vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, now.AddDays(-50), now.AddDays(-20)), (SubscriptionPeriodKind.ReferralReward, now.AddDays(-20), now.AddDays(-1))],
+            ["premio-cortado@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-40), now.AddDays(-10)), (SubscriptionPeriodKind.ReferralReward, Pro, now.AddDays(-10), now.AddHours(-1)), (SubscriptionPeriodKind.AdminGrant, Pro, now.AddHours(-1), now.AddDays(4))],
+            ["premio-vencido@prueba.mx"] = [(SubscriptionPeriodKind.Trial, Pro, now.AddDays(-50), now.AddDays(-20)), (SubscriptionPeriodKind.ReferralReward, Pro, now.AddDays(-20), now.AddDays(-1))],
         };
 
         var expected = new Dictionary<int, PlanTier>();
@@ -128,15 +142,19 @@ public partial class CustomersTests(Local133WebFactory factory) : SaleFlowTestBa
             var id = await MerchantIdAsync(email);
             expected[id] = periods is null
                 ? PlanTier.Onboarding
-                : PlanStatus.For(periods.Select(p => new SubscriptionPeriod { Kind = p.Item1, StartsAt = p.Item2, EndsAt = p.Item3 }), now, graceDays).Tier;
+                : PlanStatus.For(periods.Select(p => new SubscriptionPeriod { Kind = p.Item1, Plan = p.Item2, StartsAt = p.Item3, EndsAt = p.Item4 }), now, graceDays).Tier;
         }
 
-        // Cubre todos los estados salvo Básico, que el filtro cuenta dentro de «pro» hasta la 5.17 (WithPlan v2).
-        Assert.Equal(Enum.GetValues<PlanTier>().Where(t => t != PlanTier.Basic).Order(), expected.Values.Distinct().Order());
+        Assert.Equal(Enum.GetValues<PlanTier>().Order(), expected.Values.Distinct().Order());
+        Assert.Equal(PlanTier.Trial, expected[await MerchantIdAsync("prueba-basico@prueba.mx")]);
+        Assert.Equal(PlanTier.Pro, expected[await MerchantIdAsync("conversion@prueba.mx")]);
+        Assert.Equal(PlanTier.Basic, expected[await MerchantIdAsync("transicion@prueba.mx")]);
+        Assert.Equal(PlanTier.Grace, expected[await MerchantIdAsync("gracia-basico@prueba.mx")]);
+        Assert.Equal(PlanTier.Expired, expected[await MerchantIdAsync("transicion-vencida@prueba.mx")]);
         var admin = await AdminAsync();
         foreach (var (tier, slug) in new[]
                  {
-                     (PlanTier.Onboarding, "sin-prueba"), (PlanTier.Trial, "prueba"), (PlanTier.Pro, "pro"),
+                     (PlanTier.Onboarding, "sin-prueba"), (PlanTier.Trial, "prueba"), (PlanTier.Basic, "basico"), (PlanTier.Pro, "pro"),
                      (PlanTier.Grace, "gracia"), (PlanTier.Expired, "vencido"),
                  })
         {

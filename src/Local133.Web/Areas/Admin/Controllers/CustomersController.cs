@@ -85,7 +85,7 @@ public class CustomersController(
         }
 
         // Un rechazo del servicio (p. ej. sin prueba, cuando el formulario ni se muestra) va como aviso de la pestaña.
-        return AfterAction(id, await planActions.GrantDaysAsync(id, input.Days!.Value, input.Note!, input.Notify, Actor, cancellationToken));
+        return AfterAction(id, await planActions.GrantDaysAsync(id, input.Plan!.Value, input.Days!.Value, input.Note!, input.Notify, Actor, cancellationToken));
     }
 
     [HttpPost("{id:int}/plan/cargos/{chargeId:int}/abonar")]
