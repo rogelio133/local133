@@ -331,3 +331,16 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Ajustes 2026-11-27 — Llave de la API pública y límite por IP en la portada
 - **Secreto nuevo `PublicApi__Key`**, con **el mismo valor** en el App Service del portal y en el de la portada (App Settings o referencia a Key Vault; generar uno aleatorio de al menos 32 caracteres, p. ej. `openssl rand -base64 32`). La portada lo manda en `X-Local133-Key` a `/api/public`; el portal responde 401 sin él y **500 si al portal le falta** (la API no queda abierta por olvido). Configurarlo en los dos antes o junto con la publicación; si no, el recibo y el catálogo públicos dirán «No pudimos cargar…». Para rotarlo: cambiar el valor en los dos sitios (unos segundos de 503 mientras reinician).
 - **Límite por IP en la portada** (sin recursos nuevos): `RateLimiting__ReceiptPermitLimit` (30), `RateLimiting__StorefrontPermitLimit` (60) y `RateLimiting__WindowSeconds` (60) tienen valores por defecto en `appsettings.json`; solo se configuran para cambiarlos. La IP del cliente sale de `X-Forwarded-For` (último valor, el del front-end de App Service): la portada configura los forwarded headers en `Program.cs`, así que ya **no** se necesita el App Setting `ASPNETCORE_FORWARDEDHEADERS_ENABLED` (si está, es redundante: el encabezado ya procesado no se vuelve a aplicar). El contador vive en memoria de cada instancia: con escalado a varias instancias el límite efectivo se multiplica (aceptable; un límite compartido requeriría Redis o Front Door).
+### Fase 5.17 — Admin
+- **Se publica junto con la 5.12 a la 5.16 y la 5.18.**
+- Sin cambios para Azure: sin migración (los precios de Básico y el `Plan` de periodos y cargos ya los creó `BasicAndProPlans`), recursos, App Settings, secretos, jobs ni webhooks nuevos.
+- Antes de publicar, revisar los precios en `/admin/parametros`: la regla nueva exige Básico < Pro (también entre los de fundador). Si en producción quedó algún precio de prueba (p. ej. Pro fundador en $0.01), la pantalla no dejará guardar hasta corregirlo.
+
+### Fase 5.18 — Portada y textos legales
+- **Se publica junto con la 5.12 a la 5.17**, y la portada (`Local133.LandingPage`) **antes o junto con** Web:
+  - la casilla del checkout enlaza a `{App__LandingUrl}/terminos`;
+  - el cargo guarda `LegalDocuments.CurrentTermsVersion`, que ahora es `2026-11-27`;
+  - si Web sale primero, los pedidos guardarían la versión nueva mientras la portada todavía muestra la `2026-11-24`, con el plan gratuito.
+- Las dos apps comparten `LegalDocuments.cs` (enlazado): se publican desde el mismo commit.
+- El Aviso de privacidad también pasa a la `2026-11-27`. Los vendedores que se registren desde la publicación guardan las dos versiones nuevas; a los existentes no se les pide reaceptar (pendiente con el abogado, §13 del diseño).
+- Sin migración, recursos, App Settings, secretos, jobs ni webhooks nuevos. La portada sigue sin base: si en producción se cambia un precio o los días de prueba desde `/admin/parametros`, hay que cambiar a mano `_Pricing.cshtml` y los Términos, y publicar la portada.

@@ -142,9 +142,8 @@ public static class PlanTierFilters
 {
     public const string QueryKey = "plan";
 
-    /// <summary>Hasta la 5.17 (filtro v2) Básico se cuenta dentro de «pro».</summary>
     public static readonly IReadOnlyList<PlanTier> All =
-        [PlanTier.Onboarding, PlanTier.Trial, PlanTier.Pro, PlanTier.Grace, PlanTier.Expired];
+        [PlanTier.Onboarding, PlanTier.Trial, PlanTier.Basic, PlanTier.Pro, PlanTier.Grace, PlanTier.Expired];
 
     public static string Slug(PlanTier tier) => tier switch
     {
@@ -161,7 +160,7 @@ public static class PlanTierFilters
         All.Cast<PlanTier?>().FirstOrDefault(t => string.Equals(Slug(t!.Value), slug?.Trim(), StringComparison.OrdinalIgnoreCase));
 }
 
-/// <summary>Filtro de vencimiento del Pro (prueba, pagado o regalado).</summary>
+/// <summary>Filtro de vencimiento del plan (<c>ProUntil</c>: fin del último periodo, de Básico o de Pro).</summary>
 public enum ExpiryFilter
 {
     /// <summary>Vence en los próximos 7 días.</summary>

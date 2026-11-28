@@ -83,6 +83,16 @@
                     <div class="small text-body-secondary" data-dashboard-revenue-charges="@month.Revenue.Charges" data-dashboard-revenue-manual="@month.Revenue.CreditedManually">
                         @(month.Revenue.Charges == 1 ? "1 cargo pagado" : $"{DashboardViewModel.Count(month.Revenue.Charges)} cargos pagados")@(month.Revenue.CreditedManually > 0 ? $" ({DashboardViewModel.Count(month.Revenue.CreditedManually)} a mano)" : null)
                     </div>
+                    <ul class="list-inline small mb-0 mt-1">
+                        @foreach (var plan in RevenueFigure.Plans)
+                        {
+                            var byPlan = month.Revenue.ByPlan[plan];
+                            <li class="list-inline-item text-nowrap" data-dashboard-revenue-plan="@plan" data-amount="@byPlan.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-charges="@byPlan.Charges">
+                                <span class="badge @PlanLabels.PlanBadge(plan)">@plan.Label()</span>
+                                @SaleQrViewModel.FormatAmount(byPlan.Amount) <span class="text-body-secondary">(@byPlan.Charges)</span>
+                            </li>
+                        }
+                    </ul>
                 </div></div>
             </div>
         }
@@ -183,8 +193,15 @@
                     <div class="fs-4 fw-bold">@DashboardViewModel.Percent(Model.RecentConversion.Percent)</div>
                     <div class="small text-body-secondary">Pruebas que terminaron en los últimos @DashboardViewModel.RecentTrialDays días: @DashboardViewModel.Count(Model.RecentConversion.Paid) de @DashboardViewModel.Count(Model.RecentConversion.Ended)</div>
                 </div>
+                <div data-dashboard-upgrades="@Model.RecentUpgrades">
+                    <div class="fs-4 fw-bold">@DashboardViewModel.Count(Model.RecentUpgrades)</div>
+                    <div class="small text-body-secondary">Subieron de Básico a Pro en los últimos @DashboardViewModel.RecentTrialDays días</div>
+                </div>
             </div>
-            <p class="small text-body-secondary mt-3 mb-0">Cuenta a quien pagó al menos un cargo, también antes de terminar la prueba o abonado a mano.</p>
+            <p class="small text-body-secondary mt-3 mb-0">
+                La conversión cuenta a quien pagó al menos un cargo de cualquier plan, también antes de terminar la prueba o
+                abonado a mano. Una subida es un pago de Pro que convirtió el Básico que tenía por delante.
+            </p>
         </div></div>
     </section>
 
@@ -206,7 +223,7 @@
 
 <section class="card mb-4" aria-labelledby="dashboard-fair-use-title" data-dashboard-fair-use="@Model.FairUse.Count">
     <div class="card-body">
-        <h2 class="h6 text-body-secondary text-uppercase mb-1" id="dashboard-fair-use-title">Uso justo de Pro</h2>
+        <h2 class="h6 text-body-secondary text-uppercase mb-1" id="dashboard-fair-use-title">Uso justo (Básico y Pro)</h2>
         <p class="small text-body-secondary">Vendedores con @DashboardViewModel.Count(Model.FairUseLimit) cobros concretados o más este mes. Es solo una alerta: no se les bloquea.</p>
         @if (Model.FairUse.Count == 0)
         {

@@ -19,22 +19,6 @@ namespace Local133.LandingPage.Tests;
 /// </summary>
 public partial class LegalPagesTests
 {
-    /// <summary>
-    /// Días de prueba que dicen los textos publicados. <c>SystemSettings.DefaultTrialDays</c> ya es 15 (5.12); la portada
-    /// y los Términos se actualizan en la 5.18, y entonces esta constante se quita.
-    /// </summary>
-    private const int PublishedTrialDays = 30;
-
-    /// <summary>
-    /// Límites del gratuito que dicen los textos publicados. Sus parámetros se borraron en la 5.14; la portada y los
-    /// Términos los quitan en la 5.18, y entonces estas constantes se quitan.
-    /// </summary>
-    private const int PublishedFreeMonthlyPaidLimit = 100;
-
-    private const int PublishedFreeHistoryDays = 30;
-
-    private const int PublishedFreeMonthlyGeneratedLimit = 300;
-
     private const string AppUrl = "https://app.example.test";
 
     private static readonly CultureInfo Mx = CultureInfo.GetCultureInfo("es-MX");
@@ -88,7 +72,7 @@ public partial class LegalPagesTests
     {
         var html = await HtmlAsync("/terminos");
 
-        Assert.Equal(2, Regex.Matches(html, $"href=\"{Regex.Escape(AppUrl)}\"[^>]*>Prueba 30 días gratis</a>").Count);
+        Assert.Equal(2, Regex.Matches(html, $"href=\"{Regex.Escape(AppUrl)}\"[^>]*>Prueba {SystemSettings.DefaultTrialDays} días gratis</a>").Count);
         Assert.Equal(2, Regex.Matches(html, $"href=\"{Regex.Escape(AppUrl)}/Identity/Account/Login\"").Count);
         Assert.Contains("href=\"/terminos\">Términos y condiciones</a>", html);
         Assert.Contains("href=\"/aviso-de-privacidad\">Aviso de privacidad</a>", html);
@@ -102,24 +86,50 @@ public partial class LegalPagesTests
 
         string[] expected =
         [
+            $"{Money(SystemSettings.DefaultBasicMonthlyPrice)} al mes",
+            $"{Money(SystemSettings.DefaultBasicAnnualPrice)} al año",
+            $"{Money(SystemSettings.DefaultBasicFounderMonthlyPrice)} al mes",
+            $"{Money(SystemSettings.DefaultBasicFounderAnnualPrice)} al año",
             $"{Money(SystemSettings.DefaultProMonthlyPrice)} al mes",
             $"{Money(SystemSettings.DefaultProAnnualPrice)} al año",
             $"{Money(SystemSettings.DefaultProFounderMonthlyPrice)} al mes",
             $"{Money(SystemSettings.DefaultProFounderAnnualPrice)} al año",
             $"primeros {Count(SystemSettings.DefaultFounderSlots)} vendedores",
-            $"{Count(PublishedTrialDays)} días de prueba",
+            $"{Count(SystemSettings.DefaultTrialDays)} días de prueba",
+            "empieza con tu primer cobro",
             $"{Count(SystemSettings.DefaultGraceDays)} días de gracia",
-            $"{Count(PublishedFreeMonthlyPaidLimit)} cobros concretados por mes",
-            $"{Count(PublishedFreeMonthlyGeneratedLimit)} cobros generados",
-            $"últimos {Count(PublishedFreeHistoryDays)} días",
             $"{Count(SystemSettings.DefaultFairUseMonthlyPaid)} cobros concretados al mes",
-            $"{Count(SystemSettings.DefaultReferralRewardDays)} días de Pro cuando",
+            $"{Count(SystemSettings.DefaultReferralRewardDays)} días del plan que tenga",
             $"{Count(SystemSettings.DefaultReferralRewardsPerYear)} premios en 12 meses",
             $"{Count((int)(SystemSettings.DefaultReferralWelcomeDiscountRate * 100))} % de descuento",
             $"por {Count((int)ReferralCookie.Lifetime.TotalDays)} días",
         ];
 
         Assert.All(expected, phrase => Assert.Contains(phrase, text));
+    }
+
+    [Fact]
+    public async Task Los_terminos_ya_no_hablan_del_gratuito_ni_de_los_paquetes_retirados()
+    {
+        // 5.18: Básico y Pro sin gratuito; solo se venden 1 mes y Anual.
+        var text = await TextAsync("/terminos");
+
+        Assert.DoesNotContain("gratuito", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("3 meses", text);
+        Assert.DoesNotContain("6 meses", text);
+        Assert.Contains("Cambio de plan", text);
+        Assert.Contains("tu plan vence", text);
+        Assert.Contains("no puedes generar cobros nuevos", text);
+    }
+
+    [Fact]
+    public async Task El_aviso_de_privacidad_ya_no_habla_del_gratuito()
+    {
+        var text = await TextAsync("/aviso-de-privacidad");
+
+        Assert.DoesNotContain("gratuito", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("límite de cobros", text);
+        Assert.Contains("la versión de los Términos que aceptaste en cada pedido", text);
     }
 
     [Fact]

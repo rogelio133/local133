@@ -258,7 +258,7 @@ public static class TransactionListQuery
                 orderby p.PaidAt descending, p.Id descending
                 select new
                 {
-                    p.Id, p.MerchantId, m.OwnerName, m.BusinessName, u.Email, ChargeId = c.Id, c.Package, ChargeStatus = c.Status,
+                    p.Id, p.MerchantId, m.OwnerName, m.BusinessName, u.Email, ChargeId = c.Id, c.Plan, c.Package, ChargeStatus = c.Status,
                     p.PaidAt, p.PaymentMethod, p.Amount, p.Base, p.Fee, p.PeyTransactionId,
                 })
             .Skip(pageInfo.Skip).Take(pageInfo.PageSize)
@@ -270,7 +270,7 @@ public static class TransactionListQuery
             {
                 var (name, business) = CustomerListQuery.NamesOf(r.OwnerName, r.BusinessName, r.Email);
                 return new SubscriptionPaymentRow(
-                    r.Id, r.MerchantId, name, business, r.ChargeId, r.Package, r.ChargeStatus, SaleFormats.DateTime(r.PaidAt, today),
+                    r.Id, r.MerchantId, name, business, r.ChargeId, r.Plan, r.Package, r.ChargeStatus, SaleFormats.DateTime(r.PaidAt, today),
                     SubscriptionPaymentMethodFilters.Text(r.PaymentMethod), SaleQrViewModel.FormatAmount(r.Amount),
                     SaleQrViewModel.FormatAmount(r.Base), r.Fee is { } fee ? SaleQrViewModel.FormatAmount(fee) : null,
                     r.PeyTransactionId);

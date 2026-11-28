@@ -18,6 +18,26 @@ public sealed class SettingsInput
     private const string RequiredMessage = "Escribe un valor.";
     private const string WholeMessage = "Escribe un número entero.";
 
+    [Display(Name = "Básico, 1 mes")]
+    [Required(ErrorMessage = RequiredMessage)]
+    [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
+    public string? BasicMonthlyPrice { get; set; }
+
+    [Display(Name = "Básico, anual")]
+    [Required(ErrorMessage = RequiredMessage)]
+    [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
+    public string? BasicAnnualPrice { get; set; }
+
+    [Display(Name = "Básico fundador, 1 mes")]
+    [Required(ErrorMessage = RequiredMessage)]
+    [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
+    public string? BasicFounderMonthlyPrice { get; set; }
+
+    [Display(Name = "Básico fundador, anual")]
+    [Required(ErrorMessage = RequiredMessage)]
+    [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
+    public string? BasicFounderAnnualPrice { get; set; }
+
     [Display(Name = "Pro, 1 mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
@@ -28,12 +48,12 @@ public sealed class SettingsInput
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
     public string? ProAnnualPrice { get; set; }
 
-    [Display(Name = "Fundador, 1 mes")]
+    [Display(Name = "Pro fundador, 1 mes")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
     public string? ProFounderMonthlyPrice { get; set; }
 
-    [Display(Name = "Fundador, anual")]
+    [Display(Name = "Pro fundador, anual")]
     [Required(ErrorMessage = RequiredMessage)]
     [RegularExpression(PricePattern, ErrorMessage = PriceMessage)]
     public string? ProFounderAnnualPrice { get; set; }
@@ -58,7 +78,7 @@ public sealed class SettingsInput
     [Range(1, SystemSettingsRules.MaxCount, ErrorMessage = "Escribe un número entre 1 y 1,000,000.")]
     public int? FairUseMonthlyPaid { get; set; }
 
-    [Display(Name = "Días de Pro por referido que paga")]
+    [Display(Name = "Días por referido que paga (del plan de quien invita)")]
     [Required(ErrorMessage = RequiredMessage)]
     [Range(1, SystemSettingsRules.MaxRewardDays, ErrorMessage = "Escribe un número entre 1 y 365.")]
     public int? ReferralRewardDays { get; set; }
@@ -91,6 +111,10 @@ public sealed class SettingsInput
 
     public static SettingsInput From(SystemSettings settings) => new()
     {
+        BasicMonthlyPrice = Price(settings.BasicMonthlyPrice),
+        BasicAnnualPrice = Price(settings.BasicAnnualPrice),
+        BasicFounderMonthlyPrice = Price(settings.BasicFounderMonthlyPrice),
+        BasicFounderAnnualPrice = Price(settings.BasicFounderAnnualPrice),
         ProMonthlyPrice = Price(settings.ProMonthlyPrice),
         ProAnnualPrice = Price(settings.ProAnnualPrice),
         ProFounderMonthlyPrice = Price(settings.ProFounderMonthlyPrice),
@@ -110,6 +134,10 @@ public sealed class SettingsInput
     /// <summary>Los valores como <see cref="SystemSettings"/> (ya pasó la validación del formulario).</summary>
     public SystemSettings ToSettings() => new()
     {
+        BasicMonthlyPrice = ParseDecimal(BasicMonthlyPrice),
+        BasicAnnualPrice = ParseDecimal(BasicAnnualPrice),
+        BasicFounderMonthlyPrice = ParseDecimal(BasicFounderMonthlyPrice),
+        BasicFounderAnnualPrice = ParseDecimal(BasicFounderAnnualPrice),
         ProMonthlyPrice = ParseDecimal(ProMonthlyPrice),
         ProAnnualPrice = ParseDecimal(ProAnnualPrice),
         ProFounderMonthlyPrice = ParseDecimal(ProFounderMonthlyPrice),
@@ -158,17 +186,21 @@ public static class SettingsLabels
 
     public static string Help(string field) => field switch
     {
-        nameof(SystemSettings.ProMonthlyPrice) => "IVA incluido. Los paquetes de 3 y 6 meses son múltiplos. Solo afecta a los links nuevos.",
-        nameof(SystemSettings.ProAnnualPrice) => "IVA incluido. Solo afecta a los links nuevos; quien renueva el anual conserva su precio congelado.",
+        nameof(SystemSettings.BasicMonthlyPrice) => "IVA incluido. Debe ser menor que el de Pro: con él se calcula cuántos días de Pro vale un día de Básico al subir de plan.",
+        nameof(SystemSettings.BasicAnnualPrice) => "IVA incluido. Debe ser menor que el de Pro. Quien renueva el anual de Básico conserva su precio congelado.",
+        nameof(SystemSettings.BasicFounderMonthlyPrice) => "De por vida para los fundadores. No puede ser mayor que el normal y debe ser menor que el de fundador de Pro.",
+        nameof(SystemSettings.BasicFounderAnnualPrice) => "De por vida para los fundadores. No puede ser mayor que el normal y debe ser menor que el de fundador de Pro.",
+        nameof(SystemSettings.ProMonthlyPrice) => "IVA incluido. Solo afecta a los pedidos nuevos.",
+        nameof(SystemSettings.ProAnnualPrice) => "IVA incluido. Solo afecta a los pedidos nuevos; quien renueva el anual de Pro conserva su precio congelado.",
         nameof(SystemSettings.ProFounderMonthlyPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
         nameof(SystemSettings.ProFounderAnnualPrice) => "De por vida para los fundadores. No puede ser mayor que el precio normal.",
-        nameof(SystemSettings.FounderSlots) => "Los primeros que paguen Pro. No puede bajar de los lugares ya asignados.",
+        nameof(SystemSettings.FounderSlots) => "Entre los dos planes: los primeros que paguen cualquiera. No puede bajar de los lugares ya asignados.",
         nameof(SystemSettings.TrialDays) => "Solo afecta a las pruebas que empiecen después del cambio.",
         nameof(SystemSettings.GraceDays) => "Cambia de inmediato el estado de quien tenga un pago vencido (gracia o vencido).",
         nameof(SystemSettings.FairUseMonthlyPaid) => "Al pasarlo se alerta al admin, sin bloquear.",
         nameof(SystemSettings.ReferralRewardDays) => "Para los premios que se den después del cambio.",
         nameof(SystemSettings.ReferralRewardsPerYear) => "En 12 meses móviles. 0 = sin premios.",
-        nameof(SystemSettings.ReferralWelcomeDiscountRate) => "Sobre el precio de un mes, en el primer pago. Solo afecta a los links nuevos.",
+        nameof(SystemSettings.ReferralWelcomeDiscountRate) => "Sobre el precio de un mes del plan que elija, en el primer pago. Solo afecta a los pedidos nuevos.",
         nameof(SystemSettings.VatRate) => "Sirve para desglosar el IVA incluido; los precios no cambian.",
         nameof(SystemSettings.SaleQrExpirationSeconds) => "Para los QR nuevos. Pey exige al menos 360 segundos.",
         nameof(SystemSettings.ReferenceTerminalFeeRate) => "Sin IVA. Para la estimación del resumen mensual.",

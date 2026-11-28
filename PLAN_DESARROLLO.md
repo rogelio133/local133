@@ -259,8 +259,12 @@ La bitácora de cada subfase terminada (qué se hizo, pruebas, revisión en nave
     - resumen mensual por plan y anuncio del cambio.
 
     ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.15, la 5.17 y la 5.18)* — [bitácora](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#516-recordatorios-referidos-y-avisos)
-17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
-18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva. — [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
+17. **Admin**: parámetros de Básico, filtro y pestaña Plan con el plan, regalar días por plan y tablero por plan.
+
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.16 y la 5.18; Básico < Pro también en los precios de fundador)* — [bitácora](log_plan/fase-5.17-admin.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#517-admin)
+18. **Portada y textos legales**: precios de Prueba, Básico y Pro; textos con 15 días y sin gratuito; Términos y versión nueva.
+
+    ✅ *(hecho 2026-11-27, sin publicar: sale con la 5.12 a la 5.17; Términos y Aviso de privacidad en la versión `2026-11-27`; la portada se publica antes o junto con Web)* — [bitácora](log_plan/fase-5.18-portada-y-textos-legales.md) · [detalle](actualizaciones/planes_basico_pro_2026_11_26.md#518-portada-y-textos-legales)
 
 ### Fase 6 — Portal administrador (≈1.5 semanas)
 1. Listado de clientes con búsqueda y filtros (estatus, plan, fecha, vencimiento); detalle con pestañas General / Cuenta / Ventas / Plan. ✅ *(hecho 2026-11-23; solo lectura, la pestaña Plan con el resumen)* — [bitácora](log_plan/fase-6.1-clientes.md)
@@ -290,6 +294,7 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
 - [3.2](log_plan/fase-3.2-carrito.md): cobro real con carrito (QR y celular) y su webhook.
 - [5.8](log_plan/fase-5.8-afiliados.md): un referido paga un link real ⇒ 10 días al que lo invitó (con $0.01 el descuento redondea a $0.00).
 - [5.13](log_plan/fase-5.13-prueba-al-primer-cobro.md): el primer cobro real de $0.01 empieza la prueba de 15 días de Pro (punto 1 de la verificación de extremo a extremo de los planes Básico y Pro).
+- [5.17](log_plan/fase-5.17-admin.md): para la verificación de extremo a extremo con $0.01, la regla «Básico < Pro» no deja poner los dos en $0.01 desde Parámetros: usar Básico $0.01 y Pro $0.02 (también los de fundador).
 - [5.15](log_plan/fase-5.15-checkout-por-pasos.md): pagar Básico durante la prueba y subir a Pro con links reales ⇒ webhook ⇒ conversión de los días; «Regresar» de Pey vuelve al resumen del pedido (puntos 2 y 3 de la verificación de extremo a extremo).
 - [5.6](log_plan/fase-5.6-mi-plan-y-pago.md): ~~pagar un link real con $0.01~~ hecho el 2026-11-20 (se abonó por la consulta de la página de regreso; cubre el pendiente de la [PoC](log_plan/poc-link-de-pago.md)). Falta ver llegar el webhook `payment_link.status_updated` real con túnel + `App:PublicBaseUrl`.
 
@@ -329,8 +334,11 @@ Pendientes abiertos de las subfases terminadas (el detalle sigue en cada bitáco
   - eliminación de cuentas tras 2 años sin actividad: el aviso lo promete y no hay job;
   - cambiar desde el admin un parámetro que aparece en los Términos exige publicar una versión nueva: la pantalla de la 6.2 lo advierte, pero no lo impide;
   - decidir si se pide reaceptar a quien tenga la versión `2026-11-18`.
-- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release); la portada y los Términos todavía mencionan los paquetes de 3 y 6 meses (5.18). Los recordatorios con «Pro» se corrigieron en la 5.16.
+- [5.15, ajuste del checkout simplificado](log_plan/fase-5.15-checkout-por-pasos.md#ajuste-2026-11-27-checkout-simplificado): `dotnet build` en Debug y `has-pending-model-changes` con Visual Studio detenido (las pruebas corrieron en Release). La portada y los Términos ya no mencionan los paquetes de 3 y 6 meses ([5.18](log_plan/fase-5.18-portada-y-textos-legales.md)); los recordatorios con «Pro» se corrigieron en la 5.16.
 - [5.16](log_plan/fase-5.16-recordatorios-referidos-y-avisos.md): el anuncio del cambio de planes sale a las 9:00 del día siguiente a la publicación, como correo real a todos los vendedores existentes (publicar en el horario acordado). `/app/avisos` y la campana siguen pendientes (5.4).
+- [5.18](log_plan/fase-5.18-portada-y-textos-legales.md):
+  - revisión legal de los Términos `2026-11-27`, sobre todo el cambio de plan con conversión de días, la aceptación en cada pedido y los vendedores que aceptaron la `2026-11-24` (§13 del diseño: ¿basta aceptar al pagar o hay que pedir reaceptación?, ¿15 días al primer cobro o se respetan los 30?);
+  - confirmar con Pey si el pagador con tarjeta paga comisión encima (los Términos lo dicen así; el resumen del pedido no lo muestra).
 - [6.2](log_plan/fase-6.2-plan-y-parametros.md): anular un premio y «Dar premios pendientes» en el navegador (la base de desarrollo no tiene premios; los cubren las pruebas de integración).
 - [Portada nueva](log_plan/portada-nueva.md):
   - «Quedan N lugares» de fundador está oculto: falta de dónde saca el dato la portada, que no tiene base;

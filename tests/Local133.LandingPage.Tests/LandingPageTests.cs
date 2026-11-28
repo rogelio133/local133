@@ -11,20 +11,6 @@ namespace Local133.LandingPage.Tests;
 
 public class LandingPageTests
 {
-    /// <summary>
-    /// Días de prueba que dicen los textos publicados. <c>SystemSettings.DefaultTrialDays</c> ya es 15 (5.12); la portada
-    /// y los Términos se actualizan en la 5.18, y entonces esta constante se quita.
-    /// </summary>
-    private const int PublishedTrialDays = 30;
-
-    /// <summary>
-    /// Límites del gratuito que dicen los textos publicados. Sus parámetros se borraron en la 5.14; la portada y los
-    /// Términos los quitan en la 5.18, y entonces estas constantes se quitan.
-    /// </summary>
-    private const int PublishedFreeMonthlyPaidLimit = 100;
-
-    private const int PublishedFreeHistoryDays = 30;
-
     private const string AppUrl = "https://app.example.test";
 
     private static WebApplicationFactory<Program> CreateFactory(params (string Key, string Value)[] settings) =>
@@ -77,11 +63,11 @@ public class LandingPageTests
         Assert.Contains("Empieza a cobrar en tres pasos", text);
         Assert.Contains("Todo para cobrar y vender desde tu celular", text);
         Assert.Contains("nunca toca tu dinero", text);
-        Assert.Contains("Prueba todo gratis 30 días", text);
+        Assert.Contains($"Prueba Pro {SystemSettings.DefaultTrialDays} días gratis", text);
         Assert.Contains("¿Tienes dudas?", text);
         Assert.Contains("listo para cobrar con CoDi", text);
         Assert.Contains("© 2026 Local133. CoDi® es una marca del Banco de México.", text);
-        Assert.Equal(7, Regex.Matches(await GetHomeAsync(), "<details").Count);
+        Assert.Equal(8, Regex.Matches(await GetHomeAsync(), "<details").Count);
     }
 
     [Fact]
@@ -107,11 +93,12 @@ public class LandingPageTests
 
         string[] signUpTexts =
         [
-            "Prueba 30 días gratis", "Crear mi cuenta gratis", "Crear cuenta gratis", "Empezar con 30 días gratis",
+            $"Prueba {SystemSettings.DefaultTrialDays} días gratis", "Crear mi cuenta gratis", "Empezar mi prueba gratis",
+            $"Empezar con {SystemSettings.DefaultTrialDays} días gratis",
         ];
         var hrefs = signUpTexts.SelectMany(text => HrefsOf(html, text)).ToList();
 
-        // Encabezado y menú (2), hero y cierre (2), gratuito (1), Pro mensual y anual (2).
+        // Encabezado y menú (2), hero y cierre (2), prueba, Básico y Pro (3).
         Assert.Equal(7, hrefs.Count);
         Assert.All(hrefs, href => Assert.Equal(expectedHref, href));
     }
@@ -188,21 +175,56 @@ public class LandingPageTests
         static string Money(decimal amount) =>
             "$" + amount.ToString(amount == decimal.Truncate(amount) ? "#,0" : "#,0.00", CultureInfo.InvariantCulture);
 
-        var monthly = SystemSettings.DefaultProMonthlyPrice;
-        var annual = SystemSettings.DefaultProAnnualPrice;
-        Assert.Contains($"{Money(monthly)} al mes", text);
-        Assert.Contains($"{Money(annual)} al año", text);
-        Assert.Contains($"Equivale a {Money(decimal.Round(annual / 12, 2))} al mes", text);
-        Assert.Contains($"Ahorras {Money(monthly * 12 - annual)} al año", text);
-        Assert.Contains($"3 meses ({Money(monthly * 3)}) y 6 meses ({Money(monthly * 6)})", text);
-        Assert.Contains($"los primeros {SystemSettings.DefaultFounderSlots} vendedores que paguen Pro pagan " +
-            $"{Money(SystemSettings.DefaultProFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultProFounderAnnualPrice)} al año", text);
-        Assert.Contains($"{PublishedFreeMonthlyPaidLimit} cobros al mes", text);
-        Assert.Contains($"Historial de los últimos {PublishedFreeHistoryDays} días", text);
-        Assert.Contains($"Prueba todo gratis {PublishedTrialDays} días", text);
-        Assert.Contains($"+{SystemSettings.DefaultReferralRewardDays} días de Pro para ti", text);
+        // Por plan: «$99 al mes», «o $990 al año» y «12 meses por el precio de 10: equivale a $82.50 al mes».
+        (decimal Monthly, decimal Annual)[] plans =
+        [
+            (SystemSettings.DefaultBasicMonthlyPrice, SystemSettings.DefaultBasicAnnualPrice),
+            (SystemSettings.DefaultProMonthlyPrice, SystemSettings.DefaultProAnnualPrice),
+        ];
+        foreach (var (monthly, annual) in plans)
+        {
+            var paidMonths = annual / monthly;
+            Assert.Equal(decimal.Truncate(paidMonths), paidMonths);
+            Assert.Contains($"{Money(monthly)} al mes", text);
+            Assert.Contains($"o {Money(annual)} al año", text);
+            Assert.Contains($"12 meses por el precio de {paidMonths:0}: equivale a {Money(decimal.Round(annual / 12, 2))} al mes", text);
+        }
+
+        Assert.Contains($"los primeros {SystemSettings.DefaultFounderSlots} vendedores que paguen su plan pagan " +
+            $"Básico a {Money(SystemSettings.DefaultBasicFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultBasicFounderAnnualPrice)} al año, " +
+            $"y Pro a {Money(SystemSettings.DefaultProFounderMonthlyPrice)} al mes o {Money(SystemSettings.DefaultProFounderAnnualPrice)} al año", text);
+        Assert.Contains($"$0 por {SystemSettings.DefaultTrialDays} días", text);
+        Assert.Contains($"Tu prueba de {SystemSettings.DefaultTrialDays} días empieza con tu primer cobro", text);
+        Assert.Contains($"+{SystemSettings.DefaultReferralRewardDays} días de tu plan para ti", text);
         Assert.Contains($"-{SystemSettings.DefaultReferralWelcomeDiscountRate * 100:0}% de descuento", text);
         Assert.Contains($"Tienes {SystemSettings.DefaultGraceDays} días de gracia", text);
+    }
+
+    [Fact]
+    public async Task Ya_no_menciona_el_gratuito_ni_los_paquetes_retirados()
+    {
+        // 5.18: sin plan gratuito (5.14), prueba de 15 días (5.12) y solo 1 mes y Anual (ajuste del 2026-11-27).
+        var text = TextOf(await GetHomeAsync());
+
+        Assert.DoesNotContain("gratuito", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("3 meses", text);
+        Assert.DoesNotContain("6 meses", text);
+        Assert.DoesNotContain("30 días", text);
+        Assert.DoesNotContain("cobros al mes", text);
+    }
+
+    [Fact]
+    public async Task La_tabla_de_planes_compara_Basico_con_Pro()
+    {
+        var html = await GetHomeAsync();
+        var text = TextOf(html);
+
+        Assert.Contains("Compara los planes", text);
+        Assert.Contains("Función Básico Pro y prueba", text);
+        Assert.Contains("Catálogo de productos Solo lectura ✓ Sí", text);
+        Assert.Contains("Cobro con productos (carrito) — No ✓ Sí", text);
+        Assert.Contains("Recibo por WhatsApp y «Compartir» «Cobrado con Local133» Con tu logo", text);
+        Assert.Equal(11, Regex.Matches(html, "<th scope=\"row\">").Count);
     }
 
     [Fact]
@@ -222,8 +244,8 @@ public class LandingPageTests
     {
         var html = await GetHomeAsync();
 
-        // Títulos de sección, «Próximamente», tu dinero, fundador, Invita y gana, preguntas y cierre.
-        Assert.Equal(10, Regex.Matches(html, @"\sdata-reveal[\s>]").Count);
+        // Títulos de sección, «Próximamente», tu dinero, tabla de planes, fundador, Invita y gana, preguntas y cierre.
+        Assert.Equal(11, Regex.Matches(html, @"\sdata-reveal[\s>]").Count);
         // Pasos, herramientas, tu dinero, precios e Invita y gana: sus tarjetas aparecen escalonadas.
         Assert.Equal(5, Regex.Matches(html, @"\sdata-reveal-stagger[\s>]").Count);
         Assert.Contains("data-carousel-track data-reveal-stagger>", html);

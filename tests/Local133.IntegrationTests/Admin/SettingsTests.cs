@@ -105,6 +105,9 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
     [InlineData(nameof(SystemSettings.SaleQrExpirationSeconds), "300", "Pey exige al menos 360")]
     [InlineData(nameof(SystemSettings.ProMonthlyPrice), "199.999", "Escribe un precio")]
     [InlineData(nameof(SystemSettings.FairUseMonthlyPaid), "0", "Escribe un número entre 1")]
+    [InlineData(nameof(SystemSettings.BasicMonthlyPrice), "199", "Básico debe costar menos que Pro")]
+    [InlineData(nameof(SystemSettings.BasicFounderMonthlyPrice), "120", "no puede ser mayor que el normal")]
+    [InlineData(nameof(SystemSettings.BasicAnnualPrice), "abc", "Escribe un precio")]
     public async Task Valores_invalidos_no_se_guardan(string field, string value, string message)
     {
         var admin = await AdminAsync();
@@ -116,7 +119,39 @@ public partial class SettingsTests(Local133WebFactory factory) : SubscriptionPay
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains(message, await response.Content.ReadAsStringAsync());
         Assert.Equal(SystemSettings.DefaultProMonthlyPrice, (await CurrentAsync()).ProMonthlyPrice);
+        Assert.Equal(SystemSettings.DefaultBasicMonthlyPrice, (await CurrentAsync()).BasicMonthlyPrice);
         Assert.Empty(await WithDbAsync(db => db.AuditLogs.ToListAsync()));
+    }
+
+    [Fact]
+    public async Task Los_precios_de_Basico_se_muestran_se_guardan_y_estan_en_los_terminos()
+    {
+        await WithSettingsAsync(_ => { }, async () =>
+        {
+            var admin = await AdminAsync();
+            var before = await GetHtmlAsync(admin, Url);
+            Assert.Contains("data-settings-prices=\"Basic\"", before);
+            Assert.Contains("Básico fundador, 1 mes", before);
+            Assert.Contains("id=\"settings-BasicMonthlyPrice\"", before);
+            Assert.Contains("value=\"99\"", before);
+
+            var values = await CurrentAsync();
+            values.BasicMonthlyPrice = 109m;
+            values.BasicFounderAnnualPrice = 650m;
+            var response = await PostFormAsync(admin, Url, Fields(values));
+
+            Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+            var saved = await CurrentAsync();
+            Assert.Equal(109m, saved.BasicMonthlyPrice);
+            Assert.Equal(650m, saved.BasicFounderAnnualPrice);
+            var audit = Assert.Single(await WithDbAsync(db => db.AuditLogs.AsNoTracking().ToListAsync()));
+            Assert.Contains("BasicMonthlyPrice 99 → 109", audit.Summary);
+            Assert.Contains("BasicFounderAnnualPrice 690 → 650", audit.Summary);
+
+            var html = await GetHtmlAsync(admin, Url);
+            Assert.Contains("data-settings-terms-warning", html);
+            Assert.Contains("Básico, 1 mes", html);
+        });
     }
 
     [Fact]

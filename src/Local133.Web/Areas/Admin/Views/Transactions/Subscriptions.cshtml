@@ -80,7 +80,7 @@ else
                 <div class="flex-grow-1 text-break">
                     <div class="small text-body-secondary">Cargo #@row.ChargeId · @row.PaidAtText</div>
                     <div class="fw-semibold">@row.MerchantName@(row.BusinessName is { } b ? $" · {b}" : null)</div>
-                    <div>Pro, @row.Package.Label()</div>
+                    <div data-subscription-payment-plan="@row.Plan">@row.Plan.Label(), @row.Package.Label()</div>
                     <div class="small text-body-secondary">
                         @row.MethodText · base @row.BaseText@(row.FeeText is { } fee ? $" · comisión {fee}" : null)
                     </div>
