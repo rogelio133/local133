@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <!-- Portada pública (local133.com.mx). Sitio aparte del portal (Local133.Web, app.local133.com.mx): no lo referencia.
-       Marca (SCSS) y limpieza de las palabras se comparten por enlace. Logo, íconos y rotating-word.js son copias
-       de Local133.Web/wwwroot (los static web assets no sirven archivos enlazados); SharedAssetsTests falla si difieren. -->
+       Marca (SCSS) y limpieza de las palabras se comparten por enlace. Logo, íconos, Bootstrap Icons y rotating-word.js
+       son copias de Local133.Web/wwwroot (los static web assets no sirven archivos enlazados); SharedAssetsTests falla
+       si difieren. El recibo y el catálogo públicos (2026-11-27) piden sus datos al portal por /api/public. -->
 
   <PropertyGroup>
     <UserSecretsId>5ce24b76-6f2a-40ba-b0d7-6afc99fc1257</UserSecretsId>
@@ -10,6 +11,8 @@
 
   <ItemGroup>
     <PackageReference Include="AspNetCore.SassCompiler" />
+    <!-- Reintentos de los GET a /api/public del portal (recibo y catálogo). -->
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,6 +23,8 @@
     <!-- Versión de Términos y Aviso de privacidad (5.11; las páginas viven aquí desde 2026-11-25). Sin dependencias:
          la misma que guarda el portal al registrar. -->
     <Compile Include="..\Local133.Domain\Legal\LegalDocuments.cs" Link="Hosting\LegalDocuments.cs" />
+    <!-- Contratos de la API pública del portal (recibo y catálogo, 2026-11-27). Sin dependencias. -->
+    <Compile Include="..\Local133.Web\PublicPages\PublicPageContracts.cs" Link="PublicPages\PublicPageContracts.cs" />
   </ItemGroup>
 
 </Project>

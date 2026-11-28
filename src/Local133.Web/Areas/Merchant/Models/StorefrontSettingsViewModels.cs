@@ -35,7 +35,7 @@ public sealed class StorefrontSettingsViewModel
 {
     public required StorefrontSlugInput Input { get; init; }
 
-    /// <summary>Base de la liga, p. ej. <c>https://app.local133.com.mx/tienda/</c> (se muestra antes del campo).</summary>
+    /// <summary>Base de la liga en la portada, p. ej. <c>https://local133.com.mx/tienda/</c> (se muestra antes del campo).</summary>
     public required string UrlPrefix { get; init; }
 
     /// <summary>El plan permite publicar (Pro, prueba, gracia u onboarding).</summary>

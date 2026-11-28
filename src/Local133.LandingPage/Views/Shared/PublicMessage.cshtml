@@ -1,0 +1,36 @@
+@model PublicPageMessageViewModel
+@{
+    var isReceipt = Model.Kind is PublicPageMessageKind.ReceiptNotFound or PublicPageMessageKind.ReceiptError;
+    var (icon, title, text) = Model.Kind switch
+    {
+        PublicPageMessageKind.ReceiptNotFound => ("bi-receipt", "No encontramos este recibo",
+            "Revisa la liga o pídele al negocio que te la mande de nuevo."),
+        PublicPageMessageKind.ReceiptError => ("bi-cloud-slash", "No pudimos cargar el recibo",
+            "Intenta de nuevo en unos minutos."),
+        PublicPageMessageKind.StorefrontError => ("bi-cloud-slash", "No pudimos cargar el catálogo",
+            "Intenta de nuevo en unos minutos."),
+        // Mismo texto que PublicCatalogMessages.Unavailable del portal.
+        _ => ("bi-shop", "Catálogo no disponible por ahora",
+            Model.BusinessName is not null
+                ? $"El catálogo de {Model.BusinessName} no está disponible en este momento. Pregúntale al negocio por sus productos."
+                : "Este catálogo no está disponible en este momento. Revisa la liga o pregúntale al negocio."),
+    };
+    ViewData["Title"] = title;
+    ViewData["NoIndex"] = true;
+    ViewData["BodyClass"] = isReceipt ? "receipt-page" : "storefront-page";
+}
+@section Head {
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+}
+@* Recibo o catálogo que no se puede mostrar (no existe, no se ve o el portal no respondió). El recibo no lleva barra;
+   el catálogo, la misma barra rosa que cuando se ve. *@
+@if (!isReceipt)
+{
+    <partial name="_StoreBar" />
+}
+<main class="public-message" data-public-message="@Model.Kind"
+      data-storefront-unavailable="@(Model.Kind == PublicPageMessageKind.StorefrontUnavailable ? "" : null)">
+    <i class="bi @icon text-body-secondary display-4" aria-hidden="true"></i>
+    <h1 class="h4 mt-3">@title</h1>
+    <p class="text-body-secondary mb-0">@text</p>
+</main>

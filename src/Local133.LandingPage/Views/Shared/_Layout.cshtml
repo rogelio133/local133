@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#E4007C" />
     <meta name="description" content="@(ViewData["Description"] as string ?? "Cobra con CoDi® desde tu celular, sin terminal ni efectivo. El dinero llega completo a tu cuenta, sin comisión por venta.")" />
+    @if (ViewData["NoIndex"] is true)
+    {
+        <meta name="robots" content="noindex, nofollow" />
+    }
     <title>@(ViewData["Title"] is string title ? $"{title} · Local133" : "Local133")</title>
     <link rel="icon" href="~/favicon.ico" sizes="any" />
     <link rel="icon" href="~/icon-192.png" type="image/png" sizes="192x192" />
@@ -17,7 +21,9 @@
     <link rel="stylesheet" href="~/css/landing.css" asp-append-version="true" />
     @await RenderSectionAsync("Head", required: false)
 </head>
-<body>
+@* Sin encabezado ni pie: cada página los agrega (la portada y las legales; el recibo no lleva ninguno y el catálogo
+   solo _StoreBar). ViewData["BodyClass"] agrega una clase al body y ViewData["NoIndex"] = true pide no indexar. *@
+<body class="@(ViewData["BodyClass"] as string)">
     @RenderBody()
     @await RenderSectionAsync("Scripts", required: false)
 </body>

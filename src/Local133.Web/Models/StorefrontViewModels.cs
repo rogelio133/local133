@@ -2,7 +2,10 @@ using Local133.Domain.Merchants;
 
 namespace Local133.Web.Models;
 
-/// <summary>Catálogo público de un vendedor (<c>/tienda/{slug}</c>, 5.10) o su vista previa.</summary>
+/// <summary>
+/// Vista previa del catálogo del vendedor (5.10). El público lo dibuja la portada desde el 2026-11-27, con
+/// <see cref="Local133.Web.PublicPages.PublicStorefront"/>.
+/// </summary>
 /// <param name="ListPath">Página del catálogo (paginación y búsqueda).</param>
 /// <param name="WhatsAppUrl">«Pedir por WhatsApp» al celular del negocio, o <c>null</c> si no tiene.</param>
 /// <param name="MadeWithUrl">Portada con el código de invitación del vendedor («Hecho con Local133»).</param>
@@ -52,9 +55,6 @@ public sealed record StorefrontViewModel(
 
 /// <summary>Producto del catálogo público.</summary>
 public sealed record StorefrontProduct(string Name, string? Description, string PriceText, string? ThumbnailUrl);
-
-/// <summary>Catálogo que no se puede ver (sin publicar, sin Pro, suspendido, de baja o inexistente).</summary>
-public sealed record StorefrontUnavailableViewModel(string? BusinessName);
 
 /// <summary>Rutas públicas del catálogo (<c>StorefrontController</c>).</summary>
 public static class StorefrontUrls

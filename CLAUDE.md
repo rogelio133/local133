@@ -19,7 +19,7 @@ src/
   Local133.Application     casos de uso, DTOs, validadores, interfaces (IPaymentGateway, IFileStorage…)
   Local133.Infrastructure  EF Core, PeyClient, procesamiento de webhooks, storage, email, jobs Hangfire
   Local133.Web             MVC (áreas Merchant/Admin, vistas Razor), Identity scaffoldeado, endpoints /api, hub SignalR, POST /api/webhooks/pey
-  Local133.LandingPage     portada pública (local133.com.mx), sitio aparte; no referencia a los demás proyectos
+  Local133.LandingPage     portada pública (local133.com.mx), sitio aparte; no referencia a los demás proyectos; recibo y catálogo públicos con datos de /api/public del portal
 tests/
   Local133.UnitTests         (solo Domain; corre en CI)
   Local133.IntegrationTests  (base `Local133_Tests` en SQL Server local, recreada con migraciones, limpiada con Respawn)
@@ -30,7 +30,7 @@ Portada: detalle en [portada.md](docs/claude/portada.md).
 
 ## Detalle por área
 Las notas de implementación de cada módulo están en `docs/claude/`. **Antes de tocar un área, lee su archivo**, y si cambias algo de lo que describe, actualízalo ahí (no aquí).
-- [portada.md](docs/claude/portada.md): `Local133.LandingPage` (secciones, ligas, palabras, precios, estilos, JS y archivos compartidos con Web).
+- [portada.md](docs/claude/portada.md): `Local133.LandingPage` (secciones, ligas, palabras, precios, estilos, JS, archivos compartidos con Web, y recibo y catálogo públicos).
 - [identity.md](docs/claude/identity.md): Identity scaffoldeado, redirección después del login, barra y home, login externo, alta de vendedores, textos legales, nombre de la persona y admin sembrado.
 - [vendedor.md](docs/claude/vendedor.md): Inicio, «Mi información», cuenta bancaria, Cobrar (monto, celular y carrito), Productos, «Más», PWA, Ventas (historial, búsqueda, Excel y corte) y recibo público.
 - [suscripciones.md](docs/claude/suscripciones.md): planes y vigencia, acceso por plan (Básico, Pro y vencido), pago con link de Pey, recordatorios y avisos, afiliados y valor visible (recibo con marca, catálogo público y resumen mensual).
@@ -39,7 +39,7 @@ Las notas de implementación de cada módulo están en `docs/claude/`. **Antes d
 - [infraestructura.md](docs/claude/infraestructura.md): logo e íconos, archivos (`IFileStorage`), correo (Resend) y configuración del MCP de Playwright.
 
 ## Comandos (una vez creado el scaffold de Fase 0)
-- Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings: `dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web` y `dotnet user-secrets set "Pey:WebhookSecret" "whsec_<secreto>" --project src/Local133.Web`; sin la API key el sitio arranca y solo fallan las llamadas a Pey; sin el secreto el webhook responde 500).
+- Conexión: `dotnet user-secrets set "ConnectionStrings:Default" "Server=localhost\SQLEXPRESS;Database=Local133;Trusted_Connection=True;TrustServerCertificate=True" --project src/Local133.Web` (también API key y secreto de webhook de Pey en user-secrets, nunca en appsettings: `dotnet user-secrets set "Pey:ApiKey" "<api-key>" --project src/Local133.Web` y `dotnet user-secrets set "Pey:WebhookSecret" "whsec_<secreto>" --project src/Local133.Web`; sin la API key el sitio arranca y solo fallan las llamadas a Pey; sin el secreto el webhook responde 500). La portada y el portal comparten `PublicApi:Key` (mismo valor en user-secrets de `src/Local133.Web` y `src/Local133.LandingPage`): sin ella `/api/public` responde 500 y el recibo y el catálogo públicos no cargan.
 - Migraciones: `dotnet ef migrations add <Nombre> --project src/Local133.Infrastructure --startup-project src/Local133.Web` · `dotnet ef database update --project src/Local133.Infrastructure --startup-project src/Local133.Web`. El sitio aplica solo las migraciones pendientes **al arrancar** (`Web/Hosting/DatabaseMigrationSetup`, antes del admin y de Hangfire; si una falla, no arranca). `Database:MigrateOnStartup` vale `true` por defecto y las pruebas lo apagan, porque la fábrica migra su propia base.
 - Build / pruebas: `dotnet build` · `dotnet test` · una prueba: `dotnet test --filter "FullyQualifiedName~<Clase>.<Metodo>"`
 - Arrancar: `dotnet run --project src/Local133.Web` → `http://localhost:5231` (perfil `http`).

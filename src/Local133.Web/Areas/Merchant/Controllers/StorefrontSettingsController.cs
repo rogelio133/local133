@@ -127,15 +127,15 @@ public class StorefrontSettingsController(
             .SingleOrDefaultAsync(cancellationToken);
         var productCount = await db.Products.AsNoTracking()
             .CountAsync(p => p.MerchantId == merchant.Id && !p.IsDeleted, cancellationToken);
-        var baseUrl = site.Value.BaseUrlFor(Request);
         var canPublish = plan.Entitlements.CanPublishCatalog;
         var businessName = string.IsNullOrWhiteSpace(merchant.BusinessName) ? null : merchant.BusinessName.Trim();
-        var url = merchant.PublicCatalogEnabled && merchant.PublicSlug is { } slug ? baseUrl + PublicSlug.PathFor(slug) : null;
+        var url = merchant.PublicCatalogEnabled && merchant.PublicSlug is { } slug ? site.Value.StorefrontUrlFor(slug) : null;
 
         return new StorefrontSettingsViewModel
         {
             Input = input ?? new StorefrontSlugInput { Slug = merchant.PublicSlug ?? PublicSlug.Suggest(businessName) },
-            UrlPrefix = baseUrl + PublicSlug.PathPrefix,
+            // El catálogo público vive en la portada desde el 2026-11-27.
+            UrlPrefix = site.Value.StorefrontUrlPrefix,
             CanPublish = canPublish,
             IsDisabled = merchant.Status == MerchantStatus.Disabled,
             IsSuspended = merchant.Status == MerchantStatus.Suspended,

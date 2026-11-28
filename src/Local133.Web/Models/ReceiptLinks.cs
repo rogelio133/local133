@@ -5,17 +5,13 @@ using Microsoft.Extensions.Options;
 namespace Local133.Web.Models;
 
 /// <summary>
-/// Ligas del recibo público de una venta (<c>/recibo/{token}</c>): la URL absoluta y el mensaje para WhatsApp.
+/// Ligas del recibo público de una venta: la URL absoluta en la portada (<c>{App:LandingUrl}/recibo/{token}</c>, desde
+/// el 2026-11-27) y el mensaje para WhatsApp.
 /// </summary>
 public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
 {
-    public const string PathPrefix = "/recibo/";
-
-    /// <summary>Ruta del recibo (relativa a la raíz del sitio).</summary>
-    public static string PathFor(string token) => PathPrefix + token;
-
-    /// <summary>URL absoluta del recibo (base de <see cref="PublicSiteOptions.BaseUrlFor"/>).</summary>
-    public string UrlFor(HttpRequest request, string token) => options.Value.BaseUrlFor(request) + PathFor(token);
+    /// <summary>URL absoluta del recibo en la portada (<see cref="PublicSiteOptions.ReceiptUrlFor"/>).</summary>
+    public string UrlFor(string token) => options.Value.ReceiptUrlFor(token);
 
     /// <summary>
     /// Todo lo necesario para compartir el recibo. En un cobro por celular además se ofrece mandarlo al chat de ese
@@ -24,15 +20,14 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
     /// </summary>
     /// <remarks>En todos los planes, también vencido (5.14): el recibo es de una venta que ya existe.</remarks>
     public ReceiptShare ShareFor(
-        HttpRequest request, string token, string? businessName, int folio, string amountText, string? customerPhone = null,
+        string token, string? businessName, int folio, string amountText, string? customerPhone = null,
         string? customerWhatsAppPath = null)
     {
-        var url = UrlFor(request, token);
+        var url = UrlFor(token);
         var message = Message(businessName, folio, amountText, url);
         var toCustomer = customerWhatsAppPath is not null && customerPhone is not null && PhoneNumber.IsValid(customerPhone);
         return new ReceiptShare(
             url,
-            PathFor(token),
             message,
             WhatsAppUrl(message),
             WhatsAppAppUrl(message),
@@ -84,8 +79,7 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
     }
 }
 
-/// <param name="Url">URL absoluta del recibo.</param>
-/// <param name="Path">Ruta del recibo (para enlazarlo dentro del sitio).</param>
+/// <param name="Url">URL absoluta del recibo (en la portada).</param>
 /// <param name="Message">Texto que se comparte (incluye la URL).</param>
 /// <param name="WhatsAppUrl">Liga <c>wa.me</c> con el mensaje (el vendedor elige el contacto); para el celular.</param>
 /// <param name="WhatsAppAppUrl">Liga <c>whatsapp://send</c> que abre la app de escritorio.</param>
@@ -95,5 +89,5 @@ public sealed class ReceiptLinks(IOptions<PublicSiteOptions> options)
 /// </param>
 /// <param name="CustomerMaskedPhone">Celular (enmascarado) del cliente, si hay <paramref name="CustomerWhatsAppPath"/>.</param>
 public sealed record ReceiptShare(
-    string Url, string Path, string Message, string WhatsAppUrl, string WhatsAppAppUrl, string WhatsAppWebUrl,
+    string Url, string Message, string WhatsAppUrl, string WhatsAppAppUrl, string WhatsAppWebUrl,
     string? CustomerWhatsAppPath, string? CustomerMaskedPhone);

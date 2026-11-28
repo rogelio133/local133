@@ -1,0 +1,180 @@
+// Recibo y catálogo públicos (ajustes 2026-11-27: se mudaron del portal a la portada). Mismo marcado Bootstrap que
+// tenían en Local133.Web; estas reglas son copia de las de Local133.Web/Styles/site.scss («Valor visible» y «Recibo tipo
+// ticket»), que allá se quedan porque el recibo de la suscripción (.receipt-*) y la vista previa del catálogo
+// (.storefront-*) las siguen usando. Si cambian allá, revisar aquí.
+
+// --- Recibo tipo ticket ------------------------------------------
+// Fondo rosa papel para que el ticket blanco y sus dientes se distingan.
+.receipt-page {
+  background-color: $rosa-papel;
+}
+
+.receipt-main {
+  padding: 32px $landing-gutter 40px;
+}
+
+/* Recibo con marca: el logo cabe en 6rem sin deformarse (PNG con transparencia). */
+.receipt-logo {
+  max-height: 6rem;
+  max-width: 12rem;
+  object-fit: contain;
+}
+
+// La sombra va en el contenedor: en el mismo elemento, `filter` se aplica antes que `mask` y se perdería. Así sigue el
+// contorno de los dientes.
+.receipt-ticket-wrap {
+  max-width: 26rem;
+  margin-inline: auto;
+  filter: drop-shadow(0 2px 6px rgba($tinta, .18));
+}
+
+// Dientes arriba y abajo: dos zigzag de 90° (conic-gradient en repeat-x), sin imágenes. La profundidad es la mitad del
+// ancho de cada diente, y el relleno vertical la deja fuera del contenido.
+.receipt-ticket {
+  --receipt-tooth: .875rem;
+  $teeth:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--receipt-tooth) 51% repeat-x,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--receipt-tooth) 51% repeat-x;
+  padding: calc(var(--receipt-tooth) / 2) 1.5rem;
+  font-variant-numeric: tabular-nums;
+  background-color: $white;
+  -webkit-mask: $teeth;
+  mask: $teeth;
+}
+
+.receipt-ticket-section {
+  padding-block: 1.25rem;
+
+  + .receipt-ticket-section {
+    border-top: 2px dashed rgba($tinta, .25);
+  }
+}
+
+.receipt-ticket-total {
+  padding-top: .5rem;
+  margin-top: .25rem;
+  border-top: 1px solid rgba($tinta, .15);
+}
+
+.receipt-check {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+// El nombre del producto se parte en vez de empujar el precio.
+.receipt-item-info {
+  min-width: 0;
+}
+
+.receipt-notes {
+  max-width: 26rem;
+  margin-inline: auto;
+}
+
+// Al imprimir: sobre papel blanco, y la sombra se vuelve un contorno delgado para que los dientes se sigan viendo.
+// Va después de las reglas de pantalla porque pesan lo mismo.
+@media print {
+  .receipt-page {
+    background-color: $white;
+  }
+
+  .receipt-ticket-wrap {
+    filter: drop-shadow(0 0 1px rgba($tinta, .6));
+    break-inside: avoid;
+  }
+}
+
+// --- Catálogo ------------------------------------------------------
+.storefront-page {
+  background-color: $landing-tint;
+}
+
+// Barra del catálogo: el rosa del fondo del PNG del logo, así el logo se funde con ella.
+.store-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  background-color: $landing-logo-pink;
+}
+
+.store-bar-brand {
+  display: block;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 12px;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  &:focus-visible {
+    outline: 3px solid $white;
+    outline-offset: 3px;
+  }
+}
+
+.storefront-main {
+  padding: 24px $landing-gutter 40px;
+}
+
+// El ancho del col-md-10 col-lg-8 que tenía en el portal, sin la fila de Bootstrap.
+.storefront-container {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+/* Catálogo público: portada con la foto del local y el logo encima. */
+.storefront-cover {
+  aspect-ratio: 16 / 7;
+  max-height: 15rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+.storefront-logo {
+  width: 5rem;
+  height: 5rem;
+  object-fit: contain;
+  background-color: var(--#{$prefix}body-bg);
+}
+
+.storefront-product-img,
+.storefront-product-placeholder {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.storefront-product-info {
+  min-width: 0;
+}
+
+// Paginación (como .pager del portal): Anterior y Siguiente de al menos 44 px que no se parten.
+.pager-btn {
+  --#{$prefix}btn-padding-x: 1rem;
+  --#{$prefix}btn-padding-y: .5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  min-height: 2.75rem;
+  white-space: nowrap;
+}
+
+.pager-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+// --- Recibo o catálogo que no se puede mostrar ---------------------
+.public-message {
+  max-width: 34rem;
+  margin-inline: auto;
+  padding: 64px $landing-gutter;
+  text-align: center;
+}

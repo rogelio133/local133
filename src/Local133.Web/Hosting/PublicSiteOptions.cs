@@ -1,8 +1,12 @@
+using Local133.Domain.Merchants;
+using Local133.Web.PublicPages;
+
 namespace Local133.Web.Hosting;
 
 /// <summary>
-/// Datos públicos del sitio (sección <c>App</c>). <see cref="PublicBaseUrl"/> fija el dominio de las ligas que salen
-/// del sitio (recibos compartidos por WhatsApp); sin él se usa el esquema y el host de la petición.
+/// Datos públicos del sitio (sección <c>App</c>). <see cref="PublicBaseUrl"/> fija el dominio de las ligas absolutas del
+/// portal (regreso de Pey, imágenes del recibo y del catálogo que pide la portada); sin él se usa el esquema y el host
+/// de la petición. El recibo y el catálogo públicos viven en la portada (<see cref="LandingUrl"/>) desde el 2026-11-27.
 /// </summary>
 public sealed class PublicSiteOptions
 {
@@ -14,8 +18,8 @@ public sealed class PublicSiteOptions
     public const string DefaultLandingUrl = "https://local133.com.mx";
 
     /// <summary>
-    /// Portada pública (<c>Local133.LandingPage</c>), sin diagonal final. A ella apuntan «Cobrado con Local133» del
-    /// recibo sin logo y el pie del catálogo público (5.10), con el código de invitación del vendedor.
+    /// Portada pública (<c>Local133.LandingPage</c>), sin diagonal final. Ahí viven el recibo y el catálogo públicos
+    /// (2026-11-27) y los textos legales; también la invitación con el código del vendedor.
     /// </summary>
     public string LandingUrl { get; set; } = DefaultLandingUrl;
 
@@ -37,6 +41,18 @@ public sealed class PublicSiteOptions
 
     /// <summary>Aviso de privacidad, en la portada (igual que <see cref="TermsUrl"/>).</summary>
     public string PrivacyNoticeUrl => Landing + PrivacyNoticePath;
+
+    /// <summary>
+    /// Recibo público, en la portada desde el 2026-11-27 (<c>{LandingUrl}/recibo/{token}</c>). Es la liga que se comparte
+    /// por WhatsApp; la ruta vieja <c>/recibo/{token}</c> del portal redirige aquí (301).
+    /// </summary>
+    public string ReceiptUrlFor(string token) => Landing + PublicPagesApi.ReceiptPathPrefix + token;
+
+    /// <summary>Base de la liga del catálogo público en la portada (<c>{LandingUrl}/tienda/</c>, 2026-11-27).</summary>
+    public string StorefrontUrlPrefix => Landing + PublicSlug.PathPrefix;
+
+    /// <summary>Catálogo público en la portada; la ruta vieja <c>/tienda/{slug}</c> del portal redirige aquí (301).</summary>
+    public string StorefrontUrlFor(string slug) => Landing + PublicSlug.PathFor(slug);
 
     /// <summary><see cref="LandingUrl"/> sin espacios ni diagonal final; la de producción si viene vacía.</summary>
     private string Landing =>

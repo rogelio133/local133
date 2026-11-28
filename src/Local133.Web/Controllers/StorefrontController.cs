@@ -2,10 +2,8 @@ using Local133.Application.Merchants;
 using Local133.Application.Products;
 using Local133.Application.Storage;
 using Local133.Application.Subscriptions;
-using Local133.Domain.Merchants;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Hosting;
-using Local133.Web.Models;
 using Local133.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,12 +13,9 @@ using Microsoft.Extensions.Options;
 namespace Local133.Web.Controllers;
 
 /// <summary>
-/// Catálogo público del vendedor (<c>/tienda/{slug}</c>, 5.10): nombre, logo, foto del local, productos vigentes con
-/// precio y foto, y «Pedir por WhatsApp» al celular del negocio. Sin pedidos ni pagos en línea. Solo se ve si el
-/// vendedor lo publicó, su plan lo permite (Pro) y no está suspendido ni dado de baja
-/// (<see cref="Merchant.CanShowPublicCatalog(Domain.Subscriptions.PlanEntitlements)"/>); si no, la liga dice «Catálogo
-/// no disponible por ahora» con <c>noindex</c>. Las imágenes se sirven aquí con la misma regla. Nunca muestra CLABE ni
-/// ids de Pey.
+/// Catálogo público del vendedor (5.10). Desde el 2026-11-27 lo dibuja la portada (<c>{App:LandingUrl}/tienda/{slug}</c>)
+/// con los datos de <see cref="PublicPagesApiController"/>; aquí quedan la redirección de la liga vieja y las imágenes
+/// públicas, que solo se sirven si el catálogo se ve (<see cref="StorefrontQuery.IsVisibleAsync"/>).
 /// </summary>
 [AllowAnonymous]
 [ApiExplorerSettings(IgnoreApi = true)]
@@ -34,30 +29,10 @@ public class StorefrontController(
     /// <summary>Caché de las imágenes públicas: corta, porque el vendedor puede dejar de publicar.</summary>
     public const string ImageCacheControl = "public, max-age=3600";
 
+    /// <summary>Liga vieja del portal ⇒ 301 al catálogo de la portada, con la búsqueda y la página.</summary>
     [HttpGet("")]
-    public async Task<IActionResult> Show(string slug, string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
-    {
-        var merchant = await FindMerchantAsync(slug, cancellationToken);
-        if (merchant is null || !await IsVisibleAsync(merchant, cancellationToken))
-        {
-            Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
-            Response.Headers.CacheControl = "no-cache";
-            if (merchant is null)
-            {
-                Response.StatusCode = StatusCodes.Status404NotFound;
-            }
-
-            return View("Unavailable", new StorefrontUnavailableViewModel(
-                merchant?.BusinessName is { Length: > 0 } name ? name.Trim() : null));
-        }
-
-        Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-        Response.Headers.CacheControl = "no-cache";
-        var model = await StorefrontQuery.BuildAsync(
-            db, merchant, q, page, StorefrontQuery.PublicImages(merchant.PublicSlug!), StorefrontUrls.Index(merchant.PublicSlug!),
-            site.Value.LandingUrlFor(merchant.ReferralCode), isPreview: false, cancellationToken);
-        return View(model);
-    }
+    public IActionResult Show(string slug) =>
+        RedirectPermanent(site.Value.StorefrontUrlFor(Uri.EscapeDataString(slug)) + Request.QueryString);
 
     [HttpGet("logo")]
     public Task<IActionResult> Logo(string slug, CancellationToken cancellationToken) =>
@@ -77,8 +52,8 @@ public class StorefrontController(
 
     private async Task<IActionResult> MerchantImageAsync(string slug, MerchantImageKind kind, CancellationToken cancellationToken)
     {
-        var merchant = await FindMerchantAsync(slug, cancellationToken);
-        if (merchant is null || !await IsVisibleAsync(merchant, cancellationToken))
+        var merchant = await StorefrontQuery.FindMerchantAsync(db, slug, cancellationToken);
+        if (merchant is null || !await StorefrontQuery.IsVisibleAsync(merchant, plans, cancellationToken))
         {
             return NotFound();
         }
@@ -92,8 +67,8 @@ public class StorefrontController(
     private async Task<IActionResult> ProductImageAsync(
         string slug, int id, Func<string, string> fileKey, CancellationToken cancellationToken)
     {
-        var merchant = await FindMerchantAsync(slug, cancellationToken);
-        if (merchant is null || !await IsVisibleAsync(merchant, cancellationToken))
+        var merchant = await StorefrontQuery.FindMerchantAsync(db, slug, cancellationToken);
+        if (merchant is null || !await StorefrontQuery.IsVisibleAsync(merchant, plans, cancellationToken))
         {
             return NotFound();
         }
@@ -118,17 +93,4 @@ public class StorefrontController(
         Response.Headers.CacheControl = ImageCacheControl;
         return File(stream, contentType);
     }
-
-    /// <summary>Vendedor dueño del slug (sin distinguir mayúsculas), o <c>null</c>.</summary>
-    private async Task<Merchant?> FindMerchantAsync(string slug, CancellationToken cancellationToken)
-    {
-        var normalized = slug.ToLowerInvariant();
-        return PublicSlug.IsValid(normalized)
-            ? await db.Merchants.AsNoTracking().SingleOrDefaultAsync(m => m.PublicSlug == normalized, cancellationToken)
-            : null;
-    }
-
-    private async Task<bool> IsVisibleAsync(Merchant merchant, CancellationToken cancellationToken) =>
-        merchant.PublicCatalogEnabled
-        && merchant.CanShowPublicCatalog((await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements);
 }

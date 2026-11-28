@@ -67,6 +67,9 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Secreto Standard Webhooks de prueba (<c>Pey:WebhookSecret</c>).</summary>
     public const string WebhookSecret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
 
+    /// <summary>Llave compartida de prueba de la API pública (<c>PublicApi:Key</c>, la que manda la portada).</summary>
+    public const string PublicApiKey = "prueba-llave-de-la-portada-0123456789abcdef";
+
     /// <summary>Lo que devuelve el proveedor externo falso; cada prueba lo ajusta (se restablece en <see cref="ResetAsync"/>).</summary>
     public FakeExternalUser ExternalUser { get; } = new();
 
@@ -89,6 +92,7 @@ public class Local133WebFactory : WebApplicationFactory<Program>, IAsyncLifetime
             [AdminSeeder.EmailKey] = "",
             [AdminSeeder.PasswordKey] = "",
             ["Pey:WebhookSecret"] = WebhookSecret,
+            [Local133.Web.PublicPages.PublicPagesApi.KeyConfigKey] = PublicApiKey,
             ["Resend:ApiKey"] = "",
             // Sin dominio público aunque user-secrets traiga uno: las ligas salen del host de la petición y las de los
             // correos de jobs/webhooks, del respaldo de desarrollo (SiteUrlOptions.DevelopmentFallbackBaseUrl).

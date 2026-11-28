@@ -1,5 +1,8 @@
 using Local133.LandingPage.Hosting;
+using Local133.LandingPage.Services;
 using Local133.Web.Hosting;
+using Local133.Web.PublicPages;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +11,29 @@ builder.Services.AddControllersWithViews();
 // Palabras que rotan en el título (Home:RotatingWords, mismas reglas que Local133.Web) y destino del botón.
 builder.Services.Configure<HomeHeroOptions>(builder.Configuration.GetSection(HomeHeroOptions.SectionName));
 builder.Services.Configure<LandingOptions>(builder.Configuration.GetSection(LandingOptions.SectionName));
+
+// Recibo y catálogo públicos (2026-11-27): sus datos salen de la API pública del portal (Landing:AppUrl), que solo
+// acepta la llave compartida PublicApi:Key (secreto: user-secrets / App Settings). Sin ella el portal responde 401 y
+// estas páginas dicen «No pudimos cargar…».
+if (string.IsNullOrWhiteSpace(builder.Configuration[PublicPagesApi.KeyConfigKey]))
+{
+    Console.Error.WriteLine($"Aviso: falta {PublicPagesApi.KeyConfigKey}; el recibo y el catálogo públicos no podrán cargar.");
+}
+
+builder.Services.AddHttpClient<PublicPagesClient>((services, http) =>
+    {
+        var appUrl = services.GetRequiredService<IOptions<LandingOptions>>().Value.AppUrl;
+        http.BaseAddress = new Uri(string.IsNullOrWhiteSpace(appUrl) ? LandingOptions.DefaultAppUrl : appUrl.Trim().TrimEnd('/') + "/");
+        var key = services.GetRequiredService<IConfiguration>()[PublicPagesApi.KeyConfigKey];
+        if (!string.IsNullOrWhiteSpace(key))
+        {
+            http.DefaultRequestHeaders.Add(PublicPagesApi.KeyHeader, key.Trim());
+        }
+    })
+    .AddStandardResilienceHandler();
+
+// Límite por IP de esas dos páginas (RateLimiting:*): cada visita es una llamada al portal.
+builder.Services.AddPublicPagesRateLimit(builder.Configuration);
 
 #if DEBUG
 // Estilos: Styles/landing.scss → wwwroot/css/landing.css. El build y el publish compilan con dart-sass
@@ -27,6 +53,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePages();
+app.UseRouting();
+app.UseRateLimiter();
 app.MapStaticAssets();
 app.MapControllers();
 

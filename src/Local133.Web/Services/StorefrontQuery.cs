@@ -1,8 +1,10 @@
 using Local133.Application.Merchants;
+using Local133.Application.Subscriptions;
 using Local133.Domain.Merchants;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Models;
+using Local133.Web.PublicPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace Local133.Web.Services;
@@ -11,7 +13,8 @@ namespace Local133.Web.Services;
 /// Arma el catálogo público (5.10): datos del negocio, celular para WhatsApp y productos vigentes por nombre, con
 /// búsqueda y páginas de <see cref="StorefrontViewModel.PageSize"/>. Sin filtro multi-tenant (quien lo abre puede tener
 /// sesión de otro vendedor): todo va por <c>MerchantId</c> explícito. Las URLs de las imágenes las decide quien llama
-/// (rutas públicas en <c>/tienda</c>, privadas en la vista previa).
+/// (rutas públicas en <c>/tienda</c>, privadas en la vista previa). El catálogo público lo dibuja la portada desde el
+/// 2026-11-27, con los datos de <see cref="ToPublic"/> (<c>GET /api/public/tiendas/{slug}</c>).
 /// </summary>
 public static class StorefrontQuery
 {
@@ -19,10 +22,43 @@ public static class StorefrontQuery
     public sealed record ImageUrls(
         Func<string, string> Logo, Func<string, string> ShopPhoto, Func<int, string, string> Thumbnail);
 
-    public static ImageUrls PublicImages(string slug) => new(
-        logo => StorefrontUrls.Logo(slug, MerchantImageRules.Version(logo)),
-        photo => StorefrontUrls.ShopPhoto(slug, MerchantImageRules.Version(photo)),
-        (id, key) => StorefrontUrls.Thumbnail(slug, id, ProductUrls.Version(key)));
+    /// <summary>Rutas públicas de las imágenes en el portal; <paramref name="baseUrl"/> las hace absolutas (la portada las pide aquí).</summary>
+    public static ImageUrls PublicImages(string slug, string baseUrl = "") => new(
+        logo => baseUrl + StorefrontUrls.Logo(slug, MerchantImageRules.Version(logo)),
+        photo => baseUrl + StorefrontUrls.ShopPhoto(slug, MerchantImageRules.Version(photo)),
+        (id, key) => baseUrl + StorefrontUrls.Thumbnail(slug, id, ProductUrls.Version(key)));
+
+    /// <summary>Vendedor dueño del slug (sin distinguir mayúsculas, sin filtro multi-tenant), o <c>null</c>.</summary>
+    public static async Task<Merchant?> FindMerchantAsync(AppDbContext db, string slug, CancellationToken cancellationToken)
+    {
+        var normalized = slug.ToLowerInvariant();
+        return PublicSlug.IsValid(normalized)
+            ? await db.Merchants.AsNoTracking().SingleOrDefaultAsync(m => m.PublicSlug == normalized, cancellationToken)
+            : null;
+    }
+
+    /// <summary>
+    /// El catálogo se ve: publicado, con un plan que lo permite (Pro) y sin suspender ni dar de baja
+    /// (<see cref="Merchant.CanShowPublicCatalog(Domain.Subscriptions.PlanEntitlements)"/>).
+    /// </summary>
+    public static async Task<bool> IsVisibleAsync(Merchant merchant, IPlanAccess plans, CancellationToken cancellationToken) =>
+        merchant.PublicCatalogEnabled
+        && merchant.CanShowPublicCatalog((await plans.GetForMerchantAsync(merchant.Id, cancellationToken)).Entitlements);
+
+    /// <summary>Datos del catálogo para la portada (<see cref="PublicStorefront"/>).</summary>
+    public static PublicStorefront ToPublic(StorefrontViewModel model, string referralCode) => new(
+        true,
+        model.BusinessName,
+        model.Address,
+        model.LogoUrl,
+        model.CoverUrl,
+        model.WhatsAppUrl,
+        model.Products.Select(p => new PublicStorefrontProduct(p.Name, p.Description, p.PriceText, p.ThumbnailUrl)).ToList(),
+        model.Page.Page,
+        model.Page.PageSize,
+        model.Page.TotalCount,
+        model.Query,
+        referralCode);
 
     /// <summary>Vista previa del vendedor: las rutas privadas de «Mi información» y de productos.</summary>
     public static ImageUrls PrivateImages { get; } = new(ProfileUrls.Logo, ProfileUrls.ShopPhoto, ProductUrls.Thumbnail);

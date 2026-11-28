@@ -1,33 +1,36 @@
 using System.Net;
+using System.Net.Http.Json;
 using Local133.Application.Merchants;
 using Local133.Application.Storage;
 using Local133.Domain.Sales;
 using Local133.IntegrationTests.Infrastructure;
 using Local133.IntegrationTests.Products;
+using Local133.Web.PublicPages;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Local133.IntegrationTests.Sales;
 
 /// <summary>
 /// 5.10: recibo con marca. Según el plan del vendedor al abrir la liga: en Pro (y prueba, gracia, onboarding) lleva el
-/// logo del negocio; en el gratuito, «Cobrado con Local133» con liga a la portada y el código de invitación.
+/// logo del negocio (servido por el portal); en Básico y vencido, el código de invitación para «Cobrado con Local133».
+/// Desde el 2026-11-27 la portada dibuja el recibo con <c>GET /api/public/recibos/{token}</c>.
 /// </summary>
 public class BrandedReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
 {
     [Fact]
-    public async Task En_Pro_con_logo_el_recibo_lleva_el_logo_y_no_el_pie_de_Local133()
+    public async Task En_Pro_con_logo_el_recibo_lleva_el_logo_y_no_el_codigo()
     {
         var sale = await PaidSaleAsync();
         await SeedTrialAsync(Email);
         var logoKey = await StoreLogoAsync(Email);
 
-        var client = CreateClient();
-        var html = await GetHtmlAsync(client, $"/recibo/{sale.ReceiptToken}");
+        var client = LandingClient();
+        var receipt = await client.GetFromJsonAsync<PublicReceipt>(PublicPagesApi.Receipt(sale.ReceiptToken));
 
         var logoPath = $"/recibo/{sale.ReceiptToken}/logo?v={MerchantImageRules.Version(logoKey)}";
-        Assert.Contains($"src=\"{logoPath}\"", html);
-        Assert.Contains("data-receipt-logo", html);
-        Assert.DoesNotContain("data-receipt-powered-by", html);
+        Assert.NotNull(receipt);
+        Assert.Equal(new Uri(client.BaseAddress!, logoPath).AbsoluteUri, receipt.LogoUrl);
+        Assert.Null(receipt.ReferralCode);
 
         var logo = await client.GetAsync(logoPath);
         Assert.Equal(HttpStatusCode.OK, logo.StatusCode);
@@ -37,34 +40,34 @@ public class BrandedReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(
     }
 
     [Fact]
-    public async Task En_Pro_sin_logo_no_hay_logo_ni_pie()
+    public async Task En_Pro_sin_logo_no_hay_logo_ni_codigo()
     {
         var sale = await PaidSaleAsync();
         await SeedTrialAsync(Email);
 
-        var client = CreateClient();
-        var html = await GetHtmlAsync(client, $"/recibo/{sale.ReceiptToken}");
+        var client = LandingClient();
+        var receipt = await client.GetFromJsonAsync<PublicReceipt>(PublicPagesApi.Receipt(sale.ReceiptToken));
 
-        Assert.DoesNotContain("data-receipt-logo", html);
-        Assert.DoesNotContain("data-receipt-powered-by", html);
+        Assert.NotNull(receipt);
+        Assert.Null(receipt.LogoUrl);
+        Assert.Null(receipt.ReferralCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/recibo/{sale.ReceiptToken}/logo")).StatusCode);
     }
 
     [Fact]
-    public async Task En_el_gratuito_dice_Cobrado_con_Local133_con_el_codigo_y_no_sirve_el_logo()
+    public async Task Vencido_lleva_el_codigo_para_Cobrado_con_Local133_y_no_sirve_el_logo()
     {
         var sale = await PaidSaleAsync();
         await SeedExpiredPlanAsync(Email);
         await StoreLogoAsync(Email);
         var code = (await WithDbAsync(db => MerchantOfAsync(db, Email))).ReferralCode;
 
-        var client = CreateClient();
-        var html = await GetHtmlAsync(client, $"/recibo/{sale.ReceiptToken}");
+        var client = LandingClient();
+        var receipt = await client.GetFromJsonAsync<PublicReceipt>(PublicPagesApi.Receipt(sale.ReceiptToken));
 
-        Assert.Contains("data-receipt-powered-by", html);
-        Assert.Contains($"?codigo={code}\" target=\"_blank\" rel=\"noopener\"", html);
-        Assert.Contains("Cobrado con <strong>Local133</strong>", html);
-        Assert.DoesNotContain("data-receipt-logo", html);
+        Assert.NotNull(receipt);
+        Assert.Equal(code, receipt.ReferralCode);
+        Assert.Null(receipt.LogoUrl);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/recibo/{sale.ReceiptToken}/logo")).StatusCode);
     }
 
@@ -75,7 +78,7 @@ public class BrandedReceiptTests(Local133WebFactory factory) : SaleFlowTestBase(
         await StoreLogoAsync(Email);
         var pending = await ChargeAsync(merchant);
 
-        var client = CreateClient();
+        var client = LandingClient();
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/recibo/{pending.ReceiptToken}/logo")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/recibo/no-es-token/logo")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/recibo/{new string('a', 32)}/logo")).StatusCode);

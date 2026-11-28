@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Local133.Application.Auth;
 using Local133.Application.Merchants;
@@ -9,16 +11,20 @@ using Local133.Infrastructure.Identity;
 using Local133.IntegrationTests.Infrastructure;
 using Local133.IntegrationTests.Products;
 using Local133.IntegrationTests.Sales;
+using Local133.Web.Hosting;
+using Local133.Web.PublicPages;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Local133.IntegrationTests.Merchants;
 
 /// <summary>
-/// 5.10: catálogo público (<c>/tienda/{slug}</c>) y su pantalla «Catálogo en línea» (<c>/app/tienda</c>): publicar solo
-/// en Pro y con nombre del negocio, slug único, «no disponible» con <c>noindex</c> si no se puede ver, imágenes públicas
-/// con la misma regla y vista previa.
+/// 5.10: catálogo público y su pantalla «Catálogo en línea» (<c>/app/tienda</c>): publicar solo en Pro y con nombre del
+/// negocio, slug único, «no disponible» si no se puede ver, imágenes públicas con la misma regla y vista previa. Desde el
+/// 2026-11-27 la portada dibuja el catálogo (<c>/tienda/{slug}</c>) con <c>GET /api/public/tiendas/{slug}</c>; la liga
+/// vieja del portal redirige ahí.
 /// </summary>
 public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(factory)
 {
@@ -46,24 +52,26 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         Assert.True(merchant.PublicCatalogEnabled);
         Assert.Equal("tacos-don-ramon", merchant.PublicSlug);
 
+        // La liga que se comparte es la de la portada.
         var after = WebUtility.HtmlDecode(await GetHtmlAsync(client, SettingsUrl));
         Assert.Contains(PublicCatalogMessages.Published, after);
         Assert.Contains("data-storefront-published", after);
-        Assert.Contains("/tienda/tacos-don-ramon\"", after);
+        Assert.Contains($"value=\"{Site.StorefrontUrlFor("tacos-don-ramon")}\"", after);
 
-        var response = await CreateClient().GetAsync("/tienda/tacos-don-ramon");
-        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        var response = await LandingClient().GetAsync(PublicPagesApi.Storefront("tacos-don-ramon"));
+        var json = await response.Content.ReadAsStringAsync();
+        var storefront = JsonSerializer.Deserialize<PublicStorefront>(json, JsonSerializerOptions.Web);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.False(response.Headers.Contains("X-Robots-Tag"));
-        Assert.DoesNotContain("noindex", html);
-        Assert.Contains("data-storefront-name>Tacos Don Ramón<", html);
-        Assert.Contains("Taco al pastor", html);
-        Assert.Contains("$25.00", html);
-        Assert.Contains("Agua de horchata", html);
-        Assert.Contains("https://wa.me/525512345678?text=", html);
-        Assert.Contains($"?codigo={merchant.ReferralCode}", html);
+        Assert.NotNull(storefront);
+        Assert.True(storefront.Available);
+        Assert.Equal("Tacos Don Ramón", storefront.BusinessName);
+        Assert.Equal(["Agua de horchata", "Taco al pastor"], storefront.Products.Select(p => p.Name));
+        Assert.Equal("$25.00", storefront.Products[1].PriceText);
+        Assert.StartsWith("https://wa.me/525512345678?text=", storefront.WhatsAppUrl);
+        Assert.Equal(merchant.ReferralCode, storefront.ReferralCode);
+        Assert.Equal(2, storefront.TotalCount);
         // Nada interno.
-        Assert.DoesNotContain(TestClabe, html);
+        Assert.DoesNotContain(TestClabe, json);
     }
 
     [Fact]
@@ -149,7 +157,7 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         // Publicado cuando tenía Pro: la liga sigue, pero no muestra nada.
         await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
         Assert.Contains("data-storefront-hidden-by-plan", await GetHtmlAsync(client, SettingsUrl));
-        await AssertUnavailableAsync("/tienda/tacos-don-ramon", HttpStatusCode.OK, "Taco al pastor");
+        await AssertUnavailableAsync("tacos-don-ramon", "Taco al pastor");
     }
 
     [Fact]
@@ -165,7 +173,7 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         var merchant = await WithDbAsync(db => MerchantOfAsync(db, Email));
         Assert.False(merchant.PublicCatalogEnabled);
         Assert.Equal("tacos-don-ramon", merchant.PublicSlug);
-        await AssertUnavailableAsync("/tienda/tacos-don-ramon", HttpStatusCode.OK);
+        await AssertUnavailableAsync("tacos-don-ramon");
         // Al volver a publicar, propone la misma liga.
         Assert.Contains("value=\"tacos-don-ramon\"", await GetHtmlAsync(client, SettingsUrl));
     }
@@ -183,14 +191,19 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
             m.Status = status;
         });
 
-        await AssertUnavailableAsync("/tienda/tacos-don-ramon", HttpStatusCode.OK);
+        await AssertUnavailableAsync("tacos-don-ramon");
     }
 
     [Theory]
-    [InlineData("/tienda/no-existe")]
-    [InlineData("/tienda/x")]
-    public async Task Una_liga_que_no_existe_es_404_con_la_misma_pagina(string url) =>
-        await AssertUnavailableAsync(url, HttpStatusCode.NotFound);
+    [InlineData("no-existe")]
+    [InlineData("x")]
+    public async Task Una_liga_que_no_existe_es_404(string slug)
+    {
+        var response = await LandingClient().GetAsync(PublicPagesApi.Storefront(slug));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+    }
 
     [Fact]
     public async Task La_liga_no_distingue_mayusculas()
@@ -199,7 +212,39 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         await SeedTrialAsync(Email);
         await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
 
-        Assert.Contains("data-storefront-name", await GetHtmlAsync(CreateClient(), "/tienda/Tacos-Don-Ramon"));
+        var storefront = await LandingClient().GetFromJsonAsync<PublicStorefront>(PublicPagesApi.Storefront("Tacos-Don-Ramon"));
+
+        Assert.True(storefront?.Available);
+    }
+
+    [Fact]
+    public async Task Busca_y_pagina_los_productos()
+    {
+        await ActiveMerchantAsync(Email);
+        await SeedTrialAsync(Email);
+        await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
+        await CreateProductAsync(Email, "Taco al pastor", 25m);
+        await CreateProductAsync(Email, "Agua de horchata", 30m);
+
+        var found = await LandingClient().GetFromJsonAsync<PublicStorefront>(PublicPagesApi.Storefront("tacos-don-ramon", "taco"));
+        Assert.NotNull(found);
+        Assert.Equal("taco", found.Query);
+        Assert.Equal("Taco al pastor", Assert.Single(found.Products).Name);
+
+        // Una página de más se ajusta a la última.
+        var last = await LandingClient().GetFromJsonAsync<PublicStorefront>(PublicPagesApi.Storefront("tacos-don-ramon", page: 9));
+        Assert.NotNull(last);
+        Assert.Equal(1, last.Page);
+        Assert.Equal(1, last.TotalPages);
+    }
+
+    [Fact]
+    public async Task La_liga_vieja_del_portal_redirige_a_la_portada_con_la_busqueda()
+    {
+        var response = await LandingClient().GetAsync("/tienda/tacos-don-ramon?q=taco&pagina=2");
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal($"{Site.StorefrontUrlFor("tacos-don-ramon")}?q=taco&pagina=2", response.Headers.Location?.OriginalString);
     }
 
     [Fact]
@@ -213,16 +258,18 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         var productKey = await StoreProductPhotoAsync(Email, productId);
         await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
 
-        var client = CreateClient();
-        var html = await GetHtmlAsync(client, "/tienda/tacos-don-ramon");
+        var client = LandingClient();
+        var json = await client.GetStringAsync(PublicPagesApi.Storefront("tacos-don-ramon"));
+        var storefront = JsonSerializer.Deserialize<PublicStorefront>(json, JsonSerializerOptions.Web)!;
         var logoUrl = $"/tienda/tacos-don-ramon/logo?v={MerchantImageRules.Version(logoKey)}";
         var photoUrl = $"/tienda/tacos-don-ramon/foto?v={MerchantImageRules.Version(photoKey)}";
         var thumbUrl = $"/tienda/tacos-don-ramon/productos/{productId}/miniatura?v={productKey.Split('/').Last()}";
-        Assert.Contains($"src=\"{logoUrl}\"", html);
-        Assert.Contains($"src=\"{photoUrl}\"", html);
-        Assert.Contains($"src=\"{thumbUrl}\"", html);
+        // Absolutas: la portada las pide al portal.
+        Assert.Equal(new Uri(client.BaseAddress!, logoUrl).AbsoluteUri, storefront.LogoUrl);
+        Assert.Equal(new Uri(client.BaseAddress!, photoUrl).AbsoluteUri, storefront.CoverUrl);
+        Assert.Equal(new Uri(client.BaseAddress!, thumbUrl).AbsoluteUri, Assert.Single(storefront.Products).ThumbnailUrl);
         // Nunca las rutas privadas del vendedor.
-        Assert.DoesNotContain("/app/", html.Replace("href=\"/app\"", string.Empty));
+        Assert.DoesNotContain("/app/", json);
 
         foreach (var url in new[] { logoUrl, photoUrl, thumbUrl, $"/tienda/tacos-don-ramon/productos/{productId}/foto" })
         {
@@ -256,10 +303,11 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
         await SeedTrialAsync(Email);
         await UpdateMerchantAsync(Email, m => m.PublishCatalog("tacos-don-ramon"));
 
-        var html = await GetHtmlAsync(CreateClient(), "/tienda/tacos-don-ramon");
+        var storefront = await LandingClient().GetFromJsonAsync<PublicStorefront>(PublicPagesApi.Storefront("tacos-don-ramon"));
 
-        Assert.DoesNotContain("data-storefront-whatsapp", html);
-        Assert.DoesNotContain("wa.me/52", html);
+        Assert.NotNull(storefront);
+        Assert.True(storefront.Available);
+        Assert.Null(storefront.WhatsAppUrl);
         Assert.Contains("Agrega tu celular", await GetHtmlAsync(client, SettingsUrl));
     }
 
@@ -300,14 +348,14 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     public async Task Admin_y_anonimo_no_entran_a_la_pantalla_del_vendedor()
     {
         await CreateConfirmedUserAsync("admin@prueba.mx", Roles.Admin);
-        var admin = CreateClient();
+        var admin = LandingClient();
         await LoginAsync(admin, "admin@prueba.mx");
 
         var asAdmin = await admin.GetAsync(SettingsUrl);
         Assert.Equal(HttpStatusCode.Redirect, asAdmin.StatusCode);
         Assert.StartsWith("/Identity/Account/AccessDenied", Location(asAdmin));
 
-        var anonymous = await CreateClient().GetAsync("/app/tienda/vista-previa");
+        var anonymous = await LandingClient().GetAsync("/app/tienda/vista-previa");
         Assert.Equal(HttpStatusCode.Redirect, anonymous.StatusCode);
         Assert.StartsWith("/Identity/Account/Login", Location(anonymous));
     }
@@ -323,19 +371,25 @@ public class StorefrontTests(Local133WebFactory factory) : SaleFlowTestBase(fact
     private static Task<HttpResponseMessage> PublishAsync(HttpClient client, string slug) =>
         PostFormAsync(client, SettingsUrl, new Dictionary<string, string> { ["Input.Slug"] = slug }, postUrl: PublishUrl);
 
-    private async Task AssertUnavailableAsync(string url, HttpStatusCode expected, string? mustNotContain = null)
-    {
-        var response = await CreateClient().GetAsync(url);
-        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+    private PublicSiteOptions Site => Factory.Services.GetRequiredService<IOptions<PublicSiteOptions>>().Value;
 
-        Assert.Equal(expected, response.StatusCode);
-        Assert.Contains("data-storefront-unavailable", html);
-        Assert.Contains(PublicCatalogMessages.Unavailable, html);
-        Assert.Contains("<meta name=\"robots\" content=\"noindex, nofollow\" />", html);
-        Assert.Equal("noindex, nofollow", string.Join(",", response.Headers.GetValues("X-Robots-Tag")));
+    /// <summary>La liga existe pero no se ve: 200 con <c>available: false</c>, el nombre del negocio y nada más.</summary>
+    private async Task AssertUnavailableAsync(string slug, string? mustNotContain = null)
+    {
+        var response = await LandingClient().GetAsync(PublicPagesApi.Storefront(slug));
+        var json = await response.Content.ReadAsStringAsync();
+        var storefront = JsonSerializer.Deserialize<PublicStorefront>(json, JsonSerializerOptions.Web);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(storefront);
+        Assert.False(storefront.Available);
+        Assert.Equal("Tacos Don Ramón", storefront.BusinessName);
+        Assert.Empty(storefront.Products);
+        Assert.Null(storefront.WhatsAppUrl);
+        Assert.Null(storefront.ReferralCode);
         if (mustNotContain is not null)
         {
-            Assert.DoesNotContain(mustNotContain, html);
+            Assert.DoesNotContain(mustNotContain, json);
         }
     }
 

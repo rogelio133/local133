@@ -157,7 +157,7 @@ public class ChargeController(
 
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var receipt = receiptLinks.ShareFor(
-            Request, sale.ReceiptToken, merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount),
+            sale.ReceiptToken, merchant.BusinessName, sale.Folio, SaleQrViewModel.FormatAmount(sale.Amount),
             sale.PhoneNumber, SalesUrls.CustomerWhatsApp(sale.Id));
         return View(SaleQrViewModel.From(sale, clock.GetUtcNow(), receipt));
     }
