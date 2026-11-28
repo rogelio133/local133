@@ -81,6 +81,7 @@ public static class DependencyInjection
         services.AddScoped<IPaymentReconciliation, PaymentReconciliation>();
         services.AddScoped<IPeyWebhookProcessor, PeyWebhookProcessor>();
         services.AddScoped<IProductCatalog, ProductCatalog>();
+        services.AddScoped<IProductCategories, ProductCategoriesService>();
         services.AddScoped<IMerchantProfile, MerchantProfileService>();
         services.AddScoped<IPublicCatalogSettings, PublicCatalogSettings>();
         // Estado del plan (suscripción) del vendedor, con caché por petición.

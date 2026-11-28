@@ -58,6 +58,14 @@
       ]
     },
     {
+      "provider": "cdnjs",
+      "library": "Sortable@1.15.7",
+      "destination": "wwwroot/lib/sortablejs/",
+      "files": [
+        "Sortable.min.js"
+      ]
+    },
+    {
       "library": "twbs/bootstrap@v5.3.8",
       "destination": "Styles/vendor/bootstrap",
       "files": [

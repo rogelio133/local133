@@ -8,14 +8,20 @@
 }
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8" data-products data-can-manage="@(Model.CanManage ? "true" : "false")">
-        <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        @* A 375 px los dos botones no caben junto al título: bajan a su renglón, a la derecha. *@
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h1 class="h4 mb-0">Productos</h1>
-            @if (Model.CanManage && !Model.IsCatalogEmpty)
-            {
-                <a class="btn btn-primary" href="@Url.Content($"~{ProductUrls.New}")" data-new-product>
-                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo
+            <div class="d-flex gap-2 ms-auto">
+                <a class="btn btn-outline-primary" href="@Url.Content($"~{ProductUrls.Categories}")" data-product-categories-link>
+                    <i class="bi bi-tags me-1" aria-hidden="true"></i> Categorías
                 </a>
-            }
+                @if (Model.CanManage && !Model.IsCatalogEmpty)
+                {
+                    <a class="btn btn-primary" href="@Url.Content($"~{ProductUrls.New}")" data-new-product>
+                        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nuevo
+                    </a>
+                }
+            </div>
         </div>
 
         @if (notice is not null)
@@ -26,34 +32,8 @@
         {
             <div class="alert alert-warning" role="alert" data-product-warning><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @warning</div>
         }
-        @if (Model.ReadOnlyReason == CatalogReadOnlyReason.Disabled)
-        {
-            <div class="alert alert-secondary" role="status" data-products-readonly>
-                Tu cuenta está dada de baja: puedes consultar tus productos, pero no modificarlos.
-            </div>
-        }
-        else if (Model.ReadOnlyReason == CatalogReadOnlyReason.Basic)
-        {
-            <div class="mb-3" data-products-readonly data-products-readonly-plan="basic">
-                <partial name="_ProRequired" model='new ProRequiredViewModel(
-                    "Tu catálogo es de solo lectura",
-                    "Con Básico consultas tus productos. Con Pro los agregas, los editas y cobras con ellos.",
-                    Model.Query is null ? ProductListViewModel.WaitingCatalogText(Model.Page.TotalCount) : null,
-                    "bi-box-seam")' />
-            </div>
-        }
-        else if (Model.ReadOnlyReason == CatalogReadOnlyReason.Expired)
-        {
-            @* Plan vencido (5.14): el catálogo se queda; se consulta hasta que elija un plan. *@
-            <div class="alert alert-danger d-flex flex-column flex-sm-row align-items-sm-center gap-2" role="status"
-                 data-products-readonly data-products-readonly-plan="expired">
-                <span class="flex-grow-1">
-                    <span class="d-block fw-bold">Tu plan venció</span>
-                    <span class="d-block small">Tus productos siguen aquí, en solo lectura. Elige un plan para volver a cobrar; con Pro también los editas.</span>
-                </span>
-                <a class="btn btn-primary text-nowrap" href="@Url.Content("~" + PlanUrls.ChoosePlan)" data-plan-expired-choose>Elegir plan</a>
-            </div>
-        }
+        <partial name="_CatalogReadOnlyNotice" model='new CatalogReadOnlyNoticeViewModel(
+            Model.ReadOnlyReason, Model.Query is null && Model.CategoryFilter is null ? ProductListViewModel.WaitingCatalogText(Model.Page.TotalCount) : null)' />
 
         @if (Model.IsCatalogEmpty)
         {
@@ -81,6 +61,7 @@
                            placeholder="Buscar por nombre" aria-label="Buscar productos por nombre" autocomplete="off" enterkeyhint="search" />
                     <button type="submit" class="btn btn-outline-primary" aria-label="Buscar"><i class="bi bi-search" aria-hidden="true"></i></button>
                 </div>
+                <input type="hidden" name="@CategoryFilters.QueryKey" value="@Model.CategoryFilter" disabled="@(Model.CategoryFilter is null)" data-category-query />
             </form>
 
             <div data-product-results aria-live="polite">

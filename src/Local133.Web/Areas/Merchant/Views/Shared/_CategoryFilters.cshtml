@@ -1,0 +1,21 @@
+@using Local133.Web.Areas.Merchant.Models
+@model ProductListViewModel
+@* Chips del filtro por categoría (Productos y catálogo del carrito): «Todas», cada categoría en su orden y «Sin
+   categoría» si hay productos sin ella. Van dentro del fragmento de resultados, así que product-search.js los
+   reemplaza junto con la lista y la URL conserva ?categoria=. Con scroll horizontal propio: la página nunca. *@
+@if (Model.ShowCategoryFilters)
+{
+    <nav class="category-chips mb-2" aria-label="Filtrar por categoría" data-category-filters>
+        <a class="category-chip @(Model.CategoryFilter is null ? "is-active" : null)" href="@Url.Content("~" + Model.UrlForCategory(null))" aria-current="@(Model.CategoryFilter is null ? "true" : null)" data-category-filter="">Todas</a>
+        @foreach (var category in Model.Categories)
+        {
+            var active = Model.CategoryFilter == category.Value;
+            <a class="category-chip @(active ? "is-active" : null)" href="@Url.Content("~" + Model.UrlForCategory(category.Value))" aria-current="@(active ? "true" : null)" data-category-filter="@category.Value">@category.Name</a>
+        }
+        @if (Model.HasUncategorized || Model.CategoryFilter == CategoryFilters.Uncategorized)
+        {
+            var active = Model.CategoryFilter == CategoryFilters.Uncategorized;
+            <a class="category-chip @(active ? "is-active" : null)" href="@Url.Content("~" + Model.UrlForCategory(CategoryFilters.Uncategorized))" aria-current="@(active ? "true" : null)" data-category-filter="@CategoryFilters.Uncategorized">Sin categoría</a>
+        }
+    </nav>
+}

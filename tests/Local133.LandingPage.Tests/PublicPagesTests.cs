@@ -206,6 +206,33 @@ public sealed class PublicPagesTests : IDisposable
         Assert.DoesNotContain("data-pager", html);
         Assert.DoesNotContain("noindex", html);
         Assert.False(response.Headers.Contains("X-Robots-Tag"));
+        Assert.DoesNotContain("data-storefront-category", html); // sin agrupar: una sola lista
+        Assert.Single(Regex.Matches(html, "data-storefront-products"));
+    }
+
+    [Fact]
+    public async Task El_catalogo_agrupado_pone_un_encabezado_por_categoria_y_Otros_al_final()
+    {
+        // Ajustes 2026-11-26: el portal manda los productos ya en el orden de sus categorías.
+        var grouped = Storefront(totalCount: 4) with
+        {
+            Grouped = true,
+            Products =
+            [
+                new PublicStorefrontProduct("Agua de horchata", null, "$30.00", null, "Bebidas"),
+                new PublicStorefrontProduct("Gringa", null, "$45.00", null, "Tacos"),
+                new PublicStorefrontProduct("Taco al pastor", null, "$25.00", null, "Tacos"),
+                new PublicStorefrontProduct("Servilletas", null, "$5.00", null),
+            ],
+        };
+        portal.Respond(PublicPagesApi.Storefront("tacos-don-ramon"), grouped);
+
+        var html = WebUtility.HtmlDecode(await Client().GetStringAsync("/tienda/tacos-don-ramon"));
+
+        Assert.Equal(["Bebidas", "Tacos", "Otros"],
+            Regex.Matches(html, "data-storefront-category>([^<]+)</h2>").Select(m => m.Groups[1].Value));
+        Assert.Equal(3, Regex.Matches(html, "data-storefront-products").Count);
+        Assert.Equal(4, Regex.Matches(html, "data-storefront-product>").Count);
     }
 
     [Fact]

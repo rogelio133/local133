@@ -93,6 +93,11 @@ public sealed record PublicReceiptPayment(string PaidAtText, string AmountText, 
 /// <param name="WhatsAppUrl">«Pedir por WhatsApp» al celular del negocio, o <c>null</c> si no tiene.</param>
 /// <param name="Page">Página mostrada (base 1, ya ajustada).</param>
 /// <param name="ReferralCode">Código de invitación del vendedor («Catálogo hecho con Local133»).</param>
+/// <param name="Grouped">
+/// Productos agrupados por categoría (ajustes 2026-11-26): vienen en el orden de sus categorías, cada uno con
+/// <see cref="PublicStorefrontProduct.Category"/> (<c>null</c> = <see cref="UncategorizedHeading"/>, al final). La
+/// vista pone un encabezado cada vez que cambia (<see cref="StorefrontGroups.Of{T}"/>), también al inicio de cada página.
+/// </param>
 public sealed record PublicStorefront(
     bool Available,
     string? BusinessName,
@@ -105,8 +110,12 @@ public sealed record PublicStorefront(
     int PageSize,
     int TotalCount,
     string? Query,
-    string? ReferralCode)
+    string? ReferralCode,
+    bool Grouped = false)
 {
+    /// <summary>Encabezado de los productos sin categoría en un catálogo agrupado.</summary>
+    public const string UncategorizedHeading = "Otros";
+
     /// <summary>Productos por página (igual que <c>StorefrontViewModel.PageSize</c>).</summary>
     public const int DefaultPageSize = 24;
 
@@ -120,5 +129,41 @@ public sealed record PublicStorefront(
         new(false, businessName, null, null, null, null, [], 1, DefaultPageSize, 0, null, null);
 }
 
-/// <summary>Producto del catálogo público.</summary>
-public sealed record PublicStorefrontProduct(string Name, string? Description, string PriceText, string? ThumbnailUrl);
+/// <summary>Producto del catálogo público; <see cref="Category"/> solo viene en un catálogo agrupado.</summary>
+public sealed record PublicStorefrontProduct(
+    string Name, string? Description, string PriceText, string? ThumbnailUrl, string? Category = null);
+
+/// <summary>Grupos de un catálogo agrupado: tramos seguidos de productos con la misma categoría (ya vienen en orden).</summary>
+public static class StorefrontGroups
+{
+    /// <summary>
+    /// Sin agrupar, un solo grupo sin encabezado (<c>Heading</c> <c>null</c>). Agrupado, un grupo por tramo, con el
+    /// nombre de la categoría o <see cref="PublicStorefront.UncategorizedHeading"/>.
+    /// </summary>
+    public static IReadOnlyList<(string? Heading, IReadOnlyList<T> Items)> Of<T>(
+        IReadOnlyList<T> items, bool grouped, Func<T, string?> category)
+    {
+        if (!grouped)
+        {
+            return items.Count == 0 ? [] : [(null, items)];
+        }
+
+        var groups = new List<(string? Heading, IReadOnlyList<T> Items)>();
+        List<T>? current = null;
+        string? currentCategory = null;
+        foreach (var item in items)
+        {
+            var itemCategory = category(item);
+            if (current is null || !string.Equals(itemCategory, currentCategory, StringComparison.Ordinal))
+            {
+                current = [];
+                currentCategory = itemCategory;
+                groups.Add((itemCategory ?? PublicStorefront.UncategorizedHeading, current));
+            }
+
+            current.Add(item);
+        }
+
+        return groups;
+    }
+}

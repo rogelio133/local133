@@ -72,16 +72,21 @@ public class ChargeController(
         return form.ShowsForm ? View(nameof(Index), form) : RedirectToAction(nameof(Index));
     }
 
-    /// <summary>Venta con productos: catálogo con búsqueda (misma <c>q</c>/<c>pagina</c> que la lista) y carrito.</summary>
+    /// <summary>
+    /// Venta con productos: catálogo con búsqueda y filtro por categoría (mismos <c>q</c>/<c>categoria</c>/<c>pagina</c>
+    /// que la lista) y carrito.
+    /// </summary>
     [HttpGet("productos")]
     public async Task<IActionResult> Cart(
-        [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken) =>
-        View(await CartFormAsync(new CartChargeInput(), q, page, [], hasErrors: false, cancellationToken));
+        [FromQuery(Name = "q")] string? q, [FromQuery(Name = CategoryFilters.QueryKey)] string? category,
+        [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken) =>
+        View(await CartFormAsync(new CartChargeInput(), q, category, page, [], hasErrors: false, cancellationToken));
 
     /// <summary>Fragmento del catálogo para la búsqueda asíncrona del carrito (<c>product-search.js</c>).</summary>
     [HttpGet("productos/catalogo")]
     public async Task<IActionResult> CartCatalog(
-        [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
+        [FromQuery(Name = "q")] string? q, [FromQuery(Name = CategoryFilters.QueryKey)] string? category,
+        [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
@@ -91,7 +96,7 @@ public class ChargeController(
         }
 
         var model = await ProductListQuery.BuildAsync(
-            db, merchant, q, page, Url, ChargeUrls.Cart, ProductListQuery.ReadOnlyReasonFor(merchant, plan), cancellationToken);
+            db, merchant, q, category, page, Url, ChargeUrls.Cart, ProductListQuery.ReadOnlyReasonFor(merchant, plan), cancellationToken);
         Response.Headers.CacheControl = "no-store";
         return PartialView("_CartCatalogResults", model);
     }
@@ -141,7 +146,7 @@ public class ChargeController(
             }
         }
 
-        var form = await CartFormAsync(input, null, null, await InitialLinesAsync(input.Lines, cancellationToken), hasErrors: true, cancellationToken);
+        var form = await CartFormAsync(input, null, null, null, await InitialLinesAsync(input.Lines, cancellationToken), hasErrors: true, cancellationToken);
         return form.Blocked is null && form.Expired is null ? View(nameof(Cart), form) : RedirectToAction(nameof(Cart));
     }
 
@@ -275,7 +280,7 @@ public class ChargeController(
     }
 
     private async Task<CartChargeViewModel> CartFormAsync(
-        CartChargeInput input, string? q, int? page, IReadOnlyList<CartLineView> initialLines, bool hasErrors,
+        CartChargeInput input, string? q, string? category, int? page, IReadOnlyList<CartLineView> initialLines, bool hasErrors,
         CancellationToken cancellationToken)
     {
         var (merchant, account) = await MerchantAndAccountAsync(cancellationToken);
@@ -302,7 +307,7 @@ public class ChargeController(
             Expired = expired,
             ProRequired = proRequired,
             Catalog = blocked is null && expired is null && proRequired is null
-                ? await ProductListQuery.BuildAsync(db, merchant, q, page, Url, ChargeUrls.Cart,
+                ? await ProductListQuery.BuildAsync(db, merchant, q, category, page, Url, ChargeUrls.Cart,
                     merchant.CanManageProducts ? null : CatalogReadOnlyReason.Disabled, cancellationToken)
                 : null,
             InitialLines = initialLines,

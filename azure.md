@@ -276,6 +276,11 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 ### Ajustes 2026-11-26 — Bloque 5: menú del admin
 - Punto 13 (menú del admin): sin cambios para Azure. Solo vista, CSS y `wwwroot/js/admin-menu.js`; el estado del menú (oculto o visible) se guarda en el navegador (`localStorage`), no en el servidor.
 
+### Ajustes 2026-11-26 — Bloque 6: categorías de productos
+- **Migración `ProductCategories`** (corre sola al arrancar con `DatabaseMigrationSetup`): tabla `ProductCategories` (nombre con intercalación explícita `Latin1_General_100_CI_AS`, válida en Azure SQL sin importar la intercalación de la base) y columna `Products.CategoryId` nula con FK `ON DELETE SET NULL`. Solo agrega: los productos existentes quedan sin categoría y el catálogo se sigue viendo por nombre hasta que el vendedor use categorías.
+- **Portal y portada juntos**: el contrato de `/api/public/tiendas/{slug}` gana `grouped` y `category` (opcionales). Una portada vieja con un portal nuevo ignora los campos (catálogo sin encabezados); una portada nueva con un portal viejo los recibe vacíos. Ningún orden de publicación rompe, pero los encabezados solo salen con los dos publicados.
+- SortableJS va en `wwwroot/lib/sortablejs` (versionado, sin CDN en ejecución). Sin recursos, App Settings, secretos, jobs ni webhooks nuevos.
+
 ### Fase 5.12 — Planes y vigencia v2 (Básico y Pro)
 - **Se publica junto con la 5.13 a la 5.18** (rama aparte): publicar solo la 5.12 dejaría a los vendedores del gratuito con una transición de Básico sin el checkout para pagarlo.
 - **Migración `BasicAndProPlans`** (corre al arrancar, como las demás):

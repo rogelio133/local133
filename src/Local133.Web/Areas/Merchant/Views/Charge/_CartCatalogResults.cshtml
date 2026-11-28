@@ -7,6 +7,7 @@
     var total = Model.Page.TotalCount;
     var pager = new PagerViewModel(Model.Page, p => Url.Content("~" + Model.UrlForPage(p)), "Páginas del catálogo");
 }
+<partial name="_CategoryFilters" model="Model" />
 <p class="small text-body-secondary mb-2" data-products-count>
     @if (Model.Query is null)
     {
@@ -15,7 +16,7 @@
     else
     {
         @(total == 1 ? "1 resultado" : $"{total:N0} resultados") @:para «@Model.Query» ·
-        <a href="@Url.Content("~" + Model.ListPath)" data-clear-search>Ver todos</a>
+        <a href="@Url.Content("~" + Model.ClearSearchUrl)" data-clear-search>Ver todos</a>
     }
 </p>
 
@@ -23,13 +24,17 @@
 {
     <div class="card" data-products-no-results>
         <div class="card-body text-center text-body-secondary">
-            @if (Model.Query is null)
+            @if (Model.Query is not null)
             {
-                @:Ya no tienes productos.
+                @:No encontramos productos con «@Model.Query»@(Model.CategoryFilterName is { } inCategory ? $" en «{inCategory}»" : null).
+            }
+            else if (Model.CategoryFilterName is { } categoryName)
+            {
+                @:No tienes productos en «@categoryName».
             }
             else
             {
-                @:No encontramos productos con «@Model.Query».
+                @:Ya no tienes productos.
             }
         </div>
     </div>

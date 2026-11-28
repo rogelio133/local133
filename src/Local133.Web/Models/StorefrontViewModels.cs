@@ -9,6 +9,10 @@ namespace Local133.Web.Models;
 /// <param name="ListPath">Página del catálogo (paginación y búsqueda).</param>
 /// <param name="WhatsAppUrl">«Pedir por WhatsApp» al celular del negocio, o <c>null</c> si no tiene.</param>
 /// <param name="MadeWithUrl">Portada con el código de invitación del vendedor («Hecho con Local133»).</param>
+/// <param name="Grouped">
+/// Los productos van agrupados por categoría (en su orden; sin categoría al final, en «Otros»): el vendedor tiene
+/// productos con categoría.
+/// </param>
 public sealed record StorefrontViewModel(
     string BusinessName,
     string? Address,
@@ -20,7 +24,8 @@ public sealed record StorefrontViewModel(
     string? Query,
     string ListPath,
     string MadeWithUrl,
-    bool IsPreview)
+    bool IsPreview,
+    bool Grouped = false)
 {
     /// <summary>Productos por página.</summary>
     public const int PageSize = 24;
@@ -53,8 +58,8 @@ public sealed record StorefrontViewModel(
         $"Hola, vi el catálogo de {businessName} en Local133.";
 }
 
-/// <summary>Producto del catálogo público.</summary>
-public sealed record StorefrontProduct(string Name, string? Description, string PriceText, string? ThumbnailUrl);
+/// <summary>Producto del catálogo público; <see cref="Category"/> solo viene si el catálogo va agrupado (<c>null</c> = «Otros»).</summary>
+public sealed record StorefrontProduct(string Name, string? Description, string PriceText, string? ThumbnailUrl, string? Category = null);
 
 /// <summary>Rutas públicas del catálogo (<c>StorefrontController</c>).</summary>
 public static class StorefrontUrls

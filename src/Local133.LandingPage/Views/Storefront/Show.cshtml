@@ -1,3 +1,4 @@
+@using Local133.Web.PublicPages
 @model StorefrontPageViewModel
 @{
     var store = Model.Storefront;
@@ -92,33 +93,42 @@
         }
         else
         {
-            <ul class="list-group mb-3" data-storefront-products>
-                @foreach (var product in store.Products)
+            @* Agrupado por categoría (ajustes 2026-11-26): un encabezado cada vez que cambia, también al inicio de cada
+               página si la categoría continúa; los productos sin categoría van al final, en «Otros». *@
+            @foreach (var group in StorefrontGroups.Of(store.Products, store.Grouped, p => p.Category))
+            {
+                @if (group.Heading is not null)
                 {
-                    <li class="list-group-item d-flex align-items-start gap-3" data-storefront-product>
-                        @if (product.ThumbnailUrl is not null)
-                        {
-                            <img class="storefront-product-img rounded" src="@product.ThumbnailUrl" alt="" width="72" height="72" loading="lazy" />
-                        }
-                        else
-                        {
-                            <span class="storefront-product-placeholder rounded bg-body-secondary d-flex align-items-center justify-content-center" aria-hidden="true">
-                                <i class="bi bi-image text-body-secondary fs-4"></i>
-                            </span>
-                        }
-                        <div class="flex-grow-1 storefront-product-info">
-                            <div class="d-flex justify-content-between gap-2">
-                                <span class="fw-semibold text-break">@product.Name</span>
-                                <span class="fw-semibold text-nowrap" data-storefront-price>@product.PriceText</span>
-                            </div>
-                            @if (product.Description is not null)
-                            {
-                                <p class="small text-body-secondary mb-0 text-break">@product.Description</p>
-                            }
-                        </div>
-                    </li>
+                    <h2 class="storefront-category text-break" data-storefront-category>@group.Heading</h2>
                 }
-            </ul>
+                <ul class="list-group mb-3" data-storefront-products>
+                    @foreach (var product in group.Items)
+                    {
+                        <li class="list-group-item d-flex align-items-start gap-3" data-storefront-product>
+                            @if (product.ThumbnailUrl is not null)
+                            {
+                                <img class="storefront-product-img rounded" src="@product.ThumbnailUrl" alt="" width="72" height="72" loading="lazy" />
+                            }
+                            else
+                            {
+                                <span class="storefront-product-placeholder rounded bg-body-secondary d-flex align-items-center justify-content-center" aria-hidden="true">
+                                    <i class="bi bi-image text-body-secondary fs-4"></i>
+                                </span>
+                            }
+                            <div class="flex-grow-1 storefront-product-info">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <span class="fw-semibold text-break">@product.Name</span>
+                                    <span class="fw-semibold text-nowrap" data-storefront-price>@product.PriceText</span>
+                                </div>
+                                @if (product.Description is not null)
+                                {
+                                    <p class="small text-body-secondary mb-0 text-break">@product.Description</p>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
 
             @if (store.TotalPages > 1)
             {

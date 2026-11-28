@@ -1,8 +1,10 @@
+using System.Globalization;
 using System.Security.Claims;
 using Local133.Application.Auth;
 using Local133.Application.Products;
 using Local133.Application.Storage;
 using Local133.Application.Subscriptions;
+using Local133.Domain.Products;
 using Local133.Infrastructure.Persistence;
 using Local133.Web.Areas.Merchant.Models;
 using Local133.Web.Areas.Merchant.Services;
@@ -34,8 +36,9 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
 
     [HttpGet("")]
     public async Task<IActionResult> Index(
-        [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken) =>
-        View(await BuildListAsync(q, page, cancellationToken));
+        [FromQuery(Name = "q")] string? q, [FromQuery(Name = CategoryFilters.QueryKey)] string? category,
+        [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken) =>
+        View(await BuildListAsync(q, category, page, cancellationToken));
 
     /// <summary>
     /// Fragmento con los resultados (conteo, lista y paginación) para la búsqueda asíncrona de
@@ -44,9 +47,10 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
     /// </summary>
     [HttpGet("resultados")]
     public async Task<IActionResult> Results(
-        [FromQuery(Name = "q")] string? q, [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
+        [FromQuery(Name = "q")] string? q, [FromQuery(Name = CategoryFilters.QueryKey)] string? category,
+        [FromQuery(Name = PageInfo.QueryKey)] int? page, CancellationToken cancellationToken)
     {
-        var model = await BuildListAsync(q, page, cancellationToken);
+        var model = await BuildListAsync(q, category, page, cancellationToken);
         Response.Headers.CacheControl = "no-store";
         return PartialView("_ProductResults", model);
     }
@@ -59,16 +63,38 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             return readOnly;
         }
 
-        return View("Form", new ProductFormViewModel());
+        return View("Form", await FormAsync(null, new ProductInput(), cancellationToken));
     }
 
-    /// <summary>Lista paginada con la búsqueda por nombre (recortada a <see cref="ProductListViewModel.QueryMaxLength"/>).</summary>
-    private async Task<ProductListViewModel> BuildListAsync(string? q, int? page, CancellationToken cancellationToken)
+    /// <summary>
+    /// Lista paginada con la búsqueda por nombre (recortada a <see cref="ProductListViewModel.QueryMaxLength"/>) y el
+    /// filtro por categoría.
+    /// </summary>
+    private async Task<ProductListViewModel> BuildListAsync(string? q, string? category, int? page, CancellationToken cancellationToken)
     {
         var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
         var plan = await plans.GetForMerchantAsync(merchant.Id, cancellationToken);
         return await ProductListQuery.BuildAsync(
-            db, merchant, q, page, Url, ProductUrls.List, ProductListQuery.ReadOnlyReasonFor(merchant, plan), cancellationToken);
+            db, merchant, q, category, page, Url, ProductUrls.List, ProductListQuery.ReadOnlyReasonFor(merchant, plan),
+            cancellationToken);
+    }
+
+    /// <summary>Formulario con las categorías del vendedor en su orden.</summary>
+    private async Task<ProductFormViewModel> FormAsync(
+        int? productId, ProductInput input, CancellationToken cancellationToken, string? currentPhotoUrl = null,
+        bool photoNeedsReselect = false)
+    {
+        var merchant = await db.GetCurrentMerchantAsync(User, cancellationToken);
+        var categories = await ProductListQuery.CategoriesAsync(db, merchant.Id, cancellationToken);
+        return new ProductFormViewModel
+        {
+            ProductId = productId,
+            Input = input,
+            CurrentPhotoUrl = currentPhotoUrl,
+            PhotoNeedsReselect = photoNeedsReselect,
+            Categories = categories,
+            CanCreateCategory = categories.Count < ProductCategory.MaxPerMerchant,
+        };
     }
 
     /// <summary>
@@ -107,17 +133,14 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             return NotFound();
         }
 
-        return View("Form", new ProductFormViewModel
+        var input = new ProductInput
         {
-            ProductId = product.Id,
-            CurrentPhotoUrl = PhotoUrl(product.Id, product.PhotoKey),
-            Input = new ProductInput
-            {
-                Name = product.Name,
-                Price = ProductInput.FormatPrice(product.Price),
-                Description = product.Description,
-            },
-        });
+            Name = product.Name,
+            Price = ProductInput.FormatPrice(product.Price),
+            Description = product.Description,
+            Category = product.CategoryId?.ToString(CultureInfo.InvariantCulture),
+        };
+        return View("Form", await FormAsync(product.Id, input, cancellationToken, PhotoUrl(product.Id, product.PhotoKey)));
     }
 
     [HttpPost("{id:int}/editar")]
@@ -160,6 +183,7 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
 
     private async Task<IActionResult> SaveAsync(int? id, ProductInput input, CancellationToken cancellationToken)
     {
+        var (categoryId, newCategoryName) = ReadCategory(input);
         if (ModelState.IsValid)
         {
             if (!input.TryGetPrice(out var price))
@@ -170,7 +194,8 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             {
                 await using var photoStream = input.Photo?.OpenReadStream();
                 var photo = input.Photo is { } file ? new ProductPhotoUpload(photoStream!, file.Length) : null;
-                var command = new SaveProductCommand(UserId, id, input.Name, input.Description, price, photo, input.RemovePhoto);
+                var command = new SaveProductCommand(
+                    UserId, id, input.Name, input.Description, price, photo, input.RemovePhoto, categoryId, newCategoryName);
                 switch (await catalog.SaveAsync(command, cancellationToken))
                 {
                     case SaveProductResult.Saved:
@@ -197,6 +222,7 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
                                 nameof(SaveProductCommand.Description) => $"Input.{nameof(ProductInput.Description)}",
                                 nameof(SaveProductCommand.Price) => $"Input.{nameof(ProductInput.Price)}",
                                 nameof(SaveProductCommand.Photo) => $"Input.{nameof(ProductInput.Photo)}",
+                                nameof(SaveProductCommand.NewCategoryName) => $"Input.{nameof(ProductInput.NewCategoryName)}",
                                 _ => string.Empty,
                             };
                             foreach (var message in messages)
@@ -223,15 +249,32 @@ public class ProductsController(AppDbContext db, IProductCatalog catalog, IFileS
             currentPhotoUrl = input.RemovePhoto ? null : PhotoUrl(product.Id, product.PhotoKey);
         }
 
-        return View("Form", new ProductFormViewModel
+        // Solo si la foto estaba bien y falló otro campo (si la foto es el error, su mensaje ya lo dice).
+        var photoNeedsReselect = input.Photo is not null
+            && ModelState[$"Input.{nameof(ProductInput.Photo)}"] is not { Errors.Count: > 0 };
+        return View("Form", await FormAsync(id, input, cancellationToken, currentPhotoUrl, photoNeedsReselect));
+    }
+
+    /// <summary>
+    /// Categoría del formulario: el nombre nuevo gana (sin JS el campo siempre se ve); «+ Nueva categoría…» sin nombre es
+    /// un error; si no, el id elegido o ninguna. El caso de uso revisa que la categoría sea del vendedor.
+    /// </summary>
+    private (int? CategoryId, string? NewCategoryName) ReadCategory(ProductInput input)
+    {
+        if (!string.IsNullOrWhiteSpace(input.NewCategoryName))
         {
-            ProductId = id,
-            Input = input,
-            CurrentPhotoUrl = currentPhotoUrl,
-            // Solo si la foto estaba bien y falló otro campo (si la foto es el error, su mensaje ya lo dice).
-            PhotoNeedsReselect = input.Photo is not null
-                && ModelState[$"Input.{nameof(ProductInput.Photo)}"] is not { Errors.Count: > 0 },
-        });
+            return (null, input.NewCategoryName);
+        }
+
+        if (input.Category == ProductInput.NewCategoryValue)
+        {
+            ModelState.AddModelError($"Input.{nameof(ProductInput.NewCategoryName)}", ProductCategoryMessages.NewNameRequired);
+            return (null, null);
+        }
+
+        return int.TryParse(input.Category, NumberStyles.None, CultureInfo.InvariantCulture, out var categoryId)
+            ? (categoryId, null)
+            : (null, null);
     }
 
     private async Task<IActionResult> PhotoFileAsync(int id, Func<string, string> fileKey, CancellationToken cancellationToken)

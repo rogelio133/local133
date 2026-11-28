@@ -154,6 +154,17 @@
   min-width: 0;
 }
 
+// Encabezado de cada categoría (catálogo agrupado, ajustes 2026-11-26).
+.storefront-category {
+  margin: 1.25rem 0 .5rem;
+  font-size: 1rem;
+  font-weight: 700;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+}
+
 // Paginación (como .pager del portal): Anterior y Siguiente de al menos 44 px que no se parten.
 .pager-btn {
   --#{$prefix}btn-padding-x: 1rem;

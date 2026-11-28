@@ -1,0 +1,203 @@
+@using Local133.Domain.Products
+@using Local133.Web.Areas.Merchant.Controllers
+@using Local133.Web.Areas.Merchant.Models
+@model ProductCategoriesViewModel
+@{
+    ViewData["Title"] = "Categorías";
+    var notice = TempData[ProductCategoriesController.NoticeKey] as string;
+    var warning = TempData[ProductCategoriesController.WarningKey] as string;
+    var count = Model.Items.Count;
+}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8" data-product-categories data-can-manage="@(Model.CanManage ? "true" : "false")">
+        <a class="link-secondary small d-inline-flex align-items-center gap-1 mb-2" href="@Url.Content($"~{ProductUrls.List}")">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i> Productos
+        </a>
+        <h1 class="h4 mb-1">Categorías</h1>
+        <p class="text-body-secondary mb-3">
+            Agrupan tus productos en tu catálogo y en el cobro con productos. Tus clientes las ven en este orden.
+        </p>
+
+        @if (notice is not null)
+        {
+            <div class="alert alert-success" role="status" data-category-notice><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> @notice</div>
+        }
+        @if (warning is not null)
+        {
+            <div class="alert alert-warning" role="alert" data-category-warning><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i> @warning</div>
+        }
+        <partial name="_CatalogReadOnlyNotice" model="new CatalogReadOnlyNoticeViewModel(Model.ReadOnlyReason)" />
+
+        @if (Model.CanManage)
+        {
+            @if (Model.CanCreate)
+            {
+                <form method="post" action="@Url.Content($"~{ProductUrls.Categories}")" class="card mb-3" data-category-create data-disable-on-submit novalidate>
+                    @Html.AntiForgeryToken()
+                    <div class="card-body">
+                        <label asp-for="Input.Name" class="form-label text-body-secondary">Categoría nueva</label>
+                        <div class="input-group">
+                            <input asp-for="Input.Name" type="text" autocomplete="off" autocapitalize="sentences"
+                                   maxlength="@ProductCategory.NameMaxLength" class="form-control" placeholder="Ej. Bebidas"
+                                   aria-required="true" data-val-trim data-category-name-input />
+                            <button type="submit" class="btn btn-primary" data-category-add>
+                                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Agregar
+                            </button>
+                        </div>
+                        <span asp-validation-for="Input.Name" class="d-block text-danger small mt-1"></span>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="alert alert-secondary" role="status" data-category-limit>
+                    Ya tienes @ProductCategory.MaxPerMerchant categorías, el máximo. Para agregar otra, borra alguna que no uses.
+                </div>
+            }
+        }
+
+        @if (count == 0)
+        {
+            <div class="card text-center" data-categories-empty>
+                <div class="card-body py-5">
+                    <i class="bi bi-tags display-4 text-body-secondary" aria-hidden="true"></i>
+                    <h2 class="h5 mt-3">Aún no tienes categorías</h2>
+                    <p class="text-body-secondary mb-0">
+                        Por ejemplo «Tacos», «Bebidas» y «Postres». También puedes crearlas al agregar o editar un producto.
+                    </p>
+                </div>
+            </div>
+        }
+        else
+        {
+            @if (Model.CanManage && count > 1)
+            {
+                <p class="small text-body-secondary mb-2" data-category-order-help>
+                    <span class="d-none d-md-inline">Arrastra <i class="bi bi-grip-vertical" aria-hidden="true"></i><span class="visually-hidden">el asa</span> o usa las flechas para cambiar el orden.</span>
+                    <span class="d-md-none">Mantén y arrastra <i class="bi bi-grip-vertical" aria-hidden="true"></i><span class="visually-hidden">el asa</span>, o usa las flechas para cambiar el orden.</span>
+                </p>
+            }
+
+            @* El orden se guarda al soltar (SortableJS) o con ↑/↓; sin JS, las flechas son formularios normales. *@
+            <ol class="list-group mb-3 category-list" data-category-list
+                data-order-url="@Url.Content($"~{ProductUrls.CategoriesOrder}")">
+                @for (var i = 0; i < count; i++)
+                {
+                    var item = Model.Items[i];
+                    <li class="list-group-item d-flex align-items-center gap-2 category-row" data-category="@item.Id" data-name="@item.Name">
+                        @if (Model.CanManage && count > 1)
+                        {
+                            <span class="category-handle text-body-secondary" data-drag-handle title="Arrastra para mover" aria-hidden="true">
+                                <i class="bi bi-grip-vertical"></i>
+                            </span>
+                        }
+                        <span class="flex-grow-1 category-info">
+                            <span class="d-block fw-semibold text-truncate" data-category-name>@item.Name</span>
+                            <span class="d-block small text-body-secondary" data-category-count>@item.ProductCountText</span>
+                        </span>
+                        @if (Model.CanManage)
+                        {
+                            @if (count > 1)
+                            {
+                                <form method="post" action="@Url.Content("~" + ProductUrls.MoveCategoryUp(item.Id))" class="m-0" data-category-move="up">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-secondary category-action" aria-label="Subir «@item.Name»"
+                                            disabled="@(i == 0)" data-category-up><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+                                </form>
+                                <form method="post" action="@Url.Content("~" + ProductUrls.MoveCategoryDown(item.Id))" class="m-0" data-category-move="down">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-outline-secondary category-action" aria-label="Bajar «@item.Name»"
+                                            disabled="@(i == count - 1)" data-category-down><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+                                </form>
+                            }
+                            <div class="dropdown">
+                                <button type="button" class="btn btn-outline-secondary category-action" data-bs-toggle="dropdown" aria-expanded="false"
+                                        aria-label="Más opciones de «@item.Name»" data-category-menu>
+                                    <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#rename-category"
+                                                data-category-rename data-action="@Url.Content("~" + ProductUrls.RenameCategory(item.Id))">
+                                            <i class="bi bi-pencil me-2" aria-hidden="true"></i> Renombrar
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#delete-category"
+                                                data-category-delete data-action="@Url.Content("~" + ProductUrls.DeleteCategory(item.Id))"
+                                                data-product-count="@item.ProductCount">
+                                            <i class="bi bi-trash me-2" aria-hidden="true"></i> Borrar
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                    </li>
+                }
+            </ol>
+            <p class="visually-hidden" aria-live="polite" data-category-status></p>
+            <div class="alert alert-danger d-none" role="alert" data-category-order-error>
+                No pudimos guardar el orden. Revisa tu conexión e intenta de nuevo.
+            </div>
+            @* Para el POST del orden (product-categories.js). *@
+            <form class="d-none" data-category-order-token>@Html.AntiForgeryToken()</form>
+        }
+    </div>
+</div>
+
+@if (Model.CanManage && count > 0)
+{
+    @* Un modal para cada acción; product-categories.js pone la categoría al abrirlo. *@
+    <div class="modal fade" id="rename-category" tabindex="-1" aria-labelledby="rename-category-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" method="post" action="" data-category-rename-form data-disable-on-submit novalidate>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="rename-category-title">Renombrar categoría</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="rename-category-name" class="form-label text-body-secondary">Nombre</label>
+                    <input asp-for="Input.Name" id="rename-category-name" value="" type="text" autocomplete="off" autocapitalize="sentences"
+                           maxlength="@ProductCategory.NameMaxLength" class="form-control" aria-required="true" data-val-trim data-category-rename-input />
+                    <span class="d-block text-danger small mt-1 field-validation-valid" data-valmsg-for="Input.Name" data-valmsg-replace="true"></span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal fade" id="delete-category" tabindex="-1" aria-labelledby="delete-category-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" method="post" action="" data-category-delete-form data-disable-on-submit>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="delete-category-title">¿Borrar «<span data-category-delete-name></span>»?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" data-category-delete-text>Tus productos no se borran.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No, conservarla</button>
+                    <button type="submit" class="btn btn-danger">Sí, borrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (Model.CanManage)
+    {
+        <partial name="_ValidationScriptsPartial" />
+        @if (count > 1)
+        {
+            <script src="~/lib/sortablejs/Sortable.min.js"></script>
+        }
+        <script src="~/js/product-categories.js"></script>
+    }
+}

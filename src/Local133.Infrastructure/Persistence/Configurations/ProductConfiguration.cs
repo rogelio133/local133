@@ -22,6 +22,12 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
             .HasForeignKey(p => p.MerchantId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Borrar la categoría deja sus productos sin categoría.
+        builder.HasOne(p => p.Category)
+            .WithMany()
+            .HasForeignKey(p => p.CategoryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Catálogo del vendedor: vigentes ordenados por nombre (lista paginada y búsqueda).
         builder.HasIndex(p => new { p.MerchantId, p.IsDeleted, p.Name });
     }
