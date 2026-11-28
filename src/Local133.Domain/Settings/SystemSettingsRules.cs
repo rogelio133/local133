@@ -32,8 +32,7 @@ public static class SystemSettingsRules
 
     /// <summary>
     /// Parámetros que aparecen escritos en los Términos (los que compara <c>LegalPagesTests</c>). Cambiar uno exige
-    /// publicar una versión nueva de los Términos. Los precios de Básico se escriben en los Términos de la 5.18, que se
-    /// publica junto con la 5.17.
+    /// publicar una versión nueva de los Términos (y, si es un precio o la prueba, cambiar también la portada).
     /// </summary>
     public static readonly IReadOnlySet<string> InTerms = new HashSet<string>(StringComparer.Ordinal)
     {

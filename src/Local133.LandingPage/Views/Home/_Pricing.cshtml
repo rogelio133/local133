@@ -1,13 +1,30 @@
 @model LandingViewModel
 @* Precios escritos a mano: la portada no tiene base y no puede leer SystemSettings. LandingPageTests los compara con
-   SystemSettings.Default*; si el admin cambia un precio (6.2), hay que cambiarlo también aquí.
-   Pendiente: «Quedan [N] lugares» de fundador se oculta hasta que la portada tenga ese dato. *@
+   SystemSettings.Default*; si el admin cambia un precio (6.2), hay que cambiarlo también aquí (y en los Términos).
+   La tabla repite MyPlanViewModel.FeaturesFor del portal (la portada no referencia Web): si cambia una función, cambiar
+   las dos. Pendiente: «Quedan [N] lugares» de fundador se oculta hasta que la portada tenga ese dato. *@
+@{
+    (string Feature, string? Basic, string? Pro)[] features =
+    [
+        ("Cobro por monto con QR o al celular", null, null),
+        ("Cobros concretados al mes", "Sin límite (uso justo)", "Sin límite (uso justo)"),
+        ("Historial completo, con fechas y búsqueda", null, null),
+        ("Corte de caja diario", null, null),
+        ("Recibo por WhatsApp y «Compartir»", "«Cobrado con Local133»", "Con tu logo"),
+        ("Exportar ventas a Excel", "—", null),
+        ("Catálogo de productos", "Solo lectura", null),
+        ("Cobro con productos (carrito)", "—", null),
+        ("Catálogo en línea con liga", "—", null),
+        ("Invita y gana días", null, null),
+        ("Próximamente: vendedores adicionales, QR impreso del puesto y reportes", "—", null),
+    ];
+}
 <section id="precios" class="landing-section section-tint">
     <div class="landing-container pricing">
         <div class="section-head section-head-center" data-reveal>
             <p class="eyebrow">Precios</p>
-            <h2 class="section-title">Prueba todo gratis 30 días</h2>
-            <p class="section-lead">Tus 30 días de Pro empiezan cuando tu cuenta queda activa. Al terminar, eliges: sigues en Pro o te quedas en el plan gratuito. No te cobramos nada en automático.</p>
+            <h2 class="section-title">Prueba Pro 15 días gratis</h2>
+            <p class="section-lead">Tu prueba empieza con tu primer cobro, así que la espera de Banxico no te quita días. Al terminar, eliges Básico o Pro. No te cobramos nada en automático.</p>
         </div>
 
         @* Celular y tablet: carrusel con puntos (sin avance automático). Desde lg: tres tarjetas en fila, con las
@@ -16,65 +33,106 @@
             <ul class="pricing-track carousel-track" data-carousel-track data-reveal-stagger>
                 <li class="plan-card">
                     <div class="plan-head">
-                        <h3 class="plan-name">Gratuito</h3>
-                        <span class="plan-tagline">Para empezar a cobrar</span>
+                        <h3 class="plan-name">Prueba Pro</h3>
+                        <span class="plan-tagline">Todo Pro, sin pagar</span>
                     </div>
-                    <div class="plan-price"><span class="plan-amount">$0</span><span class="plan-period">para siempre</span></div>
+                    <div class="plan-price-block">
+                        <div class="plan-price"><span class="plan-amount">$0</span><span class="plan-period">por 15 días</span></div>
+                    </div>
                     <ul class="plan-features">
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobro con QR y al celular</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>100 cobros al mes</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Historial de los últimos 30 días</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo con liga para copiar</li>
-                        <li class="plan-feature-off"><span class="plan-check" aria-hidden="true">–</span>Catálogo solo de lectura, sin carrito</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Todo lo de Pro</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Empieza con tu primer cobro</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Sin tarjeta ni cobro automático</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Una sola vez por negocio</li>
                     </ul>
-                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Crear cuenta gratis</a>
+                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Empezar mi prueba gratis</a>
                 </li>
                 <li class="plan-card">
                     <div class="plan-head">
-                        <h3 class="plan-name">Pro mensual</h3>
-                        <span class="plan-tagline">Todo Local133, mes con mes</span>
-                    </div>
-                    <div class="plan-price"><span class="plan-amount">$199</span><span class="plan-period">al mes</span></div>
-                    <ul class="plan-features">
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobros ilimitados (uso justo)</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Catálogo, carrito y catálogo público</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo con tu logo y botón de WhatsApp</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Historial completo y exportar a Excel</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Corte de caja diario</li>
-                    </ul>
-                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Empezar con 30 días gratis</a>
-                </li>
-                <li class="plan-card plan-card-featured">
-                    <span class="plan-ribbon">2 meses de regalo</span>
-                    <div class="plan-head">
-                        <h3 class="plan-name">Pro anual</h3>
-                        <span class="plan-tagline">12 meses por el precio de 10</span>
+                        <h3 class="plan-name">Básico</h3>
+                        <span class="plan-tagline">Para cobrar sin catálogo</span>
                     </div>
                     <div class="plan-price-block">
-                        <div class="plan-price"><span class="plan-amount">$1,990</span><span class="plan-period">al año</span></div>
-                        <span class="plan-equivalent">Equivale a $165.83 al mes</span>
+                        <div class="plan-price"><span class="plan-amount">$99</span><span class="plan-period">al mes</span></div>
+                        <span class="plan-annual">o <strong>$990 al año</strong></span>
+                        <span class="plan-equivalent">12 meses por el precio de 10: equivale a $82.50 al mes</span>
                     </div>
                     <ul class="plan-features">
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Todo lo de Pro mensual</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Ahorras $398 al año</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Precio congelado si renuevas a tiempo</li>
-                        <li><span class="plan-check" aria-hidden="true">✓</span>Un solo pago, sin pendientes cada mes</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobro con QR y al celular</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Cobros ilimitados (uso justo)</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Historial completo y corte de caja</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo por WhatsApp con «Cobrado con Local133»</li>
+                        <li class="plan-feature-off"><span class="plan-check" aria-hidden="true">–</span>Catálogo solo de lectura, sin carrito ni Excel</li>
                     </ul>
-                    <a class="btn btn-landing btn-landing-white plan-btn" href="@Model.AppUrl">Empezar con 30 días gratis</a>
+                    <a class="btn btn-landing btn-landing-outline plan-btn" href="@Model.AppUrl">Empezar con 15 días gratis</a>
+                </li>
+                <li class="plan-card plan-card-featured">
+                    <span class="plan-ribbon">Recomendado</span>
+                    <div class="plan-head">
+                        <h3 class="plan-name">Pro</h3>
+                        <span class="plan-tagline">Todo Local133, con tus productos</span>
+                    </div>
+                    <div class="plan-price-block">
+                        <div class="plan-price"><span class="plan-amount">$199</span><span class="plan-period">al mes</span></div>
+                        <span class="plan-annual">o <strong>$1,990 al año</strong></span>
+                        <span class="plan-equivalent">12 meses por el precio de 10: equivale a $165.83 al mes</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Todo lo de Básico</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Catálogo, carrito y catálogo en línea</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Recibo con tu logo</li>
+                        <li><span class="plan-check" aria-hidden="true">✓</span>Exportar tu historial a Excel</li>
+                    </ul>
+                    <a class="btn btn-landing btn-landing-white plan-btn" href="@Model.AppUrl">Empezar con 15 días gratis</a>
                 </li>
             </ul>
             <div class="carousel-dots pricing-dots">
-                <button type="button" class="carousel-dot is-active" aria-label="Plan Gratuito" aria-current="true" data-carousel-dot="0"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
-                <button type="button" class="carousel-dot" aria-label="Plan Pro mensual" aria-current="false" data-carousel-dot="1"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
-                <button type="button" class="carousel-dot" aria-label="Plan Pro anual" aria-current="false" data-carousel-dot="2"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot is-active" aria-label="Prueba Pro" aria-current="true" data-carousel-dot="0"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Plan Básico" aria-current="false" data-carousel-dot="1"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+                <button type="button" class="carousel-dot" aria-label="Plan Pro" aria-current="false" data-carousel-dot="2"><span class="carousel-dot-bar"><span class="carousel-dot-fill"></span></span></button>
+            </div>
+        </div>
+
+        @* Un valor null es «Sí» (palomita); «—» es «No». *@
+        <div class="plan-compare" data-reveal>
+            <h3 class="plan-compare-title">Compara los planes</h3>
+            <div class="plan-compare-scroll">
+                <table class="plan-compare-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Función</th>
+                            <th scope="col">Básico</th>
+                            <th scope="col">Pro y prueba</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (feature, basic, pro) in features)
+                        {
+                            <tr>
+                                <th scope="row">@feature</th>
+                                <td>@PlanCell(basic)</td>
+                                <td>@PlanCell(pro)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
         </div>
 
         <div class="founder" data-reveal>
             <span class="founder-badge">Fundador</span>
-            <p class="founder-text"><strong>Precio de fundador de por vida:</strong> los primeros 100 vendedores que paguen Pro pagan $149 al mes o $1,490 al año.</p>
+            <p class="founder-text"><strong>Precio de fundador de por vida:</strong> los primeros 100 vendedores que paguen su plan pagan Básico a $69 al mes o $690 al año, y Pro a $149 al mes o $1,490 al año.</p>
         </div>
 
-        <p class="pricing-note">Precios en pesos mexicanos con IVA incluido. También hay paquetes de 3 meses ($597) y 6 meses ($1,194). Pagas tu plan con un link de pago, con CoDi® o tarjeta.</p>
+        <p class="pricing-note">Precios en pesos mexicanos con IVA incluido. Paquetes de 1 mes o de un año. Pagas tu plan con un link de pago, con CoDi® o tarjeta.</p>
     </div>
 </section>
+
+@functions {
+    private static Microsoft.AspNetCore.Html.IHtmlContent PlanCell(string? value) => value switch
+    {
+        null => new Microsoft.AspNetCore.Html.HtmlString("<span class=\"plan-compare-yes\" aria-hidden=\"true\">✓</span><span class=\"visually-hidden\">Sí</span>"),
+        "—" => new Microsoft.AspNetCore.Html.HtmlString("<span class=\"plan-compare-no\" aria-hidden=\"true\">—</span><span class=\"visually-hidden\">No</span>"),
+        _ => new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(value),
+    };
+}

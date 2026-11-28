@@ -65,7 +65,7 @@
   - bordes con Básico;
   - `Changes` con Básico;
   - `InTerms` = 15.
-- **Integración** (949 de 950 en verde):
+- **Integración** (950, en verde, en la carpeta normal con Visual Studio detenido; antes, desde la carpeta temporal, 949 de 950):
   - `SettingsTests`: mostrar, guardar y auditar los precios de Básico, con la advertencia de Términos; inválidos de Básico;
   - `CustomersTests.Filtro_de_plan_coincide_con_el_estado_calculado`:
     - cubre los 6 estados, con Básico pagado, transición, prueba con Básico por delante, conversión, Pro seguido de Básico, gracia de Básico y transición vencida;
@@ -81,7 +81,8 @@
     - conversión con un cargo de Básico;
     - subidas en 30 días (cuenta una vez por vendedor y no las de hace 40 días ni un Pro sin Básico);
   - `TransactionsTests`: el plan del cargo.
-  - La que falla, `EmailLayoutTests.El_logo_existe_en_wwwroot`, busca `Local133.sln` desde la carpeta de la DLL. Falló porque las pruebas corrieron desde una carpeta de salida temporal (ver Montaje).
+  - `EmailLayoutTests.El_logo_existe_en_wwwroot` solo fallaba desde la carpeta temporal, porque busca `Local133.sln` subiendo desde la DLL.
+- **Portada**: 61, en verde. `dotnet build` sin advertencias.
 - Sin migración: no cambió el modelo.
 
 ## Revisión en navegador
@@ -100,4 +101,3 @@
 
 ## Pendientes
 - **Verificación de extremo a extremo con Pey real** (§16): pide Básico y Pro en $0.01 al mismo tiempo, y la regla Básico < Pro no lo permite desde la pantalla. Para esa prueba hay que usar, por ejemplo, Básico $0.01 y Pro $0.02 (y los de fundador igual), o cambiar los precios directo en la base.
-- Correr `dotnet build` y `dotnet test` desde `src`/`tests` con el sitio de Visual Studio detenido: confirma la prueba del logo y que compila en la carpeta normal.

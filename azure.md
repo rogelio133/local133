@@ -319,3 +319,12 @@ En App Settings los niveles de configuración se separan con `__` (p. ej. `Pey__
 - **Se publica junto con la 5.12 a la 5.16 y la 5.18.**
 - Sin cambios para Azure: sin migración (los precios de Básico y el `Plan` de periodos y cargos ya los creó `BasicAndProPlans`), recursos, App Settings, secretos, jobs ni webhooks nuevos.
 - Antes de publicar, revisar los precios en `/admin/parametros`: la regla nueva exige Básico < Pro (también entre los de fundador). Si en producción quedó algún precio de prueba (p. ej. Pro fundador en $0.01), la pantalla no dejará guardar hasta corregirlo.
+
+### Fase 5.18 — Portada y textos legales
+- **Se publica junto con la 5.12 a la 5.17**, y la portada (`Local133.LandingPage`) **antes o junto con** Web:
+  - la casilla del checkout enlaza a `{App__LandingUrl}/terminos`;
+  - el cargo guarda `LegalDocuments.CurrentTermsVersion`, que ahora es `2026-11-27`;
+  - si Web sale primero, los pedidos guardarían la versión nueva mientras la portada todavía muestra la `2026-11-24`, con el plan gratuito.
+- Las dos apps comparten `LegalDocuments.cs` (enlazado): se publican desde el mismo commit.
+- El Aviso de privacidad también pasa a la `2026-11-27`. Los vendedores que se registren desde la publicación guardan las dos versiones nuevas; a los existentes no se les pide reaceptar (pendiente con el abogado, §13 del diseño).
+- Sin migración, recursos, App Settings, secretos, jobs ni webhooks nuevos. La portada sigue sin base: si en producción se cambia un precio o los días de prueba desde `/admin/parametros`, hay que cambiar a mano `_Pricing.cshtml` y los Términos, y publicar la portada.
